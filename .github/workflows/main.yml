@@ -57,18 +57,22 @@ jobs:
         run: echo "src-link meta `pwd`/meta/applications" > ${SDK_NAME}/feeds.conf.default
 
       - name: Update feeds
-        run: cd ${SDK_NAME} && ./scripts/feeds update meta && ./scripts/feeds install -a -p meta
+        run: cd ${SDK_NAME} && ./scripts/feeds update meta && ./scripts/feeds install -a -p meta -d y
 
       - name: Compile Meta
         id: compile
         run: |
           cd ${SDK_NAME}
-          bash -c 'set -o pipefail ; make -j1 V=s defconfig package/{compile,index} 2>&1 | tee /tmp/openwrt-sdk-build.log'
+          bash -c 'set -o pipefail ; make -j1 V=s defconfig package/compile 2>&1 | tee /tmp/openwrt-sdk-build.log'
           echo "::set-output name=status::success"
 
       - name: Last fail log
         if: failure()
         run: tail -n 200 /tmp/openwrt-sdk-build.log
+
+      - name: Test
+        if: steps.compile.outputs.status == 'success'
+        run: find ${SDK_NAME}/bin/packages
 
       - name: Upload bin directory
         uses: actions/upload-artifact@main
