@@ -9,20 +9,19 @@ on:
       - 'applications/**'
 
 env:
-  SDK_NAME: openwrt-sdk-19.07.8-armvirt-64_gcc-7.5.0_musl.Linux-x86_64
-  SDK_URL: https://downloads.openwrt.org/releases/19.07.8/targets/armvirt/64/
+  SDK_NAME: openwrt-sdk-19.07.8-mvebu-cortexa53_gcc-7.5.0_musl.Linux-x86_64
+  SDK_URL: https://downloads.openwrt.org/releases/19.07.8/targets/mvebu/cortexa53/
   TZ: Asia/Shanghai
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Build Meta
+    name: Build IPKs
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
-          path: 'meta'
-          fetch-depth: 5
+          path: 'apps'
 
       - name: Initialization environment
         env:
@@ -44,8 +43,8 @@ jobs:
       - name: Unpack SDK
         run: tar -xJf ${SDK_NAME}.tar.xz
 
-      # - name: Clean Code
-      #   run: rm -f ${SDK_NAME}/package/linux/modules/*
+      - name: Clean Code
+        run: rm -f ${SDK_NAME}/package/linux/modules/*
 
       - name: Write Config
         run: |
@@ -54,16 +53,19 @@ jobs:
           EOF
 
       - name: Load custom feeds
-        run: echo "src-link meta `pwd`/meta/applications" > ${SDK_NAME}/feeds.conf.default
+        run: echo "src-link apps `pwd`/apps/applications" >> ${SDK_NAME}/feeds.conf.default
 
       - name: Update feeds
-        run: cd ${SDK_NAME} && ./scripts/feeds update meta && ./scripts/feeds install -a -p meta
+        run: |
+          cd ${SDK_NAME}
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a -p apps -d y
 
-      - name: Compile Meta
+      - name: Compile IPKs
         id: compile
         run: |
           cd ${SDK_NAME}
-          bash -c 'set -o pipefail ; make -j1 V=s defconfig package/{compile,index} 2>&1 | tee /tmp/openwrt-sdk-build.log'
+          bash -c 'set -o pipefail ; make -j1 V=s defconfig package/compile 2>&1 | tee /tmp/openwrt-sdk-build.log'
           echo "::set-output name=status::success"
 
       - name: Last fail log
@@ -74,5 +76,5 @@ jobs:
         uses: actions/upload-artifact@main
         if: steps.compile.outputs.status == 'success'
         with:
-          name: OpenWrt_bin
-          path: ${SDK_NAME}/bin/packages
+          name: apps
+          path: ${{ env.SDK_NAME }}/bin/packages/aarch64_cortex-a53/apps
