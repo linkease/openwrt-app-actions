@@ -1,6 +1,7 @@
 name: Build Meta
 
 on:
+  workflow_dispatch:
   push:
     branches:
       - main
