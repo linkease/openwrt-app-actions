@@ -1,0 +1,27 @@
+msgid "The Jellyfin service is running."
+msgstr "Jellyfin已启动"
+
+msgid "The Jellyfin service is not running."
+msgstr "Jellyfin服务未启动"
+
+msgid "The Jellyfin service is not installed."
+msgstr "Jellyfin服务未安装"
+
+msgid "open Jellyfin"
+msgstr "打开Jellyfin"
+
+msgid "stop Jellyfin"
+msgstr "停止Jellyfin"
+
+msgid "run Jellyfin"
+msgstr "启动Jellyfin"
+
+msgid "uninstall Jellyfin"
+msgstr "删除Jellyfin"
+
+msgid "install Jellyfin"
+msgstr "安装Jellyfin"
+
+msgid "Collecting data..."
+msgstr "收集数据..."
+

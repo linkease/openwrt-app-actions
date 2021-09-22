@@ -1,0 +1,14 @@
+[I][09-15 17:08:37] [create_route_tcp_proxy:254] create route tcp proxy success!
+[I][09-15 17:08:37] [create_epoll_handle:317] [epoll] create epoll handle, epoll fd = 7.
+[I][09-15 17:08:37] [create_epoll_handle:317] [epoll] create epoll handle, epoll fd = 8.
+[I][09-15 17:08:37] [create_epoll_handle:317] [epoll] create epoll handle, epoll fd = 9.
+[I][09-15 17:08:37] [create_tcp_proxy_event_handle:423] create tcp proxy event handle success! zTcpReqEvFd : 7, zTcpConEvFd : 8, zTcpRspEvFd : 9.
+[I][09-15 17:08:38] [create_route_udp_proxy:302] create route udp proxy success!
+[I][09-15 17:08:38] [create_epoll_handle:317] [epoll] create epoll handle, epoll fd = 11.
+[I][09-15 17:08:38] [create_udp_proxy_event_handle:442] create udp proxy event handle success! zUdpRspEvFd : 11.
+[I][09-15 17:08:38] [create_socket_domain:164] [socket] create new udp unix domain socket fd = [12] success.
+[I][09-15 17:08:38] [proxy_client_tcp_request:473] proxy client tcp request pthread ID = 9628.
+[I][09-15 17:08:38] [proxy_tcp_client_connect:571] proxy listen tcp connect event pthread ID = 9629.
+[I][09-15 17:08:38] [proxy_server_tcp_response:194] proxy client tcp response pthread ID = 9630.
+[I][09-15 17:08:38] [proxy_client_udp_request:556] proxy client udp request pthread ID = 9631.
+[I][09-15 17:08:38] [manage_thread:321] proxy control manage pthread ID = 9633.

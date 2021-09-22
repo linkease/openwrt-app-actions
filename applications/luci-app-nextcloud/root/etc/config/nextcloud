@@ -1,0 +1,3 @@
+config jellyfin
+	option 'port' '8096'
+	option 'enabled' '1'

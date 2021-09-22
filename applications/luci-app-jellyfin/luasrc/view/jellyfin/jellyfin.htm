@@ -1,0 +1,94 @@
+<script type="text/javascript">//<![CDATA[
+    XHR.poll(5, '<%=url("admin/services/jellyfin/status")%>', null,
+        function (x, st) {
+            var tb = document.getElementById('linkease_status');
+            if (st && tb) {
+                if (st.docker_install){
+                    if (st.docker_start){
+                        if (st.container_install) {
+                            if (st.container_running) {
+                                const htmlString = '<br/><em><%:The Jellyfin service is running.%></em>'
+                                + "<br/><br/><input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:open Jellyfin%> \" onclick=\"open_container('" + st.container_port + "')\" />"
+                                + "<input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:stop Jellyfin%> \" onclick=\"stop_container('" + st.container_id + "')\" /><br/><br/>";
+                                tb.innerHTML = htmlString;
+                            }
+                            else {
+                                tb.innerHTML = '<br/><em><%:The Jellyfin service is not running.%></em>'
+                                + "<br/><br/><input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:run Jellyfin%> \" onclick=\"start_container('" + st.container_id + "')\" />"
+                                + "<input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:uninstall Jellyfin%> \" onclick=\"uninstall_container('" + st.container_id + "')\" /><br/><br/>";
+                            }
+                        }
+                        else {
+                            tb.innerHTML = '<br/><em><%:The Jellyfin service is not installed.%></em>'
+                                + "<br/><br/><br/><input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:install Jellyfin%> \" onclick=\"install_container()\" /><br/><br/>";
+                        }
+                    }
+                    else{
+                        tb.innerHTML = '<em><%:Docker service is not start.%></em>'
+                    }
+                }
+                else{
+                        tb.innerHTML = '<em><%:Docker is not installed.%></em>'
+                }
+            }
+        }
+    );
+
+    function open_container(x) {
+        Url = "http://" + window.location.hostname + ":" + x
+        // alert(Url)
+        window.open(Url)
+        return false
+    }
+
+    const STOP_URL = '<%=luci.dispatcher.build_url("admin", "services", "jellyfin","stop")%>';
+
+    function stop_container(x) {
+
+        XHR.get(STOP_URL, { container_id: x }, (x, d) => {
+            alert(" 关闭容器'" + d.container_id + "' ");
+        });
+        return false
+    }
+
+    const START_URL = '<%=luci.dispatcher.build_url("admin", "services", "jellyfin","start")%>';
+
+    function start_container(x) {
+
+        XHR.get(START_URL, { container_id: x }, (x, d) => {
+            // alert(" 打开容器'" + d.container_id + "' ");
+        });
+        return false
+    }
+
+    const UNINSTALL_URL = '<%=luci.dispatcher.build_url("admin", "services", "jellyfin","uninstall")%>';
+
+    function uninstall_container(x) {
+
+        XHR.get(UNINSTALL_URL, { container_id: x }, (x, d) => {
+            // alert(" 删除容器'" + d.container_id + "' ");
+        });
+        return false
+    }
+
+    const INSTALL_URL = '<%=luci.dispatcher.build_url("admin", "services", "jellyfin","install")%>';
+
+    function install_container(x) {
+
+        XHR.get(INSTALL_URL, { container_id: x }, (x, d) => {
+            // alert(" 安装容器'" + d.container_id + "' ");
+        });
+        return false
+    }
+//]]></script>
+
+<fieldset class="cbi-section">
+    <!-- <legend>
+        <%:Jellyfin Status%>
+    </legend> -->
+    <p id="linkease_status">
+        <em>
+            <%:Collecting data...%>
+        </em>
+    </p>
+</fieldset>
