@@ -54,10 +54,13 @@ jobs:
           EOF
 
       - name: Load custom feeds
-        run: echo "src-link meta `pwd`/meta/applications" > ${SDK_NAME}/feeds.conf.default
+        run: echo "src-link meta `pwd`/meta/applications" >> ${SDK_NAME}/feeds.conf.default
 
       - name: Update feeds
-        run: cd ${SDK_NAME} && ./scripts/feeds update meta && ./scripts/feeds install -a -p meta -d y
+        run: |
+          cd ${SDK_NAME}
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a -p meta -d y
 
       - name: Compile Meta
         id: compile
