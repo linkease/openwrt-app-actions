@@ -1,0 +1,80 @@
+name: Build Meta
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'applications/**'
+
+env:
+  SDK_NAME: openwrt-sdk-19.07.8-armvirt-64_gcc-7.5.0_musl.Linux-x86_64
+  SDK_URL: https://downloads.openwrt.org/releases/19.07.8/targets/armvirt/64/
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    name: Build Meta
+    steps:
+      - name: Checkout
+        uses: actions/checkout@main
+        with:
+          path: 'meta'
+          fetch-depth: 5
+
+      - name: Initialization environment
+        env:
+          DEBIAN_FRONTEND: noninteractive
+        run: |
+          sudo swapoff /swapfile || true
+          sudo rm -rf /swapfile /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
+          sudo -E apt-get -qq update
+          sudo -E apt-get -qq install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler antlr3 gperf rsync
+          sudo -E apt-get -qq install default-jre
+          sudo -E apt-get -qq autoremove --purge
+          sudo -E apt-get -qq clean
+          sudo timedatectl set-timezone "$TZ"
+          # curl -fsSL https://raw.githubusercontent.com/P3TERX/dotfiles/master/.bashrc >> ~/.bashrc
+
+      - name: Download SDK
+        run: wget ${SDK_URL}${SDK_NAME}.tar.xz
+
+      - name: Unpack SDK
+        run: tar -xJf ${SDK_NAME}.tar.xz
+
+      # - name: Clean Code
+      #   run: rm -f ${SDK_NAME}/package/linux/modules/*
+
+      # - name: Write Config
+      #   run: |
+      #     cat <<EOF >${SDK_NAME}/.config
+      #     # CONFIG_ALL_NONSHARED is not set
+      #     # CONFIG_ALL_KMODS is not set
+      #     CONFIG_ALL=y
+      #     # CONFIG_SIGNED_PACKAGES is not set
+      #     EOF
+
+      - name: Load custom feeds
+        run: echo "src-link meta `pwd`/meta/applications" > ${SDK_NAME}/feeds.conf.default
+
+      - name: Update feeds
+        run: cd ${SDK_NAME} && ./scripts/feeds update meta && ./scripts/feeds install -a -p meta
+
+      - name: Compile Meta
+        id: compile
+        run: |
+          cd ${SDK_NAME}
+          bash -c 'set -o pipefail ; make -j1 V=s defconfig package/{compile,index} 2>&1 | tee /tmp/openwrt-sdk-build.log'
+          echo "::set-output name=status::success"
+
+      - name: Last fail log
+        if: failure()
+        run: tail -n 200 /tmp/openwrt-sdk-build.log
+
+      - name: Upload bin directory
+        uses: actions/upload-artifact@main
+        if: steps.compile.outputs.status == 'success'
+        with:
+          name: OpenWrt_bin
+          path: ${SDK_NAME}/bin/packages/aarch64_generic/meta
