@@ -16,13 +16,12 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Build Meta
+    name: Build IPKs
     steps:
       - name: Checkout
         uses: actions/checkout@main
         with:
-          path: 'meta'
-          fetch-depth: 5
+          path: 'apps'
 
       - name: Initialization environment
         env:
@@ -54,15 +53,15 @@ jobs:
           EOF
 
       - name: Load custom feeds
-        run: echo "src-link meta `pwd`/meta/applications" >> ${SDK_NAME}/feeds.conf.default
+        run: echo "src-link apps `pwd`/apps/applications" >> ${SDK_NAME}/feeds.conf.default
 
       - name: Update feeds
         run: |
           cd ${SDK_NAME}
           ./scripts/feeds update -a
-          ./scripts/feeds install -a -p meta -d y
+          ./scripts/feeds install -a -p apps -d y
 
-      - name: Compile Meta
+      - name: Compile IPKs
         id: compile
         run: |
           cd ${SDK_NAME}
@@ -73,13 +72,9 @@ jobs:
         if: failure()
         run: tail -n 200 /tmp/openwrt-sdk-build.log
 
-      - name: Test
-        if: steps.compile.outputs.status == 'success'
-        run: find ${SDK_NAME}/bin/packages
-
       - name: Upload bin directory
         uses: actions/upload-artifact@main
         if: steps.compile.outputs.status == 'success'
         with:
-          name: OpenWrt_bin
-          path: ${SDK_NAME}/bin/packages
+          name: apps
+          path: ${{ env.SDK_NAME }}/bin/packages/aarch64_cortex-a53/apps
