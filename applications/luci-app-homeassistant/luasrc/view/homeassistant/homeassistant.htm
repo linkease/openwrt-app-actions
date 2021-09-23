@@ -46,7 +46,7 @@
     function stop_container(x) {
 
         XHR.get(STOP_URL, { container_id: x }, (x, d) => {
-            alert(" 关闭容器'" + d.container_id + "' ");
+            // alert(" 关闭容器'" + d.container_id + "' ");
         });
         return false
     }
@@ -74,7 +74,7 @@
     const INSTALL_URL = '<%=luci.dispatcher.build_url("admin", "services", "homeassistant","install")%>';
 
     function install_container(x) {
-        alert("安装home assistant会花较长时间请耐心等待，ssh输入docker logs hassio_supervisor可以查看安装进度，直到容器homeassistant出现才代表安装结束");
+        // alert("安装home assistant会花较长时间请耐心等待，ssh输入docker logs hassio_supervisor可以查看安装进度，直到容器homeassistant出现才代表安装结束");
 
         XHR.get(INSTALL_URL, { container_id: x }, (x, d) => {
             // alert(" 安装容器'" + d.container_id + "' ");
