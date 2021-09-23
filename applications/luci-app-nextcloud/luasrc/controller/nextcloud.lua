@@ -63,6 +63,7 @@ function uninstall_container()
 	local status = container_status()
 	local container_id = status.container_id
 	util.exec("docker container rm '"..container_id.."'")
+	util.exec("rm -rf /root/usr/share/nextcloud")
 end
 
 -- 总结：

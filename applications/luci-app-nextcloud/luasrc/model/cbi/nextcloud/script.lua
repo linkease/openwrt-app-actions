@@ -13,10 +13,10 @@ function sync_value_to_file(value, file)
 end
 
 function view_cfg.cfgvalue()
-    return fs.readfile("/usr/share/jellyfin/install.sh") or ""
+    return fs.readfile("/usr/share/nextcloud/install.sh") or ""
 end
 function view_cfg.write(self, section, value)
-    sync_value_to_file(value, "/usr/share/jellyfin/install.sh")
+    sync_value_to_file(value, "/usr/share/nextcloud/install.sh")
 end
 
 return s
