@@ -75,8 +75,9 @@
 
     function install_container(x) {
 
+		uci_confirm_docker()
         XHR.get(INSTALL_URL, { container_id: x }, (x, d) => {
-            // alert(" 安装容器'" + d.container_id + "' ");
+            location.reload()
         });
         return false
     }

@@ -23,4 +23,4 @@ docker run --restart=unless-stopped -d \
     -v /var/tmp/vowb:/var/tmp/vowb \
     --pid=host \
     --dns=172.17.0.1 \
-    -p 8096:8096 -v /root/jellyfin/config:/config -v /mnt/sda3/media:/media --name myjellyfin-rtk-10.7 jjm2473/jellyfin-rtk:v10.7
+    -p 8096:8096 -v /root/jellyfin/config:/config -v /mnt/sda1/media:/media --name myjellyfin-rtk-10.7 jjm2473/jellyfin-rtk:v10.7

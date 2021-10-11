@@ -11,12 +11,14 @@ function index()
 	entry({"admin", "services", "jellyfin","start"}, call("start_container"))
 	entry({"admin", "services", "jellyfin","install"}, call("install_container"))
 	entry({"admin", "services", "jellyfin","uninstall"}, call("uninstall_container"))
+
 end
 
 local sys  = require "luci.sys"
 local uci  = require "luci.model.uci".cursor()
 local keyword  = "jellyfin"
 local util  = require("luci.util")
+local docker = require "luci.model.docker"
 
 function container_status()
 	local docker_path = util.exec("which docker")
@@ -55,9 +57,59 @@ function start_container()
 end
 
 function install_container()
-	luci.sys.call('sh /usr/share/jellyfin/install.sh')
-	container_status()
+	
+	docker:write_status("jellyfin installing\n")
+	local dk = docker.new()
+	local images = dk.images:list().body
+	local image = "jjm2473/jellyfin-rtk:v10.7"
+	local pull_image = function(image)
+		docker:append_status("Images: " .. "pulling" .. " " .. image .. "...\n")
+		local res = dk.images:create({query = {fromImage=image}}, docker.pull_image_show_status_cb)
+		if res and res.code and res.code == 200 and (res.body[#res.body] and not res.body[#res.body].error and res.body[#res.body].status and (res.body[#res.body].status == "Status: Downloaded newer image for ".. image or res.body[#res.body].status == "Status: Image is up to date for ".. image)) then
+			docker:append_status("done\n")
+		else
+			res.code = (res.code == 200) and 500 or res.code
+			docker:append_status("code:" .. res.code.." ".. (res.body[#res.body] and res.body[#res.body].error or (res.body.message or res.message)).. "\n")
+		end
+	end
+
+	local install_jellyfin = function()
+		local os   = require "os"
+		local fs   = require "nixio.fs"
+		local c = "sh /usr/share/jellyfin/install.sh >/tmp/log/jellyfin.stdout 2>/tmp/log/jellyfin.stderr"
+		local r = os.execute(c)
+		local e = fs.readfile("/tmp/log/jellyfin.stderr")
+		local o = fs.readfile("/tmp/log/jellyfin.stdout")
+
+		fs.unlink("/tmp/log/jellyfin.stderr")
+		fs.unlink("/tmp/log/jellyfin.stdout")
+
+		docker:append_status("r:\n" .. r .. "\n")
+		if r == 0 then
+			docker:write_status(o)
+		else
+			docker:write_status( e )
+		end
+	end
+
+	local exist_image = false
+	if image then
+		for _, v in ipairs (images) do
+			if v.RepoTags and v.RepoTags[1] == image then
+				exist_image = true
+				break
+			end
+		end
+		if not exist_image then
+			pull_image(image)
+			install_jellyfin()
+		else
+			install_jellyfin()
+		end
+	end
+
 end
+
 
 function uninstall_container()
 	local status = container_status()
