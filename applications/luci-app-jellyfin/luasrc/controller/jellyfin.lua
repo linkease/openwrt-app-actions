@@ -61,7 +61,8 @@ function install_container()
 	docker:write_status("jellyfin installing\n")
 	local dk = docker.new()
 	local images = dk.images:list().body
-	local image = "jjm2473/jellyfin-rtk:latest"
+	local image = util.exec("sh /usr/share/jellyfin/install.sh -l") 
+
 	local pull_image = function(image)
 		docker:append_status("Images: " .. "pulling" .. " " .. image .. "...\n")
 		local res = dk.images:create({query = {fromImage=image}}, docker.pull_image_show_status_cb)
@@ -76,7 +77,7 @@ function install_container()
 	local install_jellyfin = function()
 		local os   = require "os"
 		local fs   = require "nixio.fs"
-		local c = "sh /usr/share/jellyfin/install.sh >/tmp/log/jellyfin.stdout 2>/tmp/log/jellyfin.stderr"
+		local c = "sh /usr/share/jellyfin/install.sh -i >/tmp/log/jellyfin.stdout 2>/tmp/log/jellyfin.stderr"
 		local r = os.execute(c)
 		local e = fs.readfile("/tmp/log/jellyfin.stderr")
 		local o = fs.readfile("/tmp/log/jellyfin.stdout")
@@ -84,13 +85,19 @@ function install_container()
 		fs.unlink("/tmp/log/jellyfin.stderr")
 		fs.unlink("/tmp/log/jellyfin.stdout")
 
-		docker:append_status("r:\n" .. r .. "\n")
 		if r == 0 then
 			docker:write_status(o)
 		else
 			docker:write_status( e )
 		end
 	end
+
+	-- local status = {
+	-- 	shell = shell,
+	-- 	image_name = image,
+	-- }
+	-- luci.http.prepare_content("application/json")
+	-- luci.http.write_json(status)
 
 	local exist_image = false
 	if image then

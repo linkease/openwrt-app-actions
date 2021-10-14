@@ -77,6 +77,7 @@
 
 		uci_confirm_docker()
         XHR.get(INSTALL_URL, { container_id: x }, (x, d) => {
+            // alert(" 删除容器'" + d.image_name + "' ");
             location.reload()
         });
         return false

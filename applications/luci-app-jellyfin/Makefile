@@ -8,7 +8,7 @@ PKG_RELEASE:=20211013
 
 LUCI_TITLE:=LuCI support for jellyfin
 LUCI_PKGARCH:=all
-LUCI_DEPENDS:=+docker
+LUCI_DEPENDS:=+docker +luci-app-dockerman
 
 include $(TOPDIR)/feeds/luci/luci.mk
 
