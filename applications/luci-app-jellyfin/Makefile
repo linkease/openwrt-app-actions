@@ -4,7 +4,7 @@ include $(TOPDIR)/rules.mk
 
 PKG_NAME:=luci-app-jellyfin
 PKG_VERSION:=1.0.1
-PKG_RELEASE:=20211013
+PKG_RELEASE:=20211014
 
 LUCI_TITLE:=LuCI support for jellyfin
 LUCI_PKGARCH:=all
