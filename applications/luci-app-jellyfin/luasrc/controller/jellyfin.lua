@@ -61,7 +61,7 @@ function install_container()
 	docker:write_status("jellyfin installing\n")
 	local dk = docker.new()
 	local images = dk.images:list().body
-	local image = "jjm2473/jellyfin-rtk:v10.7"
+	local image = "jjm2473/jellyfin-rtk:latest"
 	local pull_image = function(image)
 		docker:append_status("Images: " .. "pulling" .. " " .. image .. "...\n")
 		local res = dk.images:create({query = {fromImage=image}}, docker.pull_image_show_status_cb)
