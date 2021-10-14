@@ -1,6 +1,7 @@
 #!/bin/sh
 image_name="jjm2473/jellyfin-rtk:latest"
-
+config="/root/jellyfin/config"
+media="/mnt/sda1/media"
 
 install(){
     docker run --restart=unless-stopped -d \
@@ -26,15 +27,21 @@ install(){
     -v /var/tmp/vowb:/var/tmp/vowb \
     --pid=host \
     --dns=172.17.0.1 \
-    -p 8096:8096 -v /root/jellyfin/config:/config -v /mnt/sda1/media:/media --name myjellyfin-rtk $image_name
+    -p 8096:8096 -v $config:/config -v $media:/media --name myjellyfin-rtk $image_name
 }
 
 
-while getopts ":il" optname
+while getopts ":ilc:m:" optname
 do
     case "$optname" in
         "l")
         echo -n $image_name
+        ;;
+        "c")
+        config=$OPTARG
+        ;;
+        "m")
+        media=$OPTARG
         ;;
         "i")
         install

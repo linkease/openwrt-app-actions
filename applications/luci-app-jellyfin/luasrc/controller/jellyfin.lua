@@ -4,7 +4,7 @@ function index()
 	
 	entry({'admin', 'services', 'jellyfin'}, alias('admin', 'services', 'jellyfin', 'client'), _('Jellyfin'), 10).dependent = true -- 首页
 	entry({"admin", "services", "jellyfin",'client'}, cbi("jellyfin/status", {hideresetbtn=true, hidesavebtn=true}), _("Jellyfin"), 20).leaf = true
-    entry({'admin', 'services', 'jellyfin', 'script'}, form('jellyfin/script'), _('Script'), 20).leaf = true -- 直接配置脚本
+    -- entry({'admin', 'services', 'jellyfin', 'script'}, form('jellyfin/script'), _('Script'), 20).leaf = true -- 直接配置脚本
 
 	entry({"admin", "services", "jellyfin","status"}, call("container_status"))
 	entry({"admin", "services", "jellyfin","stop"}, call("stop_container"))
@@ -62,7 +62,8 @@ function install_container()
 	local dk = docker.new()
 	local images = dk.images:list().body
 	local image = util.exec("sh /usr/share/jellyfin/install.sh -l") 
-
+	local media_path = luci.http.formvalue("media")
+	local config_path = luci.http.formvalue("config")
 	local pull_image = function(image)
 		docker:append_status("Images: " .. "pulling" .. " " .. image .. "...\n")
 		local res = dk.images:create({query = {fromImage=image}}, docker.pull_image_show_status_cb)
@@ -77,7 +78,9 @@ function install_container()
 	local install_jellyfin = function()
 		local os   = require "os"
 		local fs   = require "nixio.fs"
-		local c = "sh /usr/share/jellyfin/install.sh -i >/tmp/log/jellyfin.stdout 2>/tmp/log/jellyfin.stderr"
+		local c = ("sh /usr/share/jellyfin/install.sh -m " ..media_path.. " -c " ..config_path.. " -i >/tmp/log/jellyfin.stdout 2>/tmp/log/jellyfin.stderr")
+		-- docker:write_status(c)
+
 		local r = os.execute(c)
 		local e = fs.readfile("/tmp/log/jellyfin.stderr")
 		local o = fs.readfile("/tmp/log/jellyfin.stdout")

@@ -1,5 +1,5 @@
 <script type="text/javascript">//<![CDATA[
-    XHR.poll(5, '<%=url("admin/services/jellyfin/status")%>', null,
+    XHR.poll(5,'<%=url("admin/services/jellyfin/status")%>', null,
         function (x, st) {
             var tb = document.getElementById('linkease_status');
             if (st && tb) {
@@ -19,8 +19,16 @@
                             }
                         }
                         else {
-                            tb.innerHTML = '<br/><em><%:The Jellyfin service is not installed.%></em>'
-                                + "<br/><br/><br/><input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:install Jellyfin%> \" onclick=\"install_container()\" /><br/><br/>";
+                            let config = document.getElementById('config')
+                            if(!config){
+                                tb.innerHTML = '<br/><em><%:The Jellyfin service is not installed.%></em>'
+                                + "<br/><br/><br/>config path:"
+                                + "<br/><input type=\"text\" class=\"cbi-input-text\" name=\"isrc\" id=\"config\" value=\"/root/jellyfin/config\" />"
+                                + "<br/><br/>media path:"
+                                + "<br/><input type=\"text\" class=\"cbi-input-text\" name=\"isrc\" id=\"media\" value=\"/mnt/sda1/media\"/>"
+                                + "<br/><br/><input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:install Jellyfin%> \" onclick=\"install_container()\" /><br/><br/>";
+                            }
+                            
                         }
                     }
                     else{
@@ -74,9 +82,13 @@
     const INSTALL_URL = '<%=luci.dispatcher.build_url("admin", "services", "jellyfin","install")%>';
 
     function install_container(x) {
-
+        let config = document.getElementById('config')
+	    let media = document.getElementById('media')
+        let media_path = media.value
+        let config_path = config.value
+        
 		uci_confirm_docker()
-        XHR.get(INSTALL_URL, { container_id: x }, (x, d) => {
+        XHR.get(INSTALL_URL, { media: media_path,config:config_path }, (x, d) => {
             // alert(" 删除容器'" + d.image_name + "' ");
             location.reload()
         });
