@@ -1,7 +1,7 @@
 <script type="text/javascript">//<![CDATA[
     XHR.poll(5,'<%=url("admin/services/jellyfin/status")%>', null,
         function (x, st) {
-            var tb = document.getElementById('linkease_status');
+            var tb = document.getElementById('jellyfin_status');
             if (st && tb) {
                 if (st.docker_install){
                     if (st.docker_start){
@@ -21,26 +21,42 @@
                         else {
                             let config = document.getElementById('config')
                             if(!config){
-                                tb.innerHTML = '<br/><em><%:The Jellyfin service is not installed.%></em>'
-                                + "<br/><br/><br/>config path:"
-                                + "<br/><input type=\"text\" class=\"cbi-input-text\" name=\"isrc\" id=\"config\" value=\"/root/jellyfin/config\" />"
-                                + "<br/><br/>media path:"
-                                + "<br/><input type=\"text\" class=\"cbi-input-text\" name=\"isrc\" id=\"media\" value=\"/mnt/sda1/media\"/>"
-                                + "<br/><br/><input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:install Jellyfin%> \" onclick=\"install_container()\" /><br/><br/>";
+                                var configs = [
+                                    {id: "media", label: "<%:Media path%><sup>*</sup>:", value: st.media_path},
+                                    {id: "config", label: "<%:Config path%><sup>*</sup>:", value: st.config_path},
+                                    {id: "cache", label: "<%:Transcode cache path (optional)%>:", value: st.cache_path},
+                                    {id: "port", label: "<%:Port (optional)%>:", value: st.container_port},
+                                ];
+                                tb.innerHTML = '<br/><em><%:The Jellyfin service is not installed.%></em>';
+                                configs.forEach(function(c){
+                                    tb.innerHTML += ("<div class=\"cbi-value\"><label class=\"cbi-value-title\" for=\"" + c.id + "\">" + c.label + "</label>"
+                                        + "<div class=\"cbi-value-field\"><input type=\"text\" class=\"cbi-input-text\" id=\"" + c.id + "\" value=\"" + c.value + "\"/></div></div>");
+                                });
+                                tb.innerHTML += ("<div class=\"cbi-value\"><label class=\"cbi-value-title\"></label>" 
+                                        + "<div class=\"cbi-value-field\"><input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:install Jellyfin%> \" onclick=\"install_container()\" /></div></div><br>");
                             }
-                            
                         }
                     }
                     else{
-                        tb.innerHTML = '<em><%:Docker service is not start.%></em>'
+                        tb.innerHTML = '<br/><em><%:Docker service is not start.%></em>'
                     }
                 }
                 else{
-                        tb.innerHTML = '<em><%:Docker is not installed.%></em>'
+                        tb.innerHTML = '<br/><em><%:Docker is not installed.%></em>'
                 }
             }
         }
     );
+
+    var xhr_post = function(url, data, cb) {
+        data = data || {};
+        data.token = '<%=token%>';
+        cb || docker_status_message('notice', '<img src="/luci-static/resources/icons/loading.gif" alt="" style="vertical-align:middle" />');
+        new XHR().post(url, data, (x, d) => {
+            cb || docker_status_message();
+            cb && cb(x, d);
+        });
+    };
 
     function open_container(x) {
         Url = "http://" + window.location.hostname + ":" + x
@@ -53,9 +69,7 @@
 
     function stop_container(x) {
 
-        XHR.get(STOP_URL, { container_id: x }, (x, d) => {
-            alert(" 关闭容器'" + d.container_id + "' ");
-        });
+        xhr_post(STOP_URL, { container_id: x });
         return false
     }
 
@@ -63,9 +77,7 @@
 
     function start_container(x) {
 
-        XHR.get(START_URL, { container_id: x }, (x, d) => {
-            // alert(" 打开容器'" + d.container_id + "' ");
-        });
+        xhr_post(START_URL, { container_id: x });
         return false
     }
 
@@ -73,9 +85,7 @@
 
     function uninstall_container(x) {
 
-        XHR.get(UNINSTALL_URL, { container_id: x }, (x, d) => {
-            // alert(" 删除容器'" + d.container_id + "' ");
-        });
+        xhr_post(UNINSTALL_URL, { container_id: x });
         return false
     }
 
@@ -84,25 +94,31 @@
     function install_container(x) {
         let config = document.getElementById('config')
 	    let media = document.getElementById('media')
+        let cache = document.getElementById('cache')
+        let port = document.getElementById('port').value
         let media_path = media.value
         let config_path = config.value
-        
-		uci_confirm_docker()
-        XHR.get(INSTALL_URL, { media: media_path,config:config_path }, (x, d) => {
+        let cache_path = cache.value
+
+        if (media_path == "" || config_path == "") {
+            alert("<%:Media path and Config path could not be empty!%>");
+            return false;
+        }
+
+        xhr_post(INSTALL_URL, { media: media_path, config: config_path, cache: cache_path, port: port }, (x, d) => {
             // alert(" 删除容器'" + d.image_name + "' ");
             location.reload()
         });
+        uci_confirm_docker();
+
         return false
     }
 //]]></script>
 
 <fieldset class="cbi-section">
-    <!-- <legend>
-        <%:Jellyfin Status%>
-    </legend> -->
-    <p id="linkease_status">
+    <fieldset class="cbi-section-node" id="jellyfin_status">
         <em>
             <%:Collecting data...%>
         </em>
-    </p>
+    </fieldset>
 </fieldset>

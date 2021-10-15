@@ -1,16 +1,16 @@
 module("luci.controller.jellyfin", package.seeall)
 
 function index()
-	
+
 	entry({'admin', 'services', 'jellyfin'}, alias('admin', 'services', 'jellyfin', 'client'), _('Jellyfin'), 10).dependent = true -- 首页
 	entry({"admin", "services", "jellyfin",'client'}, cbi("jellyfin/status", {hideresetbtn=true, hidesavebtn=true}), _("Jellyfin"), 20).leaf = true
     -- entry({'admin', 'services', 'jellyfin', 'script'}, form('jellyfin/script'), _('Script'), 20).leaf = true -- 直接配置脚本
 
-	entry({"admin", "services", "jellyfin","status"}, call("container_status"))
-	entry({"admin", "services", "jellyfin","stop"}, call("stop_container"))
-	entry({"admin", "services", "jellyfin","start"}, call("start_container"))
-	entry({"admin", "services", "jellyfin","install"}, call("install_container"))
-	entry({"admin", "services", "jellyfin","uninstall"}, call("uninstall_container"))
+	entry({"admin", "services", "jellyfin","status"}, call("get_container_status"))
+	entry({"admin", "services", "jellyfin","stop"}, post("stop_container"))
+	entry({"admin", "services", "jellyfin","start"}, post("start_container"))
+	entry({"admin", "services", "jellyfin","install"}, post("install_container"))
+	entry({"admin", "services", "jellyfin","uninstall"}, post("uninstall_container"))
 
 end
 
@@ -25,10 +25,10 @@ function container_status()
 	local docker_server_version = util.exec("docker info | grep 'Server Version'")
 	local docker_install = (string.len(docker_path) > 0)
 	local docker_start = (string.len(docker_server_version) > 0)
-	local port = tonumber(uci:get_first(keyword, keyword, "port"))
-	local container_id = util.trim(util.exec("docker ps -aqf'name='"..keyword.."''"))
+	local port = tonumber(uci:get_first(keyword, keyword, "port", "8096"))
+	local container_id = util.trim(util.exec("docker ps -aqf 'name="..keyword.."'"))
 	local container_install = (string.len(container_id) > 0)
-	local container_running = (sys.call("pidof '"..keyword.."' >/dev/null") == 0)
+	local container_running = container_install and (string.len(util.trim(util.exec("docker ps -qf 'id="..container_id.."'"))) > 0)
 
 	local status = {
 		docker_install = docker_install,
@@ -37,11 +37,18 @@ function container_status()
 		container_install = container_install,
 		container_running = container_running,
 		container_port = (port or 8096),
+		media_path = uci:get_first(keyword, keyword, "media_path", "/mnt/sda1/media"),
+		config_path = uci:get_first(keyword, keyword, "config_path", "/root/jellyfin/config"),
+		cache_path = uci:get_first(keyword, keyword, "cache_path", ""),
 	}
 
+	return status
+end
+
+function get_container_status()
+	local status = container_status()
 	luci.http.prepare_content("application/json")
 	luci.http.write_json(status)
-	return status
 end
 
 function stop_container()
@@ -57,15 +64,25 @@ function start_container()
 end
 
 function install_container()
-	
-	docker:write_status("jellyfin installing\n")
-	local dk = docker.new()
-	local images = dk.images:list().body
+
 	local image = util.exec("sh /usr/share/jellyfin/install.sh -l") 
 	local media_path = luci.http.formvalue("media")
 	local config_path = luci.http.formvalue("config")
+	local cache_path = luci.http.formvalue("cache")
+	local port = luci.http.formvalue("port")
+
+	uci:tset(keyword, "@"..keyword.."[0]", {
+		media_path = media_path or "/mnt/sda1/media",
+		config_path = config_path or "/root/jellyfin/config",
+		cache_path = cache_path or "",
+		port = port or "8096",
+	})
+	uci:save(keyword)
+	uci:commit(keyword)
+
 	local pull_image = function(image)
 		docker:append_status("Images: " .. "pulling" .. " " .. image .. "...\n")
+		local dk = docker.new()
 		local res = dk.images:create({query = {fromImage=image}}, docker.pull_image_show_status_cb)
 		if res and res.code and res.code == 200 and (res.body[#res.body] and not res.body[#res.body].error and res.body[#res.body].status and (res.body[#res.body].status == "Status: Downloaded newer image for ".. image or res.body[#res.body].status == "Status: Image is up to date for ".. image)) then
 			docker:append_status("done\n")
@@ -78,8 +95,8 @@ function install_container()
 	local install_jellyfin = function()
 		local os   = require "os"
 		local fs   = require "nixio.fs"
-		local c = ("sh /usr/share/jellyfin/install.sh -m " ..media_path.. " -c " ..config_path.. " -i >/tmp/log/jellyfin.stdout 2>/tmp/log/jellyfin.stderr")
-		-- docker:write_status(c)
+		local c = ("sh /usr/share/jellyfin/install.sh -i >/tmp/log/jellyfin.stdout 2>/tmp/log/jellyfin.stderr")
+		-- docker:append_status(c)
 
 		local r = os.execute(c)
 		local e = fs.readfile("/tmp/log/jellyfin.stderr")
@@ -89,9 +106,9 @@ function install_container()
 		fs.unlink("/tmp/log/jellyfin.stdout")
 
 		if r == 0 then
-			docker:write_status(o)
+			docker:append_status(o)
 		else
-			docker:write_status( e )
+			docker:append_status( e )
 		end
 	end
 
@@ -102,20 +119,12 @@ function install_container()
 	-- luci.http.prepare_content("application/json")
 	-- luci.http.write_json(status)
 
-	local exist_image = false
 	if image then
-		for _, v in ipairs (images) do
-			if v.RepoTags and v.RepoTags[1] == image then
-				exist_image = true
-				break
-			end
-		end
-		if not exist_image then
-			pull_image(image)
-			install_jellyfin()
-		else
-			install_jellyfin()
-		end
+		docker:write_status("jellyfin installing\n")
+		pull_image(image)
+		install_jellyfin()
+	else
+		docker:write_status("jellyfin image not defined!\n")
 	end
 
 end
