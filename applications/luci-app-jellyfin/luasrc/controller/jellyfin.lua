@@ -2,9 +2,8 @@ module("luci.controller.jellyfin", package.seeall)
 
 function index()
 
-	entry({'admin', 'services', 'jellyfin'}, alias('admin', 'services', 'jellyfin', 'client'), _('Jellyfin'), 10).dependent = true -- 首页
-	entry({"admin", "services", "jellyfin",'client'}, cbi("jellyfin/status", {hideresetbtn=true, hidesavebtn=true}), _("Jellyfin"), 20).leaf = true
-    -- entry({'admin', 'services', 'jellyfin', 'script'}, form('jellyfin/script'), _('Script'), 20).leaf = true -- 直接配置脚本
+	entry({'admin', 'services', 'jellyfin'}, alias('admin', 'services', 'jellyfin', 'client'), _('Jellyfin'), 10)
+	entry({"admin", "services", "jellyfin",'client'}, cbi("jellyfin/status"), nil).leaf = true
 
 	entry({"admin", "services", "jellyfin","status"}, call("get_container_status"))
 	entry({"admin", "services", "jellyfin","stop"}, post("stop_container"))
