@@ -1,9 +1,25 @@
 #!/bin/sh
-image_name="jjm2473/jellyfin-rtk:latest"
-config="/root/jellyfin/config"
-media="/mnt/sda1/media"
+
+image_name=`uci get jellyfin.@jellyfin[0].image 2>/dev/null`
+
+[ -z "$image_name" ] && image_name="jjm2473/jellyfin-rtk:latest"
 
 install(){
+    local media=`uci get jellyfin.@jellyfin[0].media_path 2>/dev/null`
+    local config=`uci get jellyfin.@jellyfin[0].config_path 2>/dev/null`
+    local cache=`uci get jellyfin.@jellyfin[0].cache_path 2>/dev/null`
+    local port=`uci get jellyfin.@jellyfin[0].port 2>/dev/null`
+
+    if [ -z "$media" -o -z "$config"]; then
+        echo "media path or config path is empty!" >&2
+        exit 1
+    fi
+
+    local cachev
+    [ -z "$cache" ] || cachev="-v $cache:/config/transcodes"
+
+    [ -z "$port" ] && port=8096
+
     docker run --restart=unless-stopped -d \
     --device /dev/rpc0:/dev/rpc0 \
     --device /dev/rpc1:/dev/rpc1 \
@@ -27,21 +43,15 @@ install(){
     -v /var/tmp/vowb:/var/tmp/vowb \
     --pid=host \
     --dns=172.17.0.1 \
-    -p 8096:8096 -v $config:/config -v $media:/media --name myjellyfin-rtk $image_name
+    -p $port:8096 -v "$config:/config" $cachev -v "$media:/media" --name myjellyfin-rtk "$image_name"
 }
 
 
-while getopts ":ilc:m:" optname
+while getopts ":il" optname
 do
     case "$optname" in
         "l")
         echo -n $image_name
-        ;;
-        "c")
-        config=$OPTARG
-        ;;
-        "m")
-        media=$OPTARG
         ;;
         "i")
         install
