@@ -12,8 +12,7 @@ install(){
         exit 1
     fi
     
-    docker run -d --name wxedge -e PLACE=CTKS --privileged --network=host --tmpfs /run --tmpfs /tmp -v "$cache:/storage:rw" --restart=always "$image_name"
-
+    docker run -d --name wxedge -e PLACE=CTKS --privileged --network=host --tmpfs /run --tmpfs /tmp -v $cache:/storage:rw --restart=always $image_name
 }
 
 

@@ -2,7 +2,7 @@ module("luci.controller.wxedge", package.seeall)
 
 function index()
 
-	entry({'admin', 'services', 'wxedge'}, alias('admin', 'services', 'wxedge', 'client'), _('Wxedge'), 10)
+	entry({'admin', 'services', 'wxedge'}, alias('admin', 'services', 'wxedge', 'client'), _('wxedge'), 10)
 	entry({"admin", "services", "wxedge",'client'}, cbi("wxedge/status"), nil).leaf = true
 
 	entry({"admin", "services", "wxedge","status"}, call("get_container_status"))

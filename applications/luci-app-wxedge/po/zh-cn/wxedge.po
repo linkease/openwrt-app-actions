@@ -1,25 +1,28 @@
-msgid "The Wxedge service is running."
+msgid "wxedge"
+msgstr "网心云"
+
+msgid "The wxedge service is running."
 msgstr "网心云已启动"
 
-msgid "The Wxedge service is not running."
+msgid "The wxedge service is not running."
 msgstr "网心云服务未启动"
 
-msgid "The Wxedge service is not installed."
+msgid "The wxedge service is not installed."
 msgstr "网心云服务未安装"
 
-msgid "open Wxedge"
+msgid "open wxedge"
 msgstr "打开网心云"
 
-msgid "stop Wxedge"
+msgid "stop wxedge"
 msgstr "停止网心云"
 
-msgid "run Wxedge"
+msgid "run wxedge"
 msgstr "启动网心云"
 
-msgid "uninstall Wxedge"
+msgid "uninstall wxedge"
 msgstr "删除网心云"
 
-msgid "install Wxedge"
+msgid "install wxedge"
 msgstr "安装网心云"
 
 msgid "Collecting data..."
