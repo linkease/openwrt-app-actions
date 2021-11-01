@@ -2,7 +2,7 @@
 
 image_name=`uci get wxedge.@wxedge[0].image 2>/dev/null`
 
-[ -z "$image_name" ] && image_name="registry.cn-hangzhou.aliyuncs.com/onething/wxedge"
+[ -z "$image_name" ] && image_name="onething1/wxedge:latest"
 
 install(){
     local cache=`uci get wxedge.@wxedge[0].cache_path 2>/dev/null`
