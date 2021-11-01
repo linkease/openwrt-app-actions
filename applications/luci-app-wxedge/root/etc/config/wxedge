@@ -1,0 +1,3 @@
+config wxedge
+	option 'image' 'registry.cn-hangzhou.aliyuncs.com/onething/wxedge'
+	option 'cache_path' '/wxedge'
