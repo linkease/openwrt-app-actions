@@ -3,7 +3,16 @@
 source /etc/profile
 
 BasePath=""
-ifname="eth1"
+
+ifname=$(
+    . /lib/functions/network.sh
+
+    network_is_up "lan" || exit 1
+    network_get_device device "lan"
+    printf "%s " "${device:-br-lan}"
+)
+[ -z "$ifname" ] && ifname="br-lan"
+
 XunyouPath="${BasePath}/xunyou"
 LibPath="${XunyouPath}/lib"
 kernelKoPath="${XunyouPath}/modules"

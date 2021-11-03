@@ -4,7 +4,15 @@ source /etc/profile
 
 systemType=0
 action=$1
-ifname="eth1"
+ifname=$(
+    . /lib/functions/network.sh
+
+    network_is_up "lan" || exit 1
+    network_get_device device "lan"
+    printf "%s " "${device:-br-lan}"
+)
+[ -z "$ifname" ] && ifname="br-lan"
+
 UdpPostProc="udp-post"
 product_model=`uname -n`
 

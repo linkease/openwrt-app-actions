@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 
 
 PKG_NAME:=xunyou
-PKG_VERSION:=0.1.1
+PKG_VERSION:=1.0.9.1
 PKG_RELEASE:=1
 
 
