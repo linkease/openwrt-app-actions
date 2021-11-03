@@ -2,7 +2,14 @@
 
 image_name=`uci get jellyfin.@jellyfin[0].image 2>/dev/null`
 
-[ -z "$image_name" ] && image_name="jjm2473/jellyfin-rtk:latest"
+[ -z "$image_name" ] && image_name="default"
+
+if [ "$image_name" == "default" ]; then
+    image_name="jjm2473/jellyfin-rtk:latest"
+    if uname -r | grep -q '^4\.9\.'; then
+        image_name="jjm2473/jellyfin-rtk:4.9-latest"
+    fi
+fi
 
 install(){
     local media=`uci get jellyfin.@jellyfin[0].media_path 2>/dev/null`
