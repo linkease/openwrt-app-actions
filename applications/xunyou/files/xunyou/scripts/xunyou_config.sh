@@ -9,7 +9,7 @@ ifname=$(
 
     network_is_up "lan" || exit 1
     network_get_device device "lan"
-    printf "%s " "${device:-br-lan}"
+    printf "%s" "${device:-br-lan}"
 )
 [ -z "$ifname" ] && ifname="br-lan"
 
