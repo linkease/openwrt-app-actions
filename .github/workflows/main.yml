@@ -10,7 +10,7 @@ on:
 
 env:
   SDK_NAME: openwrt-sdk-19.07.8-realtek-rtd129x_gcc-7.5.0_musl.Linux-x86_64
-  SDK_URL: https://fw.koolcenter.com/binary/ars2/openwrt-sdk-19.07.8-realtek-rtd129x_gcc-7.5.0_musl.Linux-x86_64.tar.xz
+  SDK_URL: https://fw.koolcenter.com/binary/ars2/
   TZ: Asia/Shanghai
 
 jobs:
