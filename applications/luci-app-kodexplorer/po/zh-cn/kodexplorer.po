@@ -1,0 +1,35 @@
+msgid "kodexplorer"
+msgstr "可道云"
+
+msgid "The kodexplorer service is running."
+msgstr "可道云已启动"
+
+msgid "The kodexplorer service is not running."
+msgstr "可道云服务未启动"
+
+msgid "The kodexplorer service is not installed."
+msgstr "可道云服务未安装"
+
+msgid "open kodexplorer"
+msgstr "打开可道云"
+
+msgid "stop kodexplorer"
+msgstr "停止可道云"
+
+msgid "run kodexplorer"
+msgstr "启动可道云"
+
+msgid "uninstall kodexplorer"
+msgstr "删除可道云"
+
+msgid "install kodexplorer"
+msgstr "安装可道云"
+
+msgid "Collecting data..."
+msgstr "收集数据..."
+
+msgid "storage path"
+msgstr "存储路径（建议插入U盘或硬盘，然后输入路径。例如：/mnt/sda1/kodexplorer）"
+
+msgid "Storage path could not be empty!"
+msgstr "存储路径不能为空！"
