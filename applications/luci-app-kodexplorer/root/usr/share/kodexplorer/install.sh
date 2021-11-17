@@ -2,7 +2,7 @@
 
 image_name=`uci get kodexplorer.@kodexplorer[0].image 2>/dev/null`
 
-[ -z "$image_name" ] && image_name="kodcloud/kodexplorer:latest"
+[ -z "$image_name" ] && image_name="kodcloud/kodbox:latest"
 
 install(){
     local cache=`uci get kodexplorer.@kodexplorer[0].cache_path 2>/dev/null`
