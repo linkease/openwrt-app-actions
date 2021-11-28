@@ -13,7 +13,7 @@ install(){
     fi
     [ -z "$port" ] && port=8081
 
-    docker run -d --name kodexplorer -p $port:80 -v $cache:/var/www/html $image_name
+    docker run -d --name kodexplorer -p $port:80 -v $cache:/var/www/html -v /mnt:/mnt:rslave $image_name
 }
 
 
