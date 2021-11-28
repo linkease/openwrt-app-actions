@@ -27,6 +27,9 @@ install(){
 
     [ -z "$port" ] && port=8096
 
+    local mntv
+    [ "$media" = "/mnt" ] || mntv="-v /mnt:/mnt:rslave"
+
     docker run --restart=unless-stopped -d \
     --device /dev/rpc0:/dev/rpc0 \
     --device /dev/rpc1:/dev/rpc1 \
@@ -50,7 +53,7 @@ install(){
     -v /var/tmp/vowb:/var/tmp/vowb \
     --pid=host \
     --dns=172.17.0.1 \
-    -p $port:8096 -v "$config:/config" $cachev -v "$media:/media" --name myjellyfin-rtk "$image_name"
+    -p $port:8096 -v "$config:/config" $cachev -v "$media:/media:rslave" $mntv --name myjellyfin-rtk "$image_name"
 }
 
 
