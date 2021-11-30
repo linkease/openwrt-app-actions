@@ -23,12 +23,12 @@ install(){
     fi
 
     local cachev
-    [ -z "$cache" ] || cachev="-v $cache:/config/transcodes"
+    [ -z "$cache" ] || cachev='-v "'"$cache:/config/transcodes"'"'
 
     [ -z "$port" ] && port=8096
 
     local mediav
-    [ -z "$media" ] || mediav='-v '"$media:/media"
+    [ -z "$media" ] || mediav='-v "'"$media:/media"'"'
 
     docker run --restart=unless-stopped -d \
     --device /dev/rpc0:/dev/rpc0 \
