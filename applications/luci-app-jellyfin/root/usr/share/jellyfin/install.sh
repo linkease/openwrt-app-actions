@@ -17,8 +17,8 @@ install(){
     local cache=`uci get jellyfin.@jellyfin[0].cache_path 2>/dev/null`
     local port=`uci get jellyfin.@jellyfin[0].port 2>/dev/null`
 
-    if [ -z "$media" -o -z "$config"]; then
-        echo "media path or config path is empty!" >&2
+    if [ -z "$config"]; then
+        echo "config path is empty!" >&2
         exit 1
     fi
 
@@ -27,8 +27,8 @@ install(){
 
     [ -z "$port" ] && port=8096
 
-    local mntv
-    [ "$media" = "/mnt" ] || mntv="-v /mnt:/mnt:rslave"
+    local mediav
+    [ -z "$media" ] || mediav='-v '"$media:/media"
 
     docker run --restart=unless-stopped -d \
     --device /dev/rpc0:/dev/rpc0 \
@@ -53,7 +53,7 @@ install(){
     -v /var/tmp/vowb:/var/tmp/vowb \
     --pid=host \
     --dns=172.17.0.1 \
-    -p $port:8096 -v "$config:/config" $cachev -v "$media:/media:rslave" $mntv --name myjellyfin-rtk "$image_name"
+    -p $port:8096 -v "$config:/config" $cachev $mediav -v /mnt:/mnt:rslave --name myjellyfin-rtk "$image_name"
 }
 
 
