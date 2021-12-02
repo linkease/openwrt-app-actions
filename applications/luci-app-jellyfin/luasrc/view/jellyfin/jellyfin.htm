@@ -100,8 +100,8 @@
         let config_path = config.value
         let cache_path = cache.value
 
-        if (media_path == "" || config_path == "") {
-            alert("<%:Media path and Config path could not be empty!%>");
+        if (config_path == "") {
+            alert("<%:Config path could not be empty!%>");
             return false;
         }
 

@@ -71,7 +71,7 @@ function install_container()
 	local port = luci.http.formvalue("port")
 
 	uci:tset(keyword, "@"..keyword.."[0]", {
-		media_path = media_path or "/mnt/sda1/media",
+		media_path = media_path or "",
 		config_path = config_path or "/root/jellyfin/config",
 		cache_path = cache_path or "",
 		port = port or "8096",

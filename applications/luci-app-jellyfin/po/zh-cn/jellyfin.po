@@ -37,5 +37,5 @@ msgstr "转码缓存路径（选填）"
 msgid "Port (optional)"
 msgstr "端口（选填）"
 
-msgid "Media path and Config path could not be empty!"
-msgstr "媒体文件路径和配置数据路径不能为空！"
+msgid "Config path could not be empty!"
+msgstr "配置数据路径不能为空！"
