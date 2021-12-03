@@ -36,7 +36,7 @@ function container_status()
 		container_install = container_install,
 		container_running = container_running,
 		container_port = (port or 8096),
-		media_path = uci:get_first(keyword, keyword, "media_path", "/mnt/sda1/media"),
+		media_path = uci:get_first(keyword, keyword, "media_path", ""),
 		config_path = uci:get_first(keyword, keyword, "config_path", "/root/jellyfin/config"),
 		cache_path = uci:get_first(keyword, keyword, "cache_path", ""),
 	}
