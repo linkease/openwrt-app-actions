@@ -25,8 +25,8 @@ msgstr "安装Jellyfin"
 msgid "Collecting data..."
 msgstr "收集数据..."
 
-msgid "Media path"
-msgstr "媒体文件路径"
+msgid "Media path (optional)"
+msgstr "媒体文件路径（选填）"
 
 msgid "Config path"
 msgstr "配置数据路径"

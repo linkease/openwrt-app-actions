@@ -1,6 +1,6 @@
 config jellyfin
 	option 'port' '8096'
 	option 'image' 'default'
-	option 'media_path' '/mnt/sda1/media'
+	option 'media_path' ''
 	option 'config_path' '/root/jellyfin/config'
 	option 'cache_path' ''
