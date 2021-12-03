@@ -7,13 +7,14 @@ image_name=`uci get kodexplorer.@kodexplorer[0].image 2>/dev/null`
 install(){
     local cache=`uci get kodexplorer.@kodexplorer[0].cache_path 2>/dev/null`
     local port=`uci get kodexplorer.@kodexplorer[0].port 2>/dev/null`
-    if [ -z "$cache"]; then
+    if [ -z "$cache" ]; then
         echo "cache path is empty!" >&2
         exit 1
     fi
     [ -z "$port" ] && port=8081
-
-    docker run -d --name kodexplorer -p $port:80 -v $cache:/var/www/html -v /mnt:/mnt:rslave $image_name
+    local mntv="/mnt:/mnt"
+    mountpoint -q /mnt && mntv="$mntv:rslave"
+    docker run -d --name kodexplorer -p $port:80 -v $cache:/var/www/html -v $mntv $image_name
 }
 
 
