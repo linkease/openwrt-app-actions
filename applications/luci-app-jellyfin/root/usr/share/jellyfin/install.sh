@@ -17,20 +17,14 @@ install(){
     local cache=`uci get jellyfin.@jellyfin[0].cache_path 2>/dev/null`
     local port=`uci get jellyfin.@jellyfin[0].port 2>/dev/null`
 
-    if [ -z "$config"]; then
+    if [ -z "$config" ]; then
         echo "config path is empty!" >&2
         exit 1
     fi
 
-    local cachev
-    [ -z "$cache" ] || cachev='-v "'"$cache:/config/transcodes"'"'
-
     [ -z "$port" ] && port=8096
 
-    local mediav
-    [ -z "$media" ] || mediav='-v "'"$media:/media"'"'
-
-    docker run --restart=unless-stopped -d \
+    local cmd="docker run --restart=unless-stopped -d \
     --device /dev/rpc0:/dev/rpc0 \
     --device /dev/rpc1:/dev/rpc1 \
     --device /dev/rpc2:/dev/rpc2 \
@@ -53,7 +47,17 @@ install(){
     -v /var/tmp/vowb:/var/tmp/vowb \
     --pid=host \
     --dns=172.17.0.1 \
-    -p $port:8096 -v "$config:/config" $cachev $mediav -v /mnt:/mnt:rslave --name myjellyfin-rtk "$image_name"
+    -p $port:8096 -v \"$config:/config\""
+
+    [ -z "$cache" ] || cmd="$cmd -v \"$cache:/config/transcodes\""
+    [ -z "$media" ] || cmd="$cmd -v \"$media:/media\""
+
+    cmd="$cmd -v /mnt:/mnt"
+    mountpoint -q /mnt && cmd="$cmd:rslave"
+    cmd="$cmd --name myjellyfin-rtk \"$image_name\""
+
+    echo "$cmd" >&2
+    eval "$cmd"
 }
 
 
