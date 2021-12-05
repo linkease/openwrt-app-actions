@@ -84,15 +84,15 @@ function install_container()
 	local install_wxedge = function()
 		local os   = require "os"
 		local fs   = require "nixio.fs"
-		local c = ("sh /usr/share/wxedge/install.sh -i >/tmp/log/wxedge.stdout 2>/tmp/log/wxedge.stderr")
+		local c = ("sh /usr/share/wxedge/install.sh -i >/var/log/wxedge.stdout 2>/var/log/wxedge.stderr")
 		-- docker:append_status(c)
 
 		local r = os.execute(c)
-		local e = fs.readfile("/tmp/log/wxedge.stderr")
-		local o = fs.readfile("/tmp/log/wxedge.stdout")
+		local e = fs.readfile("/var/log/wxedge.stderr")
+		local o = fs.readfile("/var/log/wxedge.stdout")
 
-		fs.unlink("/tmp/log/wxedge.stderr")
-		fs.unlink("/tmp/log/wxedge.stdout")
+		fs.unlink("/var/log/wxedge.stderr")
+		fs.unlink("/var/log/wxedge.stdout")
 
 		if r == 0 then
 			docker:append_status(o)
