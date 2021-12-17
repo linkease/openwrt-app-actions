@@ -94,15 +94,15 @@ function install_container()
 	local install_jellyfin = function()
 		local os   = require "os"
 		local fs   = require "nixio.fs"
-		local c = ("sh /usr/share/jellyfin/install.sh -i >/tmp/log/jellyfin.stdout 2>/tmp/log/jellyfin.stderr")
+		local c = ("sh /usr/share/jellyfin/install.sh -i >/var/log/jellyfin.stdout 2>/var/log/jellyfin.stderr")
 		-- docker:append_status(c)
 
 		local r = os.execute(c)
-		local e = fs.readfile("/tmp/log/jellyfin.stderr")
-		local o = fs.readfile("/tmp/log/jellyfin.stdout")
+		local e = fs.readfile("/var/log/jellyfin.stderr")
+		local o = fs.readfile("/var/log/jellyfin.stdout")
 
-		fs.unlink("/tmp/log/jellyfin.stderr")
-		fs.unlink("/tmp/log/jellyfin.stdout")
+		fs.unlink("/var/log/jellyfin.stderr")
+		fs.unlink("/var/log/jellyfin.stdout")
 
 		if r == 0 then
 			docker:append_status(o)

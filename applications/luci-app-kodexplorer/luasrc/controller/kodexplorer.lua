@@ -87,15 +87,15 @@ function install_container()
 	local install_kodexplorer = function()
 		local os   = require "os"
 		local fs   = require "nixio.fs"
-		local c = ("sh /usr/share/kodexplorer/install.sh -i >/tmp/log/kodexplorer.stdout 2>/tmp/log/kodexplorer.stderr")
+		local c = ("sh /usr/share/kodexplorer/install.sh -i >/var/log/kodexplorer.stdout 2>/var/log/kodexplorer.stderr")
 		-- docker:append_status(c)
 
 		local r = os.execute(c)
-		local e = fs.readfile("/tmp/log/kodexplorer.stderr")
-		local o = fs.readfile("/tmp/log/kodexplorer.stdout")
+		local e = fs.readfile("/var/log/kodexplorer.stderr")
+		local o = fs.readfile("/var/log/kodexplorer.stdout")
 
-		fs.unlink("/tmp/log/kodexplorer.stderr")
-		fs.unlink("/tmp/log/kodexplorer.stdout")
+		fs.unlink("/var/log/kodexplorer.stderr")
+		fs.unlink("/var/log/kodexplorer.stdout")
 
 		if r == 0 then
 			docker:append_status(o)
