@@ -62,6 +62,7 @@ end
 function install_container()
 
 	local image = util.exec("sh /usr/share/ubuntu/install.sh -l") 
+	local docker_on_disk = tonumber(util.exec("sh /usr/share/ubuntu/install.sh -c")) 
 	local password = luci.http.formvalue("password")
 	local port = luci.http.formvalue("port")
 
@@ -110,14 +111,21 @@ function install_container()
 	-- }
 	-- luci.http.prepare_content("application/json")
 	-- luci.http.write_json(status)
+	-- docker:append_status("docker not in disk" .. docker_on_disk .."")
 
-	if image then
-		docker:write_status("ubuntu installing\n")
-		pull_image(image)
-		install_ubuntu()
+	if docker_on_disk == 0 then
+		docker:write_status("docker not in disk\n")
 	else
-		docker:write_status("ubuntu image not defined!\n")
+		if image then
+			docker:write_status("ubuntu installing\n")
+			pull_image(image)
+			install_ubuntu()
+		else
+			docker:write_status("ubuntu image not defined!\n")
+		end
 	end
+
+	
 
 end
 

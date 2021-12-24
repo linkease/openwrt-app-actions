@@ -4,16 +4,16 @@ image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
 
 [ -z "$image_name" ] && image_name="linkease/desktop-ubuntu-arm64:develop"
 
+DOCKERPATH=`uci get dockerman.local.daemon_data_root`
+result=findmnt -T $DOCKERPATH | grep -q /dev/sd | wc -l
+
 install(){
     local password=`uci get ubuntu.@ubuntu[0].password 2>/dev/null`
     local port=`uci get ubuntu.@ubuntu[0].port 2>/dev/null`
     [ -z "$password" ] && password="password"
     [ -z "$port" ] && port=6901
 
-    DOCKERPATH=`uci get dockerman.local.daemon_data_root`
-    if findmnt -T ${DOCKERPATH} | grep -q /dev/sd ; 
-    then
-        docker network ls -f "name=docker-pcnet" | grep -q docker-pcnet || \
+    docker network ls -f "name=docker-pcnet" | grep -q docker-pcnet || \
         docker network create -d bridge --subnet=10.10.100.0/24 --ip-range=10.10.100.0/24 --gateway=10.10.100.1 docker-pcnet
         
         docker run -d --name ubuntu \
@@ -26,14 +26,11 @@ install(){
         -e VNC_PW=$password \
         -e VNC_USE_HTTP=0 \
         --restart unless-stopped \
-        $image_name
-    else
-        echo "docker not in disk"
-    fi                         
+        $image_name                       
 }
 
 
-while getopts ":il" optname
+while getopts ":ilc" optname
 do
     case "$optname" in
         "l")
@@ -41,6 +38,9 @@ do
         ;;
         "i")
         install
+        ;;
+        "c")
+        echo -n $result
         ;;
         ":")
         echo "No argument value for option $OPTARG"
