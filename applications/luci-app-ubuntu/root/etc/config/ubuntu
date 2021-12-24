@@ -1,4 +1,4 @@
-config kodexplorer
+config ubuntu
 	option 'image' 'linkease/desktop-ubuntu-arm64:develop'
 	option 'password' 'password'
 	option 'port' '6901'
