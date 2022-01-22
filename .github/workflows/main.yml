@@ -7,7 +7,7 @@ on:
       applications:
         description: 'build applications'
         required: true
-        default: 'linkease'
+        default: 'linkease luci-app-linkease'
 
 env:
   SDK_NAME: openwrt-sdk-19.07.8-mvebu-cortexa53_gcc-7.5.0_musl.Linux-x86_64
@@ -56,10 +56,12 @@ jobs:
       - name: Load custom feeds
         run: |
             arr=("${{ github.event.inputs.applications }}")
+            cd apps
+            mkdir apps
             for var in ${arr[@]}
             do
               echo $var
-              cp -r /apps/applications/$var/  /apps/apps/$var
+              cp -r applications/$var  apps/$var
             done
             echo "src-link apps `pwd`/apps/apps" >> ${SDK_NAME}/feeds.conf.default
 
