@@ -1,12 +1,13 @@
 name: Build Meta
 
 on:
+  repository_dispatch:
   workflow_dispatch:
-  push:
-    branches:
-      - main
-    paths:
-      - 'applications/**'
+    inputs:
+      applications:
+        description: 'build applications'
+        required: true
+        default: 'linkease'
 
 env:
   SDK_NAME: openwrt-sdk-19.07.8-mvebu-cortexa53_gcc-7.5.0_musl.Linux-x86_64
@@ -53,7 +54,13 @@ jobs:
           EOF
 
       - name: Load custom feeds
-        run: echo "src-link apps `pwd`/apps/applications" >> ${SDK_NAME}/feeds.conf.default
+        run: |
+            arr=("${{ github.event.inputs.applications }}")
+            for var in ${arr[@]}
+            do
+              cp -r /apps/applications/$var  /apps/apps/$var
+            done
+            echo "src-link apps `pwd`/apps/apps" >> ${SDK_NAME}/feeds.conf.default
 
       - name: Update feeds
         run: |
