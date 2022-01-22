@@ -63,6 +63,7 @@ jobs:
               echo $var
               cp -r applications/$var  apps/$var
             done
+            cd ..
             echo "src-link apps `pwd`/apps/apps" >> ${SDK_NAME}/feeds.conf.default
 
       - name: Update feeds
