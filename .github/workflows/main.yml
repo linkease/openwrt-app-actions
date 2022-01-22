@@ -58,7 +58,8 @@ jobs:
             arr=("${{ github.event.inputs.applications }}")
             for var in ${arr[@]}
             do
-              cp -r /apps/applications/$var  /apps/apps/$var
+              echo $var
+              cp -r /apps/applications/$var/  /apps/apps/$var
             done
             echo "src-link apps `pwd`/apps/apps" >> ${SDK_NAME}/feeds.conf.default
 
