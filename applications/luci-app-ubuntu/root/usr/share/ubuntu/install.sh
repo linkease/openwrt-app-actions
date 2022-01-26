@@ -5,7 +5,7 @@ image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
 [ -z "$image_name" ] && image_name="linkease/desktop-ubuntu-arm64:develop"
 
 DOCKERPATH=`uci get dockerman.local.daemon_data_root`
-result=findmnt -T $DOCKERPATH | grep -q /dev/sd | wc -l
+result=`findmnt -T $DOCKERPATH | grep -c /dev/sd`
 
 install(){
     local password=`uci get ubuntu.@ubuntu[0].password 2>/dev/null`
