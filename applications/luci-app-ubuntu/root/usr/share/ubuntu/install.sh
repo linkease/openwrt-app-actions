@@ -2,7 +2,14 @@
 
 image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
 
-[ -z "$image_name" ] && image_name="linkease/desktop-ubuntu-arm64:develop"
+# TODO auto detech platform
+# TODO option for full and standard
+# linkease/desktop-ubuntu-full-arm64:latest
+# linkease/desktop-ubuntu-standard-arm64:latest
+# linkease/desktop-ubuntu-full-amd64:latest
+# linkease/desktop-ubuntu-standard-amd64:latest
+
+[ -z "$image_name" ] && image_name="linkease/desktop-ubuntu-full-arm64:latest"
 
 DOCKERPATH=`uci get dockerman.local.daemon_data_root`
 result=`findmnt -T $DOCKERPATH | grep -c /dev/sd`
