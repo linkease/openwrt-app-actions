@@ -1,7 +1,6 @@
 #!/bin/sh
 
 image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
-
 # TODO auto detech platform
 # TODO option for full and standard
 # linkease/desktop-ubuntu-full-arm64:latest
@@ -9,7 +8,7 @@ image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
 # linkease/desktop-ubuntu-full-amd64:latest
 # linkease/desktop-ubuntu-standard-amd64:latest
 
-[ -z "$image_name" ] && image_name="linkease/desktop-ubuntu-full-arm64:latest"
+[ -z "$image_name" ] && image_name="linkease/desktop-ubuntu-standard-arm64:latest"
 
 DOCKERPATH=`uci get dockerman.local.daemon_data_root`
 result=`findmnt -T $DOCKERPATH | grep -c /dev/sd`
@@ -17,23 +16,32 @@ result=`findmnt -T $DOCKERPATH | grep -c /dev/sd`
 install(){
     local password=`uci get ubuntu.@ubuntu[0].password 2>/dev/null`
     local port=`uci get ubuntu.@ubuntu[0].port 2>/dev/null`
+    local version=`uci get ubuntu.@ubuntu[0].version 2>/dev/null`
     [ -z "$password" ] && password="password"
     [ -z "$port" ] && port=6901
 
+    if [ "${version}" == "full"];then
+        image_name="linkease/desktop-ubuntu-full-arm64:latest"
+    fi
+
+    if [ "${version}" == "standard"];then
+        image_name="linkease/desktop-ubuntu-standard-arm64:latest"
+    fi
+
     docker network ls -f "name=docker-pcnet" | grep -q docker-pcnet || \
-        docker network create -d bridge --subnet=10.10.100.0/24 --ip-range=10.10.100.0/24 --gateway=10.10.100.1 docker-pcnet
-        
-        docker run -d --name ubuntu \
-        --dns=223.5.5.5 -u=0:0 \
-        -v=/mnt:/mnt:rslave \
-        --net="docker-pcnet" \
-        --ip=10.10.100.9 \
-        --shm-size=512m \
-        -p $port:6901 \
-        -e VNC_PW=$password \
-        -e VNC_USE_HTTP=0 \
-        --restart unless-stopped \
-        $image_name                       
+    docker network create -d bridge --subnet=10.10.100.0/24 --ip-range=10.10.100.0/24 --gateway=10.10.100.1 docker-pcnet
+    
+    docker run -d --name ubuntu \
+    --dns=223.5.5.5 -u=0:0 \
+    -v=/mnt:/mnt:rslave \
+    --net="docker-pcnet" \
+    --ip=10.10.100.9 \
+    --shm-size=512m \
+    -p $port:6901 \
+    -e VNC_PW=$password \
+    -e VNC_USE_HTTP=0 \
+    --restart unless-stopped \
+    $image_name                       
 }
 
 

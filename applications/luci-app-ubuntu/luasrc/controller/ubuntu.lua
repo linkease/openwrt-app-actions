@@ -65,10 +65,12 @@ function install_container()
 	local docker_on_disk = tonumber(util.exec("sh /usr/share/ubuntu/install.sh -c")) 
 	local password = luci.http.formvalue("password")
 	local port = luci.http.formvalue("port")
+	local version = luci.http.formvalue("version")
 
 	uci:tset(keyword, "@"..keyword.."[0]", {
 		password = password or "password",
 		port = port or "6901",
+		version = version or "stanard",
 	})
 	uci:save(keyword)
 	uci:commit(keyword)

@@ -30,6 +30,8 @@
                                     tb.innerHTML += ("<div class=\"cbi-value\"><label class=\"cbi-value-title\" for=\"" + c.id + "\">" + c.label + "</label>"
                                         + "<div class=\"cbi-value-field\"><input type=\"text\" class=\"cbi-input-text\" id=\"" + c.id + "\" value=\"" + c.value + "\"/></div></div>");
                                 });
+                                tb.innerHTML += ("<div class=\"cbi-value\"><label class=\"cbi-value-title\" for=\" version \"><%:Version%></label>"
+                                        + "<div class=\"cbi-value-form\"><form><select id=\"version\"><option value=\"standard\"><%:standard version%></option><option value=\"full\"><%:full version%></option></select></form></div></div>");
                                 tb.innerHTML += ("<div class=\"cbi-value\"><label class=\"cbi-value-title\"></label>" 
                                         + "<div class=\"cbi-value-field\"><input class=\"btn cbi-button cbi-button-apply\" type=\"button\" value=\" <%:install ubuntu%> \" onclick=\"install_container()\" /></div></div><br>");
                             }
@@ -93,10 +95,10 @@
         
         let password = document.getElementById('password').value
         let port = document.getElementById('port').value
+        let version = document.getElementById('version').value
+        // alert(" 安装容器'" + version + "' ");
 
-
-        xhr_post(INSTALL_URL, {password: password, port: port}, (x, d) => {
-            // alert(" 删除容器'" + d.image_name + "' ");
+        xhr_post(INSTALL_URL, {password: password, port: port, version: version}, (x, d) => {
             location.reload()
         });
         uci_confirm_docker();
