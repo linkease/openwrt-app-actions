@@ -13,21 +13,24 @@ image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
 DOCKERPATH=`uci get dockerman.local.daemon_data_root`
 result=`findmnt -T $DOCKERPATH | grep -c /dev/sd`
 
-install(){
-    local password=`uci get ubuntu.@ubuntu[0].password 2>/dev/null`
-    local port=`uci get ubuntu.@ubuntu[0].port 2>/dev/null`
+get_image(){
     local version=`uci get ubuntu.@ubuntu[0].version 2>/dev/null`
-    [ -z "$password" ] && password="password"
-    [ -z "$port" ] && port=6901
 
-    if [ "${version}" == "full"];then
+    if [ "${version}" == "full" ];then
         image_name="linkease/desktop-ubuntu-full-arm64:latest"
     fi
 
-    if [ "${version}" == "standard"];then
+    if [ "${version}" == "standard" ];then
         image_name="linkease/desktop-ubuntu-standard-arm64:latest"
     fi
+}
 
+install(){
+    local password=`uci get ubuntu.@ubuntu[0].password 2>/dev/null`
+    local port=`uci get ubuntu.@ubuntu[0].port 2>/dev/null`
+    [ -z "$password" ] && password="password"
+    [ -z "$port" ] && port=6901
+    get_image
     docker network ls -f "name=docker-pcnet" | grep -q docker-pcnet || \
     docker network create -d bridge --subnet=10.10.100.0/24 --ip-range=10.10.100.0/24 --gateway=10.10.100.1 docker-pcnet
     
@@ -49,6 +52,7 @@ while getopts ":ilc" optname
 do
     case "$optname" in
         "l")
+        get_image
         echo -n $image_name
         ;;
         "i")

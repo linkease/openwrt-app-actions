@@ -61,7 +61,6 @@ end
 
 function install_container()
 
-	local image = util.exec("sh /usr/share/ubuntu/install.sh -l") 
 	local docker_on_disk = tonumber(util.exec("sh /usr/share/ubuntu/install.sh -c")) 
 	local password = luci.http.formvalue("password")
 	local port = luci.http.formvalue("port")
@@ -74,6 +73,7 @@ function install_container()
 	})
 	uci:save(keyword)
 	uci:commit(keyword)
+	local image = util.exec("sh /usr/share/ubuntu/install.sh -l") 
 
 	local pull_image = function(image)
 		docker:append_status("Images: " .. "pulling" .. " " .. image .. "...\n")
