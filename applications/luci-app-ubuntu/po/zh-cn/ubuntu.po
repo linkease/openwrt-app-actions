@@ -55,8 +55,8 @@ msgstr "用户名"
 msgid "Password"
 msgstr "密码"
 
-msgid "LocalAddress"
+msgid "LanAddress"
 msgstr "内网地址"
 
-msgid "PublicAddress"
+msgid "WanAddress"
 msgstr "外网地址"
