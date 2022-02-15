@@ -2,7 +2,7 @@ module("luci.controller.ubuntu", package.seeall)
 
 function index()
 
-	entry({'admin', 'services', 'ubuntu'}, alias('admin', 'services', 'ubuntu', 'client'), _('ubuntu'), 10)
+	entry({'admin', 'services', 'ubuntu'}, alias('admin', 'services', 'ubuntu', 'client'), _('Ubuntu'), 10)
 	entry({"admin", "services", "ubuntu",'client'}, cbi("ubuntu/status"), nil).leaf = true
 
 	entry({"admin", "services", "ubuntu","status"}, call("get_container_status"))
@@ -27,7 +27,7 @@ function container_status()
 	local container_install = (string.len(container_id) > 0)
 	local container_running = container_install and (string.len(util.trim(util.exec("docker ps -qf 'id="..container_id.."'"))) > 0)
 	local port = tonumber(uci:get_first(keyword, keyword, "port", "6901"))
-
+	local public_address = util.exec("curl cip.cc | grep \"IP\"  | grep -oE '[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}' | tr -d '\n'")
 	local status = {
 		docker_install = docker_install,
 		docker_start = docker_running,
@@ -36,6 +36,9 @@ function container_status()
 		container_install = container_install,
 		container_running = container_running,
 		password = uci:get_first(keyword, keyword, "password", ""),
+		user_name = "kasm_user",
+		local_address = "https://10.10.100.9:"..port.."",
+		public_address = "https://"..public_address..":"..port..""
 	}
 
 	return status
@@ -65,7 +68,7 @@ function install_container()
 	local password = luci.http.formvalue("password")
 	local port = luci.http.formvalue("port")
 	local version = luci.http.formvalue("version")
-
+	
 	uci:tset(keyword, "@"..keyword.."[0]", {
 		password = password or "password",
 		port = port or "6901",

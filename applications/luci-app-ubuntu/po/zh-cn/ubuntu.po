@@ -48,3 +48,15 @@ msgstr "标准版本"
 
 msgid "full version"
 msgstr "全量版本"
+
+msgid "UserName"
+msgstr "用户名"
+
+msgid "Password"
+msgstr "密码"
+
+msgid "LocalAddress"
+msgstr "内网地址"
+
+msgid "PublicAddress"
+msgstr "外网地址"
