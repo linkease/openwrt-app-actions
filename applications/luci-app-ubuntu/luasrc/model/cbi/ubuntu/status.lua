@@ -3,10 +3,10 @@ local uci = luci.model.uci.cursor()
 local sys = require 'luci.sys'
 local docker = require "luci.model.docker"
 
-m = SimpleForm("ubuntu", translate("ubuntu"), translate("Linkease-PC是为EasePi定制的一套Ubuntu系统。纯英文系统，欢迎各位极客玩家享用。默认<用户名:kasm_user  密码:password>")
+m = SimpleForm("ubuntu", translate("ubuntu"), translate("带Web远程桌面的Docker版Ubuntu，纯英文系统，欢迎各位极客玩家享用。默认<用户名:kasm_user  密码:password>")
 .. translatef(" "
 .. "<a href=\"%s\" target=\"_blank\">"
-.. "访问官网</a>", "https://easepi.linkease.com/"))
+.. "访问官网</a>", "https://www.kasmweb.com"))
 m.submit=false
 m.reset=false
 
