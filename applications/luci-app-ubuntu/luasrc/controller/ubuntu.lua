@@ -27,7 +27,13 @@ function container_status()
 	local container_install = (string.len(container_id) > 0)
 	local container_running = container_install and (string.len(util.trim(util.exec("docker ps -qf 'id="..container_id.."'"))) > 0)
 	local port = tonumber(uci:get_first(keyword, keyword, "port", "6901"))
-	local public_address = util.exec("curl cip.cc | grep \"IP\"  | grep -oE '[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}' | tr -d '\n'")
+	local wan_status = util.ubus("network.interface.wan", "status", { })
+	local public_address = ""
+	if wan_status["ipv4-address"] and wan_status["ipv4-address"][1] and wan_status["ipv4-address"][1]["address"] then
+		public_address = wan_status["ipv4-address"][1]["address"]
+	end
+	-- local nxfs      = require "nixio.fs"
+	-- nxfs.writefile("/tmp/test.log", dump["ipv4-address"][1]["address"])
 	local status = {
 		docker_install = docker_install,
 		docker_start = docker_running,
