@@ -10,8 +10,8 @@ on:
         default: 'luci-app-jellyfin luci-app-kodexplorer'
 
 env:
-  SDK_NAME: openwrt-sdk-19.07.8-mvebu-cortexa53_gcc-7.5.0_musl.Linux-x86_64
-  SDK_URL: https://downloads.openwrt.org/releases/19.07.8/targets/mvebu/cortexa53/
+  SDK_NAME: openwrt-sdk-21.02.0-mvebu-cortexa53_gcc-8.4.0_musl.Linux-x86_64
+  SDK_URL: https://downloads.openwrt.org/releases/21.02.0/targets/mvebu/cortexa53/
   TZ: Asia/Shanghai
 
 jobs:
@@ -51,8 +51,6 @@ jobs:
         run: |
           cat <<EOF >${SDK_NAME}/.config
           # CONFIG_SIGNED_PACKAGES is not set
-          # CONFIG_LIBCURL_MBEDTLS is not set
-          CONFIG_LIBCURL_OPENSSL=y
           EOF
 
       - name: Load custom feeds
