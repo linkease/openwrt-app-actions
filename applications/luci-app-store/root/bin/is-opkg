@@ -8,7 +8,7 @@ LISTS_DIR_O=/tmp/opkg-lists
 LISTS_DIR=${IS_ROOT}${LISTS_DIR_O}
 OPKG_CONF_DIR=${IS_ROOT}/etc/opkg
 APP_LIST_FILE=/etc/istore/app.list
-BACKUP_CONFIG_FILE=/etc/istore/last_backup_dir
+BACKUP_CONFIG_FILE=/etc/config/istore
 FEEDS_SERVER=https://istore.linkease.com/repo
 ARCH=`jsonfilter -i /etc/.app_store.id -e '$.arch'`
 
@@ -396,24 +396,6 @@ get_available_backup_file_list() {
     fi
 }
 
-get_local_backup_dir_path() {
-    if [ -f ${BACKUP_CONFIG_FILE} ];then
-        cat ${BACKUP_CONFIG_FILE}
-    else
-        echo "no backup config file"
-        exit 1
-    fi
-}
-
-set_local_backup_dir_path() {
-    if [ -n "$1" ]; then
-        echo "$1" > ${BACKUP_CONFIG_FILE}
-    else
-        echo "input backup dir is null"
-        exit 1
-    fi
-}
-
 usage() {
     echo "usage: is-opkg sub-command [arguments...]"
     echo "where sub-command is one of:"
@@ -431,8 +413,6 @@ usage() {
     echo "      get_backup_app_list_file_path   get light backup app list file path"
     echo "      get_backup_app_list             get light backup app list"
     echo "      get_available_backup_file_list  get local available backup file list"
-    echo "      get_local_backup_dir_path       get local backup directory"
-    echo "      set_local_backup_dir_path       set local backup directory"
     echo "      opkg                            sys opkg wrap"
 }
 
@@ -480,12 +460,6 @@ case $action in
     ;;
     "get_available_backup_file_list")
         get_available_backup_file_list "$@"
-    ;;
-    "get_local_backup_dir_path")
-        get_local_backup_dir_path
-    ;;
-    "set_local_backup_dir_path")
-        set_local_backup_dir_path "$@"
     ;;
     "opkg")
         opkg_wrap "$@"

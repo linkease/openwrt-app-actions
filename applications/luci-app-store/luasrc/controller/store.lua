@@ -26,6 +26,7 @@ function index()
 
     entry({"admin", "store", "get_support_backup_features"}, call("get_support_backup_features"))
     entry({"admin", "store", "light_backup"}, post("light_backup"))
+    entry({"admin", "store", "get_light_backup_file"}, call("get_light_backup_file"))
     entry({"admin", "store", "local_backup"}, post("local_backup"))
     entry({"admin", "store", "light_restore"}, post("light_restore"))
     entry({"admin", "store", "local_restore"}, post("local_restore"))
@@ -344,15 +345,15 @@ end
 function get_support_backup_features()
     local jsonc = require "luci.jsonc"
     local error_ret = {code = 500, msg = "Unknown"}
-    local success_ret = {code = 200,result = "Unknown"}
+    local success_ret = {code = 200,msg = "Unknown"}
     local r,o,e = is_exec(myopkg .. " get_support_backup_features")
     if r ~= 0 then
         error_ret.msg = e
         luci.http.prepare_content("application/json")
         luci.http.write_json(error_ret)
     else
-        success_ret.code = o == "" and 304 or 200
-        success_ret.result = jsonc.stringify(split(o,'\n'))
+        success_ret.code = 200
+        success_ret.msg = jsonc.stringify(split(o,'\n'))
         luci.http.prepare_content("application/json")
         luci.http.write_json(success_ret)
     end
@@ -360,24 +361,54 @@ end
 
 -- post light_backup
 function light_backup()
-    local code, out, err, ret
-    code,out,err = is_exec(myopkg .. " backup")
-    ret = {
-        code = code,
-        stdout = out,
-        stderr = err
-    }
-    if code == 0 then
-        local light_backup_cmd  = "tar -c %s | gzip 2>/dev/null"
-        local loght_backup_filelist = "/etc/istore/app.list"
-        local reader = ltn12_popen(light_backup_cmd:format(loght_backup_filelist))
-        luci.http.header('Content-Disposition', 'attachment; filename="light-backup-%s-%s.tar.gz"' % {
-			luci.sys.hostname(), os.date("%Y-%m-%d")})
-		luci.http.prepare_content("application/x-targz")
-		luci.ltn12.pump.all(reader, luci.http.write)
-    else
+    local jsonc = require "luci.jsonc"
+    local error_ret = {code = 500, msg = "Unknown"}
+    local success_ret = {code = 200,msg = "Unknown"}
+    local r,o,e = is_exec(myopkg .. " backup")
+
+    if r ~= 0 then
+        error_ret.msg = e
         luci.http.prepare_content("application/json")
-        luci.http.write_json(ret)
+        luci.http.write_json(error_ret)
+    else
+        success_ret.code = 200
+        success_ret.msg = o:gsub("[\r\n]", "")
+        luci.http.prepare_content("application/json")
+        luci.http.write_json(success_ret)
+    end
+end
+
+-- call get_light_backup_file
+function get_light_backup_file()
+    local light_backup_cmd  = "tar -c %s | gzip 2>/dev/null"
+    local loght_backup_filelist = "/etc/istore/app.list"
+    local reader = ltn12_popen(light_backup_cmd:format(loght_backup_filelist))
+    luci.http.header('Content-Disposition', 'attachment; filename="light-backup-%s-%s.tar.gz"' % {
+        luci.sys.hostname(), os.date("%Y-%m-%d")})
+    luci.http.prepare_content("application/x-targz")
+    luci.ltn12.pump.all(reader, luci.http.write)
+end
+
+local function update_local_backup_path(path)
+    local uci = require "uci"
+    local fs = require "nixio.fs"
+    local x = uci.cursor()
+    local local_backup_path
+
+    if fs.access("/etc/config/istore") then
+        local_backup_path = x:get("istore","istore","local_backup_path")
+    else
+        --create config file
+        local f=io.open("/etc/config/istore","a+")
+        f:write("config istore \'istore\'\n\toption local_backup_path \'\'")
+        f:flush()
+        f:close()        
+    end
+
+    if path ~= local_backup_path then
+        -- set uci config
+        x:set("istore","istore","local_backup_path",path)
+        x:commit("istore")        
     end
 end
 
@@ -387,14 +418,25 @@ function local_backup()
     local error_ret
     local path = luci.http.formvalue("path")
     if path ~= "" then
-        code,out,err = is_exec(myopkg .. " backup " .. path)
-        ret = {
-            code = code,
-            stdout = out,
-            stderr = err
-        }
-        luci.http.prepare_content("application/json")
-        luci.http.write_json(ret)
+        -- judge path
+        code,out,err = is_exec("findmnt -T " .. path .. " -o TARGET|sed -n 2p")
+        if out:gsub("[\r\n]", "") == "/" or out:gsub("[\r\n]", "") == "/tmp" then
+            -- error
+            error_ret = {code = 500, msg = "Path Error,Can not be / or tmp."}
+            luci.http.prepare_content("application/json")
+            luci.http.write_json(error_ret)            
+        else
+            -- update local backup path
+            update_local_backup_path(path)
+            code,out,err = is_exec(myopkg .. " backup " .. path)
+            ret = {
+                code = code,
+                stdout = out,
+                stderr = err
+            }
+            luci.http.prepare_content("application/json")
+            luci.http.write_json(ret)
+        end
     else
         -- error
         error_ret = {code = 500, msg = "Path Unknown"}
@@ -477,15 +519,15 @@ end
 function get_backup_app_list_file_path()
     local jsonc = require "luci.jsonc"
     local error_ret = {code = 500, msg = "Unknown"}
-    local success_ret = {code = 200,result = "Unknown"}
+    local success_ret = {code = 200,msg = "Unknown"}
     local r,o,e = is_exec(myopkg .. " get_backup_app_list_file_path")
     if r ~= 0 then
         error_ret.msg = e
         luci.http.prepare_content("application/json")
         luci.http.write_json(error_ret)
     else
-        success_ret.code = o == "" and 304 or 200
-        success_ret.result = o:gsub("[\r\n]", "")
+        success_ret.code = 200
+        success_ret.msg = o:gsub("[\r\n]", "")
         luci.http.prepare_content("application/json")
         luci.http.write_json(success_ret)
     end
@@ -495,15 +537,15 @@ end
 function get_backup_app_list()
     local jsonc = require "luci.jsonc"
     local error_ret = {code = 500, msg = "Unknown"}
-    local success_ret = {code = 200,result = "Unknown"}
+    local success_ret = {code = 200,msg = "Unknown"}
     local r,o,e = is_exec(myopkg .. " get_backup_app_list")
     if r ~= 0 then
         error_ret.msg = e
         luci.http.prepare_content("application/json")
         luci.http.write_json(error_ret)
     else
-        success_ret.code = o == "" and 304 or 200
-        success_ret.result = jsonc.stringify(split(o,'\n'))
+        success_ret.code = 200
+        success_ret.msg = jsonc.stringify(split(o,'\n'))
         luci.http.prepare_content("application/json")
         luci.http.write_json(success_ret)
     end
@@ -513,19 +555,21 @@ end
 function get_available_backup_file_list()
     local jsonc = require "luci.jsonc"
     local error_ret = {code = 500, msg = "Unknown"}
-    local success_ret = {code = 200,result = "Unknown"}
+    local success_ret = {code = 200,msg = "Unknown"}
     local path = luci.http.formvalue("path")
     local r,o,e
 
     if path ~= "" then
+        -- update local backup path
+        update_local_backup_path(path)
         r,o,e = is_exec(myopkg .. " get_available_backup_file_list " .. path)
         if r ~= 0 then
             error_ret.msg = e
             luci.http.prepare_content("application/json")
             luci.http.write_json(error_ret)
         else
-            success_ret.code = o == "" and 304 or 200
-            success_ret.result = jsonc.stringify(split(o,'\n'))
+            success_ret.code = 200
+            success_ret.msg = jsonc.stringify(split(o,'\n'))
             luci.http.prepare_content("application/json")
             luci.http.write_json(success_ret)
         end
@@ -540,39 +584,43 @@ end
 -- post set_local_backup_dir_path
 function set_local_backup_dir_path()
     local path = luci.http.formvalue("path")
-    local code, out, err, ret
-    local error_ret
+    local success_ret = {code = 200,msg = "Success"}
+    local error_ret = {code = 500, msg = "Unknown"}
+
     if path ~= "" then
-        code,out,err = is_exec(myopkg .. " set_local_backup_dir_path " .. path)
-        ret = {
-            code = code,
-            stdout = out,
-            stderr = err
-        }
+        -- update local backup path
+        update_local_backup_path(path)
         luci.http.prepare_content("application/json")
-        luci.http.write_json(ret)
+        luci.http.write_json(success_ret)
     else
-        error_ret = {code = 500, msg = "Path Unknown"}
+        -- set error code
+        error_ret.msg = "Path Unknown"
         luci.http.prepare_content("application/json")
         luci.http.write_json(error_ret)
-    end
-
+    end        
 end
 
 -- call get_local_backup_dir_path
 function get_local_backup_dir_path()
-    local jsonc = require "luci.jsonc"
-    local error_ret = {code = 500, msg = "Unknown"}
-    local success_ret = {code = 200,result = "Unknown"}
-    local r,o,e = is_exec(myopkg .. " get_local_backup_dir_path")
-    if r ~= 0 then
-        error_ret.msg = e
+    local uci = require "uci"
+    local fs = require "nixio.fs"
+    local x = uci.cursor()
+    local local_backup_path = nil
+    local success_ret = {code = 200,msg = "Unknown"}
+    local error_ret = {code = 500, msg = "Path Unknown"}
+
+    if fs.access("/etc/config/istore") then
+        local_backup_path = x:get("istore","istore","local_backup_path")
+        if local_backup_path == nil then
+            luci.http.prepare_content("application/json")
+            luci.http.write_json(error_ret)
+        else
+            success_ret.msg = local_backup_path:gsub("[\r\n]", "")
+            luci.http.prepare_content("application/json")
+            luci.http.write_json(success_ret)
+        end 
+    else
         luci.http.prepare_content("application/json")
         luci.http.write_json(error_ret)
-    else
-        success_ret.code = o == "" and 304 or 200
-        success_ret.result = o:gsub("[\r\n]", "")
-        luci.http.prepare_content("application/json")
-        luci.http.write_json(success_ret)
     end
 end
