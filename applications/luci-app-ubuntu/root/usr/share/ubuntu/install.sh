@@ -15,14 +15,25 @@ result=`findmnt -T $DOCKERPATH | grep -c /dev/sd`
 
 get_image(){
     local version=`uci get ubuntu.@ubuntu[0].version 2>/dev/null`
-
-    if [ "${version}" == "full" ];then
-        image_name="linkease/desktop-ubuntu-full-arm64:latest"
+    
+    ARCH="arm64"
+    if echo `uname -m` | grep -Eqi 'x86_64'; then
+        ARCH='amd64'
+    elif  echo `uname -m` | grep -Eqi 'aarch64'; then
+        ARCH='amd64'
+    else
+        ARCH='amd64'
     fi
 
-    if [ "${version}" == "standard" ];then
-        image_name="linkease/desktop-ubuntu-standard-arm64:latest"
-    fi
+    #if [ "${version}" == "full" ];then
+    #    image_name="linkease/desktop-ubuntu-full-arm64:latest"
+    #fi
+
+    #if [ "${version}" == "standard" ];then
+    #    image_name="linkease/desktop-ubuntu-standard-arm64:latest"
+    #fi
+    
+    image_name=linkease/desktop-ubuntu-${version}-${ARCH}:latest
 }
 
 install(){
