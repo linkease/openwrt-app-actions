@@ -20,9 +20,9 @@ get_image(){
     if echo `uname -m` | grep -Eqi 'x86_64'; then
         ARCH='amd64'
     elif  echo `uname -m` | grep -Eqi 'aarch64'; then
-        ARCH='amd64'
+        ARCH='arm64'
     else
-        ARCH='amd64'
+        ARCH='arm64'
     fi
 
     #if [ "${version}" == "full" ];then
