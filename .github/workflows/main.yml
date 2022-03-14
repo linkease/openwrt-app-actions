@@ -1,17 +1,17 @@
-name: Build Meta
+name: Build IPKs
 
 on:
   repository_dispatch:
   workflow_dispatch:
     inputs:
       applications:
-        description: 'build applications'
+        description: 'build applications, eg: "luci-app-store luci-app-ddnsto". "all" means build all'
         required: true
-        default: 'luci-app-jellyfin luci-app-kodexplorer'
+        default: 'all'
 
 env:
-  SDK_NAME: openwrt-sdk-21.02.0-mvebu-cortexa53_gcc-8.4.0_musl.Linux-x86_64
-  SDK_URL: https://downloads.openwrt.org/releases/21.02.0/targets/mvebu/cortexa53/
+  SDK_NAME: openwrt-sdk-21.02.2-mvebu-cortexa53_gcc-8.4.0_musl.Linux-x86_64
+  SDK_URL: https://downloads.openwrt.org/releases/21.02.2/targets/mvebu/cortexa53/
   TZ: Asia/Shanghai
 
 jobs:
@@ -19,6 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     name: Build IPKs
     steps:
+      - name: Job Info
+        run: |
+          apps="${{ github.event.inputs.applications }}"
+          echo "::notice title=Apps::$apps"
+
       - name: Checkout
         uses: actions/checkout@main
         with:
@@ -45,7 +50,11 @@ jobs:
         run: tar -xJf ${SDK_NAME}.tar.xz
 
       - name: Clean Code
-        run: rm -f ${SDK_NAME}/package/linux/modules/*
+        run: |
+          rm -f ${SDK_NAME}/package/linux/modules/*
+          rm -f ${SDK_NAME}/package/kernel/linux/modules/*
+          grep 'src-git base ' ${SDK_NAME}/feeds.conf.default > ${SDK_NAME}/feeds.conf
+          grep 'src-git luci ' ${SDK_NAME}/feeds.conf.default >> ${SDK_NAME}/feeds.conf
 
       - name: Write Config
         run: |
@@ -55,25 +64,69 @@ jobs:
 
       - name: Load custom feeds
         run: |
-          arr=("${{ github.event.inputs.applications }}")
-          cd apps
-          mkdir build
-          for var in ${arr[@]}
-          do
-            echo $var
-            cp -r applications/$var  build/$var
-          done
-          cd ..
-          echo "src-link apps `pwd`/apps/build" >> ${SDK_NAME}/feeds.conf.default
+          echo "" >> ${SDK_NAME}/feeds.conf
+          arr="${{ github.event.inputs.applications }}"
+          if [ "$arr" = "all" ]; then
+            echo "src-link apps `pwd`/apps/applications" >> ${SDK_NAME}/feeds.conf
+          else
+            cd apps
+            mkdir build
+            for var in ${arr}
+            do
+              echo add app $var
+              cp -a applications/$var  build/$var || true
+            done
+            ls -l build/
+            cd ..
+            echo "src-link apps `pwd`/apps/build" >> ${SDK_NAME}/feeds.conf
+          fi
+          cat apps/feeds.conf >> ${SDK_NAME}/feeds.conf
+          echo "" >> ${SDK_NAME}/feeds.conf
+          echo "Final feeds.conf:"
+          cat ${SDK_NAME}/feeds.conf
 
       - name: Update feeds
         run: |
+          apps="${{ github.event.inputs.applications }}"
           cd ${SDK_NAME}
           ./scripts/feeds update -a
-          ./scripts/feeds install -a -p apps -d y
+          if [ "$apps" = "all" ]; then
+            ./scripts/feeds install -a -p apps -d y
+            for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ../apps/feeds.conf`
+            do
+              echo add all in repo $repo
+              ./scripts/feeds install -a -p $repo -d y
+            done
+          else
+            ./scripts/feeds install ${apps} -d y
+          fi
 
-      - name: Compile IPKs
+      - name: Defconfig
+        id: defconfig
+        run: |
+          cd ${SDK_NAME}
+          make defconfig
+          echo "::set-output name=status::success"
+
+      - name: Download sources
+        id: download
+        if: steps.defconfig.outputs.status == 'success'
+        run: |
+          cd ${SDK_NAME}
+          make -j4 download
+          echo "::set-output name=status::success"
+
+      - name: PreCompile IPKs
+        id: precompile
+        if: steps.download.outputs.status == 'success'
+        run: |
+          cd ${SDK_NAME}
+          make -j4 package/compile
+          echo "::set-output name=status::success"
+
+      - name: ReCompile IPKs
         id: compile
+        if: steps.download.outputs.status == 'success' && steps.precompile.outputs.status != 'success'
         run: |
           cd ${SDK_NAME}
           bash -c 'set -o pipefail ; make -j1 V=s defconfig package/compile 2>&1 | tee /tmp/openwrt-sdk-build.log'
@@ -83,9 +136,16 @@ jobs:
         if: failure()
         run: tail -n 200 /tmp/openwrt-sdk-build.log
 
+      - name: PreUpload - Clean
+        id: preupload
+        if: steps.precompile.outputs.status == 'success' || steps.compile.outputs.status == 'success'
+        run: |
+          cd ${SDK_NAME}/bin/packages/aarch64_cortex-a53
+          rm -rf base luci
+
       - name: Upload bin directory
         uses: actions/upload-artifact@main
-        if: steps.compile.outputs.status == 'success'
+        if: steps.precompile.outputs.status == 'success' || steps.compile.outputs.status == 'success'
         with:
           name: apps
-          path: ${{ env.SDK_NAME }}/bin/packages/aarch64_cortex-a53/apps
+          path: ${{ env.SDK_NAME }}/bin/packages/aarch64_cortex-a53
