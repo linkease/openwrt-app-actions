@@ -12,6 +12,10 @@ image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
 
 DOCKERPATH=`uci get dockerman.local.daemon_data_root`
 result=`findmnt -T $DOCKERPATH | grep -c /dev/sd`
+#ignore the disk check in x86
+if echo `uname -m` | grep -Eqi 'x86_64'; then
+  result=1
+fi
 
 get_image(){
     local version=`uci get ubuntu.@ubuntu[0].version 2>/dev/null`
