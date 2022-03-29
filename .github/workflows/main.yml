@@ -10,14 +10,15 @@ on:
         default: 'all'
 
 env:
-  SDK_NAME: openwrt-sdk-21.02.2-mvebu-cortexa53_gcc-8.4.0_musl.Linux-x86_64
-  SDK_URL: https://downloads.openwrt.org/releases/21.02.2/targets/mvebu/cortexa53/
   TZ: Asia/Shanghai
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Build IPKs
+    name: Build IPKs for ${{ matrix.target }}
+    strategy:
+      matrix:
+        target: [arm64, x64]
     steps:
       - name: Job Info
         run: |
@@ -28,6 +29,11 @@ jobs:
         uses: actions/checkout@main
         with:
           path: 'apps'
+
+      - name: Import Env
+        env:
+          MATRIX_TARGET: ${{ matrix.target }}
+        run: cat apps/.github/workflows/${MATRIX_TARGET}.env >> "$GITHUB_ENV"
 
       - name: Initialization environment
         env:
@@ -140,12 +146,12 @@ jobs:
         id: preupload
         if: steps.precompile.outputs.status == 'success' || steps.compile.outputs.status == 'success'
         run: |
-          cd ${SDK_NAME}/bin/packages/aarch64_cortex-a53
+          cd ${SDK_NAME}/bin/packages/${SDK_ARCH}
           rm -rf base luci
 
       - name: Upload bin directory
         uses: actions/upload-artifact@main
         if: steps.precompile.outputs.status == 'success' || steps.compile.outputs.status == 'success'
         with:
-          name: apps
-          path: ${{ env.SDK_NAME }}/bin/packages/aarch64_cortex-a53
+          name: ${{ env.SDK_ARCH }}
+          path: ${{ env.SDK_NAME }}/bin/packages/${{ env.SDK_ARCH }}
