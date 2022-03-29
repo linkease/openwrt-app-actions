@@ -132,7 +132,7 @@ jobs:
 
       - name: ReCompile IPKs
         id: compile
-        if: steps.download.outputs.status == 'success' && steps.precompile.outputs.status != 'success'
+        if: failure() && steps.download.outputs.status == 'success'
         run: |
           cd ${SDK_NAME}
           bash -c 'set -o pipefail ; make -j1 V=s defconfig package/compile 2>&1 | tee /tmp/openwrt-sdk-build.log'
