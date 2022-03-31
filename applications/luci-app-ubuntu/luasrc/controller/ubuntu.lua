@@ -3,9 +3,9 @@ module("luci.controller.ubuntu", package.seeall)
 function index()
 
 	entry({'admin', 'services', 'ubuntu'}, alias('admin', 'services', 'ubuntu', 'client'), _('Ubuntu'), 10)
-	entry({"admin", "services", "ubuntu",'client'}, cbi("ubuntu/status"), nil).leaf = true
+	entry({"admin", "services", "ubuntu",'client'}, cbi("ubuntu/ubuntu"), nil).leaf = true
 
-	entry({"admin", "services", "ubuntu","status"}, call("get_container_status"))
+  entry({"admin", "services", "ubuntu","status"}, call("action_status")).leaf = true
 	entry({"admin", "services", "ubuntu","stop"}, post("stop_container"))
 	entry({"admin", "services", "ubuntu","start"}, post("start_container"))
 	entry({"admin", "services", "ubuntu","install"}, post("install_container"))
@@ -145,6 +145,14 @@ function uninstall_container()
 	local status = container_status()
 	local container_id = status.container_id
 	util.exec("docker container rm '"..container_id.."'")
+end
+
+function action_status()
+	local e = {}
+	e.running = luci.sys.call("pidof aliyundrive-webdav >/dev/null") == 0
+	e.application = luci.sys.exec("aliyundrive-webdav --version")
+	luci.http.prepare_content("application/json")
+	luci.http.write_json(e)
 end
 
 -- 总结：
