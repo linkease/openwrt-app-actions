@@ -142,7 +142,7 @@ jobs:
 
       - name: Last fail log
         if: failure()
-        run: tail -n 200 /tmp/openwrt-sdk-build.log
+        run: tail -n 200 /tmp/openwrt-sdk-build.log && false
 
       - name: PreUpload - Clean
         id: preupload
