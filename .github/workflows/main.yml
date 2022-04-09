@@ -18,7 +18,7 @@ jobs:
     name: Build IPKs for ${{ matrix.target }}
     strategy:
       matrix:
-        target: [arm64, x64]
+        target: [arm64, x64, mipsel]
     steps:
       - name: Job Info
         run: |
