@@ -96,8 +96,8 @@ jobs:
           apps="${{ github.event.inputs.applications }}"
           cd ${SDK_NAME}
           ./scripts/feeds update -a
-          rm -rf feeds/base/package/linux
-          rm -rf feeds/base/package/kernel
+          grep -lFr '$(call KernelPackage,' feeds/base/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          grep -lFr '$(call KernelPackage,' feeds/base/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
           if [ "$apps" = "all" ]; then
             ./scripts/feeds install -a -p apps -d y
             for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ../apps/feeds.conf`
