@@ -17,13 +17,26 @@ env:
   TZ: Asia/Shanghai
 
 jobs:
-  build:
+  matrix:
     runs-on: ubuntu-latest
-    if: github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        env:
+          MATRIX_TARGET: ${{ github.event.inputs.target }}
+        run: |
+          if [ "x${MATRIX_TARGET}" = "x" -o "x${MATRIX_TARGET}" = "xall" ]; then \
+            echo "::set-output name=matrix::{\"target\":[\"arm64\", \"x64\", \"mipsel\"]}"; \
+          else \
+            echo "::set-output name=matrix::{\"target\":[\"${MATRIX_TARGET}\"]}"; \
+          fi
+  build:
+    needs: matrix
+    runs-on: ubuntu-latest
     name: Build IPKs for ${{ matrix.target }}
     strategy:
-      matrix:
-        target: [arm64, x64, mipsel]
+      matrix: ${{fromJson(needs.matrix.outputs.matrix)}}
     steps:
       - name: Job Info
         run: |
