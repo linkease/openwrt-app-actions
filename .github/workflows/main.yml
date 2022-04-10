@@ -8,6 +8,10 @@ on:
         description: 'build applications, eg: "luci-app-store luci-app-ddnsto". "all" means build all'
         required: true
         default: 'all'
+      target:
+        description: 'build target ["arm64", "x64", "mipsel", "all"]'
+        required: true
+        default: 'all'
 
 env:
   TZ: Asia/Shanghai
@@ -15,6 +19,7 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.event.inputs.target == 'all' || github.event.inputs.target == matrix.target
     name: Build IPKs for ${{ matrix.target }}
     strategy:
       matrix:
