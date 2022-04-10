@@ -8,17 +8,35 @@ on:
         description: 'build applications, eg: "luci-app-store luci-app-ddnsto". "all" means build all'
         required: true
         default: 'all'
+      target:
+        description: 'build target ["arm64", "x64", "mipsel", "all"]'
+        required: true
+        default: 'all'
 
 env:
   TZ: Asia/Shanghai
 
 jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - id: set-matrix
+        env:
+          MATRIX_TARGET: ${{ github.event.inputs.target }}
+        run: |
+          if [ "x${MATRIX_TARGET}" = "x" -o "x${MATRIX_TARGET}" = "xall" ]; then \
+            echo "::set-output name=matrix::{\"target\":[\"arm64\", \"x64\", \"mipsel\"]}"; \
+          else \
+            echo "::set-output name=matrix::{\"target\":[\"${MATRIX_TARGET}\"]}"; \
+          fi
   build:
+    needs: matrix
     runs-on: ubuntu-latest
     name: Build IPKs for ${{ matrix.target }}
     strategy:
-      matrix:
-        target: [arm64, x64, mipsel]
+      matrix: ${{fromJson(needs.matrix.outputs.matrix)}}
     steps:
       - name: Job Info
         run: |
