@@ -18,7 +18,7 @@ jobs:
     name: Build IPKs for ${{ matrix.target }}
     strategy:
       matrix:
-        target: [arm64, x64]
+        target: [arm64, x64, mipsel]
     steps:
       - name: Job Info
         run: |
@@ -59,6 +59,9 @@ jobs:
         run: |
           rm -f ${SDK_NAME}/package/linux/modules/*
           rm -f ${SDK_NAME}/package/kernel/linux/modules/*
+          grep -lFr '$(call KernelPackage,' ${SDK_NAME}/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          grep -lFr '$(call KernelPackage,' ${SDK_NAME}/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          find ${SDK_NAME}/target/linux -name 'modules.mk' | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
           grep 'src-git base ' ${SDK_NAME}/feeds.conf.default > ${SDK_NAME}/feeds.conf
           grep 'src-git luci ' ${SDK_NAME}/feeds.conf.default >> ${SDK_NAME}/feeds.conf
 
@@ -96,6 +99,8 @@ jobs:
           apps="${{ github.event.inputs.applications }}"
           cd ${SDK_NAME}
           ./scripts/feeds update -a
+          grep -lFr '$(call KernelPackage,' feeds/base/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          grep -lFr '$(call KernelPackage,' feeds/base/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
           if [ "$apps" = "all" ]; then
             ./scripts/feeds install -a -p apps -d y
             for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ../apps/feeds.conf`
@@ -140,7 +145,7 @@ jobs:
 
       - name: Last fail log
         if: failure()
-        run: tail -n 200 /tmp/openwrt-sdk-build.log
+        run: tail -n 200 /tmp/openwrt-sdk-build.log && false
 
       - name: PreUpload - Clean
         id: preupload
