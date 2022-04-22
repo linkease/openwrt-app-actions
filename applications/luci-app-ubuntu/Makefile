@@ -2,8 +2,8 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_VERSION:=1.0.5
-PKG_RELEASE:=20220215
+PKG_VERSION:=1.0.6
+PKG_RELEASE:=20220422
 
 LUCI_TITLE:=LuCI support for ubuntu
 LUCI_PKGARCH:=all
