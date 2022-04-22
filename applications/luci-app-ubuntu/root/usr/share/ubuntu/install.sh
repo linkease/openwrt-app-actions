@@ -10,13 +10,6 @@ image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
 
 [ -z "$image_name" ] && image_name="linkease/desktop-ubuntu-standard-arm64:latest"
 
-DOCKERPATH=`uci get dockerman.local.daemon_data_root`
-result=`findmnt -T $DOCKERPATH | grep -c /dev/sd`
-#ignore the disk check in x86
-if echo `uname -m` | grep -Eqi 'x86_64'; then
-  result=1
-fi
-
 get_image(){
     local version=`uci get ubuntu.@ubuntu[0].version 2>/dev/null`
     
@@ -48,7 +41,7 @@ install(){
     get_image
     docker network ls -f "name=docker-pcnet" | grep -q docker-pcnet || \
     docker network create -d bridge --subnet=10.10.100.0/24 --ip-range=10.10.100.0/24 --gateway=10.10.100.1 docker-pcnet
-    
+
     docker run -d --name ubuntu \
     --dns=223.5.5.5 -u=0:0 \
     -v=/mnt:/mnt:rslave \
@@ -59,9 +52,20 @@ install(){
     -e VNC_PW=$password \
     -e VNC_USE_HTTP=0 \
     --restart unless-stopped \
-    $image_name                       
+    $image_name
 }
 
+check_root(){
+  local result=0
+  #ignore the disk check in x86
+  if echo `uname -m` | grep -Eqi 'x86_64'; then
+    result=1
+  else
+    local DOCKERPATH=`docker info 2>/dev/null | grep ' Docker Root Dir:' | tail -c +19 -q`
+    [ -n "$DOCKERPATH" ] && result=`findmnt -T $DOCKERPATH 2>/dev/null | grep -c /dev/sd`
+  fi
+  echo -n $result
+}
 
 while getopts ":ilc" optname
 do
@@ -74,7 +78,7 @@ do
         install
         ;;
         "c")
-        echo -n $result
+        check_root
         ;;
         ":")
         echo "No argument value for option $OPTARG"
@@ -83,7 +87,7 @@ do
         echo "未知选项 $OPTARG"
         ;;
         *)
-       echo "Unknown error while processing options"
+        echo "Unknown error while processing options"
         ;;
     esac
 done
