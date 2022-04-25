@@ -87,6 +87,8 @@ jobs:
         run: |
           cat <<EOF >${SDK_NAME}/.config
           # CONFIG_SIGNED_PACKAGES is not set
+          CONFIG_LUCI_LANG_zh_Hans=y
+          CONFIG_LUCI_LANG_zh-cn=y
           EOF
 
       - name: Load custom feeds
@@ -135,6 +137,7 @@ jobs:
         run: |
           cd ${SDK_NAME}
           make defconfig
+          grep '^CONFIG_PACKAGE_' .config
           echo "::set-output name=status::success"
 
       - name: Download sources
