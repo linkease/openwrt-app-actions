@@ -82,8 +82,8 @@ jobs:
 
       - name: Clean Code
         run: |
-          chmod +x ${github.workspace}/apps/ready.sh
-          ${github.workspace}/apps/ready.sh
+          chmod +x $github.workspace/apps/ready.sh
+          $github.workspace/apps/ready.sh
           rm -f ${SDK_NAME}/package/linux/modules/*
           rm -f ${SDK_NAME}/package/kernel/linux/modules/*
           grep -lFr '$(call KernelPackage,' ${SDK_NAME}/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
