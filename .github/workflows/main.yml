@@ -12,6 +12,10 @@ on:
         description: 'build target ["arm64", "x64", "mipsel", "all"]'
         required: true
         default: 'all'
+      sdkversion:
+        description: 'build sdkversion ["21.02.2", "21.02.1"]'
+        required: true
+        default: '21.02.2'
 
 env:
   TZ: Asia/Shanghai
@@ -52,7 +56,9 @@ jobs:
       - name: Import Env
         env:
           MATRIX_TARGET: ${{ matrix.target }}
-        run: cat apps/.github/workflows/${MATRIX_TARGET}.env >> "$GITHUB_ENV"
+        run: |
+          sed -i 's/#version/${{ github.event.inputs.sdkversion }}/g' apps/.github/workflows/${MATRIX_TARGET}.env
+          cat apps/.github/workflows/${MATRIX_TARGET}.env >> "$GITHUB_ENV"
 
       - name: Initialization environment
         env:
@@ -70,12 +76,14 @@ jobs:
 
       - name: Download SDK
         run: wget ${SDK_URL}${SDK_NAME}.tar.xz
-
+    
       - name: Unpack SDK
         run: tar -xJf ${SDK_NAME}.tar.xz
 
       - name: Clean Code
         run: |
+          chmod +x ${{ github.workspace }}/apps/ready.sh
+          ${{ github.workspace }}/apps/ready.sh
           rm -f ${SDK_NAME}/package/linux/modules/*
           rm -f ${SDK_NAME}/package/kernel/linux/modules/*
           grep -lFr '$(call KernelPackage,' ${SDK_NAME}/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
