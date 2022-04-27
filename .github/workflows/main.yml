@@ -82,7 +82,7 @@ jobs:
 
       - name: Clean Code
         run: |
-          chmod +x ${github.workspace}apps/ready.sh
+          chmod +x ${github.workspace}/apps/ready.sh
           ${github.workspace}/apps/ready.sh
           rm -f ${SDK_NAME}/package/linux/modules/*
           rm -f ${SDK_NAME}/package/kernel/linux/modules/*
