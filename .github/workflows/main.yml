@@ -122,6 +122,7 @@ jobs:
           ./scripts/feeds update -a
           grep -lFr '$(call KernelPackage,' feeds/base/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
           grep -lFr '$(call KernelPackage,' feeds/base/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          patch -d feeds/luci -p1 -f -i `pwd`/../apps/.github/workflows/luci.patch
           if [ "$apps" = "all" ]; then
             ./scripts/feeds install -a -p apps -d y
             for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ../apps/feeds.conf`

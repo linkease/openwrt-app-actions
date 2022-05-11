@@ -1,0 +1,23 @@
+From 72f06f906ad22be173a25c3f50b61f9b1a33a16c Mon Sep 17 00:00:00 2001
+From: Liangbin Lian <jjm2473@gmail.com>
+Date: Fri, 11 Mar 2022 19:16:05 +0800
+Subject: [PATCH] i18n compatible with old luci sources
+
+Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
+---
+ luci.mk | 2 ++
+ 1 file changed, 2 insertions(+)
+
+diff --git a/luci.mk b/luci.mk
+index b331ebe1c5e..7e9a823b8bd 100644
+--- a/luci.mk
++++ b/luci.mk
+@@ -50,6 +50,8 @@ LUCI_LANG.uk=Українська (Ukrainian)
+ LUCI_LANG.vi=Tiếng Việt (Vietnamese)
+ LUCI_LANG.zh_Hans=简体中文 (Chinese Simplified)
+ LUCI_LANG.zh_Hant=繁體中文 (Chinese Traditional)
++LUCI_LANG.zh-cn=$(LUCI_LANG.zh_Hans)
++LUCI_LANG.zh-tw=$(LUCI_LANG.zh_Hant)
+ 
+ # Submenu titles
+ LUCI_MENU.col=1. Collections
