@@ -40,8 +40,8 @@ run_action() {
 
 do_install() {
   local CACHE_PATH=`uci get wxedge.@wxedge[0].cache_path 2>/dev/null`
-  if [ -z "$cache"]; then
-    echo "cache path is empty!" >&2
+  if [ -z "${CACHE_PATH}"]; then
+    echo "cache path is empty!" >>${LOGFILE}
     exit 1
   fi
     

@@ -1,7 +1,7 @@
-local sys  = require "luci.sys"
 local util  = require "luci.util"
 local http = require "luci.http"
 local docker = require "luci.model.docker"
+local iform = require "luci.iform"
 
 module("luci.controller.ubuntu", package.seeall)
 
@@ -9,10 +9,6 @@ function index()
 
   entry({"admin", "services", "ubuntu"}, call("redirect_index"), _("Ubuntu"), 30).dependent = true
   entry({"admin", "services", "ubuntu", "pages"}, call("ubuntu_index")).leaf = true
-  if nixio.fs.access("/usr/lib/lua/luci/view/ubuntu/main_dev.htm") then 
-    entry({"admin","services", "ubuntu", "dev"}, call("ubuntu_dev")).leaf = true 
-  end 
-  
   entry({"admin", "services", "ubuntu", "form"}, call("ubuntu_form"))
   entry({"admin", "services", "ubuntu", "submit"}, call("ubuntu_submit"))
   entry({"admin", "services", "ubuntu", "log"}, call("ubuntu_log"))
@@ -31,12 +27,7 @@ function ubuntu_index()
     luci.template.render("ubuntu/main", {prefix=luci.dispatcher.build_url(unpack(page_index))})
 end
 
-function ubuntu_dev()
-    luci.template.render("ubuntu/main_dev", {prefix=luci.dispatcher.build_url(unpack({"admin", "services", "ubuntu", "dev"}))})
-end
-
 function ubuntu_form()
-    local sys  = require "luci.sys"
     local error = ""
     local scope = ""
     local success = 0
@@ -207,34 +198,7 @@ function ubuntu_submit()
 end
 
 function ubuntu_log()
-  local fs   = require "nixio.fs"
-  local ltn12 = require "luci.ltn12"
-  local logfd = io.open("/var/log/ubuntu.log", "r")
-  local curr = logfd:seek()
-  local size = logfd:seek("end")
-  if size > 8*1024 then
-    logfd:seek("end", -8*1024)
-  else
-    logfd:seek("set", curr)
-  end
-
-  local write_log = function()
-    local buffer = logfd:read(4096)
-    if buffer and #buffer > 0 then
-        return buffer
-    else
-        logfd:close()
-        return nil
-    end
-  end
-
-  http.prepare_content("text/plain;charset=utf-8")
-
-  if logfd then
-    ltn12.pump.all(write_log, http.write)
-  else
-    http.write("log not found" .. const_log_end)
-  end
+  iform.response_log("/var/log/"..appname..".log")
 end
 
 function install_upgrade_ubuntu(req)
@@ -255,7 +219,7 @@ function install_upgrade_ubuntu(req)
   -- local exec_cmd = string.format("start-stop-daemon -q -S -b -x /usr/share/ubuntu/install.sh -- %s", req["$apply"])
   -- os.execute(exec_cmd)
   local exec_cmd = string.format("/usr/share/ubuntu/install.sh %s", req["$apply"])
-  fork_exec(exec_cmd)
+  iform.fork_exec(exec_cmd)
 
   local result = {
     async = true,
@@ -266,15 +230,7 @@ function install_upgrade_ubuntu(req)
 end
 
 function delete_ubuntu()
-  local f = io.popen("docker rm -f ubuntu", "r")
-  local log = "docker rm -f ubuntu\n"
-  if f then
-    local output = f:read('*all')
-    f:close()
-    log = log .. output .. const_log_end
-  else
-    log = log .. "Failed" .. const_log_end
-  end
+  local log = iform.exec_to_log("docker rm -f ubuntu")
   local result = {
     async = false,
     log = log
@@ -283,15 +239,7 @@ function delete_ubuntu()
 end
 
 function restart_ubuntu()
-  local f = io.popen("docker restart ubuntu", "r")
-  local log = "docker restart ubuntu\n"
-  if f then
-    local output = f:read('*all')
-    f:close()
-    log = log .. output .. const_log_end
-  else
-    log = log .. "Failed" .. const_log_end
-  end
+  local log = iform.exec_to_log("docker restart ubuntu")
   local result = {
     async = false,
     log = log
@@ -299,26 +247,3 @@ function restart_ubuntu()
   return result
 end
 
-function fork_exec(command)
-	local pid = nixio.fork()
-	if pid > 0 then
-		return
-	elseif pid == 0 then
-		-- change to root dir
-		nixio.chdir("/")
-
-		-- patch stdin, out, err to /dev/null
-		local null = nixio.open("/dev/null", "w+")
-		if null then
-			nixio.dup(null, nixio.stderr)
-			nixio.dup(null, nixio.stdout)
-			nixio.dup(null, nixio.stdin)
-			if null:fileno() > 2 then
-				null:close()
-			end
-		end
-
-		-- replace with target command
-		nixio.exec("/bin/sh", "-c", command)
-	end
-end

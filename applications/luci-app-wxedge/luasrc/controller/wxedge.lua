@@ -1,7 +1,8 @@
-local sys  = require "luci.sys"
 local uci  = require "luci.model.uci".cursor()
 local util  = require "luci.util"
 local http = require "luci.http"
+local jsonc = require "luci.jsonc"
+local iform = require "luci.iform"
 
 module("luci.controller.wxedge", package.seeall)
 
@@ -28,7 +29,6 @@ function wxedge_index()
 end
 
 function wxedge_form()
-    local sys  = require "luci.sys"
     local error = ""
     local scope = ""
     local success = 0
@@ -49,46 +49,63 @@ function wxedge_form()
 end
 
 function get_schema(data)
-    local actions = {
-        {
-            name = "install",
-            text = "安装",
-            type = "apply",
-        },
-        {
-            name = "upgrade",
-            text = "更新",
-            type = "apply",
-        },
-        {
-            name = "remove",
-            text = "删除",
-            type = "apply",
-        },
+  local actions
+  if data.container_install then
+    actions = {
+      {
+          name = "restart",
+          text = "重启",
+          type = "apply",
+      },
+      {
+          name = "upgrade",
+          text = "更新",
+          type = "apply",
+      },
+      {
+          name = "remove",
+          text = "删除",
+          type = "apply",
+      },
     } 
-    local schema = {
-        actions = actions,
-        containers = get_containers(data),
-        description = "本插件能让设备快速加入网心云共享计算生态网络，为网心科技星域云贡献设备的上行带宽和存储资源，用户根据每日的贡献量可获得相应的现金收益回报。 具体请访问它的<a href=\"https://www.onethingcloud.com/\">官网</a>",
-        title = "网心云"
+  else
+    actions = {
+      {
+          name = "install",
+          text = "安装",
+          type = "apply",
+      },
     }
-    return schema
+  end
+  local schema = {
+      actions = actions,
+      containers = get_containers(data),
+      description = "本插件能让设备快速加入网心云共享计算生态网络，为网心科技星域云贡献设备的上行带宽和存储资源，用户根据每日的贡献量可获得相应的现金收益回报。 具体请访问它的<a href=\"https://www.onethingcloud.com/\">官网</a>",
+      title = "网心云"
+  }
+  return schema
 end
 
 function get_containers(data) 
-    local containers = {
-        status_container(data),
-        main_container(data)
-    }
-    return containers
+  local containers = {
+      status_container(data),
+      main_container(data)
+  }
+  return containers
 end
 
 function status_container(data)
+  local status_value
+  if data.container_install then
+    status_value = "Wxedge 运行中"
+  else
+    status_value = "Wxedge 未运行"
+  end
   local status_c1 = {
     labels = {
       {
         key = "状态：",
-        value = "The wxedge service is not installed"
+        value = status_value
       },
       {
         key = "访问：",
@@ -104,30 +121,45 @@ function status_container(data)
 end
 
 function main_container(data)
-    local main_c2 = {
-        properties = {
-          {
-            name = "instance1",
-            required = true,
-            title = "实例1的存储位置：",
-            type = "string",
-            enum = {"standard", "full"},
-            enumNames = {"Standard Version", "Full Version"}
-          },
+  local main_c2 = {
+      properties = {
+        {
+          name = "instance1",
+          required = true,
+          title = "实例1的存储位置：",
+          type = "string",
+          enum = dup_array(data.blocks),
+          enumNames = dup_array(data.blocks)
         },
-        description = "请选择合适的存储位置进行安装：",
-        title = "服务操作"
-      }
-      return main_c2
+      },
+      description = "请选择合适的存储位置进行安装：",
+      title = "服务操作"
+    }
+    return main_c2
 end
 
 function get_data()
-    local data = {
-        port = "6901",
-        password = "password",
-        version = "standard"
-    }
-    return data
+  local uci = require "luci.model.uci".cursor()
+  local default_path = ""
+  local blks = blocks()
+  if #blks > 0 then
+    default_path = blks[1] .. "/wxedge1"
+  end
+  local blk1 = {}
+  for _, val in pairs(blks) do
+    table.insert(blk1, val .. "/wxedge1")
+  end
+
+  local docker_path = util.exec("which docker")
+  local container_id = util.trim(util.exec("docker ps -aqf 'name="..appname.."'"))
+  local container_install = (string.len(docker_path) > 0) and (string.len(container_id) > 0)
+
+  local data = {
+    instance1 = uci:get_first(appname, appname, "cache_path", default_path),
+    blocks = blk1,
+    container_install = container_install
+  }
+  return data
 end
 
 function wxedge_submit()
@@ -136,7 +168,6 @@ function wxedge_submit()
     local success = 0
     local result
     
-    local jsonc = require "luci.jsonc"
     local json_parse = jsonc.parse
     local content = http.content()
     local req = json_parse(content)
@@ -160,47 +191,16 @@ function wxedge_submit()
 end
 
 function wxedge_log()
-  local fs   = require "nixio.fs"
-  local ltn12 = require "luci.ltn12"
-  local logfd = io.open("/var/log/wxedge.log", "r")
-  local curr = logfd:seek()
-  local size = logfd:seek("end")
-  if size > 8*1024 then
-    logfd:seek("end", -8*1024)
-  else
-    logfd:seek("set", curr)
-  end
-
-  local write_log = function()
-    local buffer = logfd:read(4096)
-    if buffer and #buffer > 0 then
-        return buffer
-    else
-        logfd:close()
-        return nil
-    end
-  end
-
-  http.prepare_content("text/plain;charset=utf-8")
-
-  if logfd then
-    ltn12.pump.all(write_log, http.write)
-  else
-    http.write("log not found" .. const_log_end)
-  end
+  iform.response_log("/var/log/"..appname..".log")
 end
 
 function install_upgrade_wxedge(req)
-  local password = req["password"]
-  local port = req["port"]
-  local version = req["version"]
+  local cache_path = req["instance1"]
 
   -- save config
   local uci = require "luci.model.uci".cursor()
   uci:tset(appname, "@"..appname.."[0]", {
-    password = password or "password",
-    port = port or "6901",
-    version = version or "standard",
+    cache_path = cache_path,
   })
   uci:save(appname)
   uci:commit(appname)
@@ -208,7 +208,7 @@ function install_upgrade_wxedge(req)
   -- local exec_cmd = string.format("start-stop-daemon -q -S -b -x /usr/share/wxedge/install.sh -- %s", req["$apply"])
   -- os.execute(exec_cmd)
   local exec_cmd = string.format("/usr/share/wxedge/install.sh %s", req["$apply"])
-  fork_exec(exec_cmd)
+  iform.fork_exec(exec_cmd)
 
   local result = {
     async = true,
@@ -219,15 +219,7 @@ function install_upgrade_wxedge(req)
 end
 
 function delete_wxedge()
-  local f = io.popen("docker rm -f wxedge", "r")
-  local log = "docker rm -f wxedge\n"
-  if f then
-    local output = f:read('*all')
-    f:close()
-    log = log .. output .. const_log_end
-  else
-    log = log .. "Failed" .. const_log_end
-  end
+  local log = iform.exec_to_log("docker rm -f wxedge")
   local result = {
     async = false,
     log = log
@@ -236,15 +228,7 @@ function delete_wxedge()
 end
 
 function restart_wxedge()
-  local f = io.popen("docker restart wxedge", "r")
-  local log = "docker restart wxedge\n"
-  if f then
-    local output = f:read('*all')
-    f:close()
-    log = log .. output .. const_log_end
-  else
-    log = log .. "Failed" .. const_log_end
-  end
+  local log = iform.exec_to_log("docker restart wxedge")
   local result = {
     async = false,
     log = log
@@ -252,26 +236,28 @@ function restart_wxedge()
   return result
 end
 
-function fork_exec(command)
-	local pid = nixio.fork()
-	if pid > 0 then
-		return
-	elseif pid == 0 then
-		-- change to root dir
-		nixio.chdir("/")
+function blocks()
+  local f = io.popen("lsblk -s -f -b -o NAME,FSSIZE,MOUNTPOINT --json", "r")
+  local vals = {}
+  if f then
+    local ret = f:read("*all")
+    f:close()
+    local obj = jsonc.parse(ret)
+    for _, val in pairs(obj["blockdevices"]) do
+      local fsize = val["fssize"]
+      if string.len(fsize) > 10 and val["mountpoint"] then
+        -- fsize > 1G
+        vals[#vals+1] = val["mountpoint"]
+      end
+    end
+  end
+  return vals
+end
 
-		-- patch stdin, out, err to /dev/null
-		local null = nixio.open("/dev/null", "w+")
-		if null then
-			nixio.dup(null, nixio.stderr)
-			nixio.dup(null, nixio.stdout)
-			nixio.dup(null, nixio.stdin)
-			if null:fileno() > 2 then
-				null:close()
-			end
-		end
-
-		-- replace with target command
-		nixio.exec("/bin/sh", "-c", command)
-	end
+function dup_array(a)
+  local a2 = {}
+  for _, val in pairs(a) do
+    table.insert(a2, val)
+  end
+  return a2
 end
