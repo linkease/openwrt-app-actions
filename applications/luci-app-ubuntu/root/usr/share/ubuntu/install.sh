@@ -1,93 +1,133 @@
 #!/bin/sh
+# Author Xiaobao(xiaobao@linkease.com)
 
-image_name=`uci get ubuntu.@ubuntu[0].image 2>/dev/null`
-# TODO auto detech platform
-# TODO option for full and standard
+ACTION=${1}
+WRLOCK=/var/lock/ubuntu.lock
+LOGFILE=/var/log/ubuntu.log
+LOGEND="XU6J03M6"
+shift 1
+
+IMAGE_NAME=''
 # linkease/desktop-ubuntu-full-arm64:latest
 # linkease/desktop-ubuntu-standard-arm64:latest
 # linkease/desktop-ubuntu-full-amd64:latest
 # linkease/desktop-ubuntu-standard-amd64:latest
 
-[ -z "$image_name" ] && image_name="linkease/desktop-ubuntu-standard-arm64:latest"
+check_params() {
 
-get_image(){
-    local version=`uci get ubuntu.@ubuntu[0].version 2>/dev/null`
-    
-    ARCH="arm64"
-    if echo `uname -m` | grep -Eqi 'x86_64'; then
-        ARCH='amd64'
-    elif  echo `uname -m` | grep -Eqi 'aarch64'; then
-        ARCH='arm64'
-    else
-        ARCH='arm64'
-    fi
+  if [ -z "${WRLOCK}" ]; then
+    echo "lock file not found"
+    exit 1
+  fi
 
-    #if [ "${version}" == "full" ];then
-    #    image_name="linkease/desktop-ubuntu-full-arm64:latest"
-    #fi
+  if [ -z "${LOGFILE}" ]; then
+    echo "logger file not found"
+    exit 1
+  fi
 
-    #if [ "${version}" == "standard" ];then
-    #    image_name="linkease/desktop-ubuntu-standard-arm64:latest"
-    #fi
-    
-    image_name=linkease/desktop-ubuntu-${version}-${ARCH}:latest
 }
 
-install(){
-    local password=`uci get ubuntu.@ubuntu[0].password 2>/dev/null`
-    local port=`uci get ubuntu.@ubuntu[0].port 2>/dev/null`
-    [ -z "$password" ] && password="password"
-    [ -z "$port" ] && port=6901
-    get_image
-    docker network ls -f "name=docker-pcnet" | grep -q docker-pcnet || \
-    docker network create -d bridge --subnet=10.10.100.0/24 --ip-range=10.10.100.0/24 --gateway=10.10.100.1 docker-pcnet
+lock_run() {
+  local lock="$WRLOCK"
+  exec 300>$lock
+  flock -n 300 || return
+  do_run
+  flock -u 300
+  return
+}
 
-    docker run -d --name ubuntu \
-    --dns=223.5.5.5 -u=0:0 \
-    -v=/mnt:/mnt:rslave \
-    --net="docker-pcnet" \
-    --ip=10.10.100.9 \
+run_action() {
+  if check_params; then
+    lock_run
+  fi
+}
+
+get_image() {
+  local version=`uci get ubuntu.@ubuntu[0].version 2>/dev/null`
+  
+  ARCH="arm64"
+  if echo `uname -m` | grep -Eqi 'x86_64'; then
+    ARCH='amd64'
+  elif  echo `uname -m` | grep -Eqi 'aarch64'; then
+    ARCH='arm64'
+  else
+    ARCH='arm64'
+  fi
+
+  IMAGE_NAME=linkease/desktop-ubuntu-${version}-${ARCH}:latest
+}
+
+do_install() {
+  local PASSWORD=`uci get ubuntu.@ubuntu[0].password 2>/dev/null`
+  local PORT=`uci get ubuntu.@ubuntu[0].port 2>/dev/null`
+  [ -z "$PASSWORD" ] && PASSWORD="password"
+  [ -z "$PORT" ] && PORT=6901
+  echo "docker create pcnet" >${LOGFILE}
+  local mntv="/mnt:/mnt"
+  mountpoint -q /mnt && mntv="$mntv:rslave"
+  get_image
+  echo "docker pull ${IMAGE_NAME}" >>${LOGFILE}
+  docker pull ${IMAGE_NAME} >>${LOGFILE} 2>&1
+  docker rm -f ubuntu
+
+  #  --net="docker-pcnet" \
+
+  docker run -d --name ubuntu \
+   --dns=223.5.5.5 -u=0:0 \
+    -v=${mntv} \
     --shm-size=512m \
-    -p $port:6901 \
-    -e VNC_PW=$password \
+    -p ${PORT}:6901 \
+    -e VNC_PW=${PASSWORD} \
     -e VNC_USE_HTTP=0 \
     --restart unless-stopped \
-    $image_name
-}
+    $IMAGE_NAME >>${LOGFILE} 2>&1
 
-check_root(){
-  local result=0
-  #ignore the disk check in x86
-  if echo `uname -m` | grep -Eqi 'x86_64'; then
-    result=1
+  RET=$?
+  if [ "${RET}" = "0" ]; then
+    # mark END, remove the log file
+    echo ${LOGEND} >> ${LOGFILE}
+    sleep 5
+    rm -f ${LOGFILE}
   else
-    local DOCKERPATH=`docker info 2>/dev/null | grep ' Docker Root Dir:' | tail -c +19 -q`
-    [ -n "$DOCKERPATH" ] && result=`findmnt -T $DOCKERPATH 2>/dev/null | grep -c /dev/sd`
+    # reserve the log
+    echo "docker run ${IMAGE_NAME} failed" >>${LOGFILE}
+    echo ${LOGEND} >> ${LOGFILE}
   fi
-  echo -n $result
+  exit ${RET}
 }
 
-while getopts ":ilc" optname
-do
-    case "$optname" in
-        "l")
-        get_image
-        echo -n $image_name
-        ;;
-        "i")
-        install
-        ;;
-        "c")
-        check_root
-        ;;
-        ":")
-        echo "No argument value for option $OPTARG"
-        ;;
-        "?")
-        echo "未知选项 $OPTARG"
-        ;;
-        *)
-        echo "Unknown error while processing options"
-        ;;
-    esac
-done
+# run in lock
+do_run() {
+  case ${ACTION} in
+    "install")
+      do_install
+    ;;
+    "upgrade")
+      do_install
+    ;;
+  esac
+}
+
+usage() {
+  echo "usage: wxedge sub-command"
+  echo "where sub-command is one of:"
+  echo "      install                Install the ubuntu"
+  echo "      upgrade                Upgrade the ubuntu"
+  echo "      remove                 Remove the ubuntu"
+}
+
+case ${ACTION} in
+  "install")
+    run_action
+  ;;
+  "upgrade")
+    run_action
+  ;;
+  "remove")
+    docker rm -f ubuntu
+  ;;
+  *)
+    usage
+  ;;
+esac
+

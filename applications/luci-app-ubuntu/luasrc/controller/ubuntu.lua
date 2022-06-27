@@ -1,162 +1,250 @@
+local util  = require "luci.util"
+local http = require "luci.http"
+local docker = require "luci.model.docker"
+local iform = require "luci.iform"
+
 module("luci.controller.ubuntu", package.seeall)
 
 function index()
 
-	entry({'admin', 'services', 'ubuntu'}, alias('admin', 'services', 'ubuntu', 'client'), _('Ubuntu'), 10)
-	entry({"admin", "services", "ubuntu",'client'}, cbi("ubuntu/status"), nil).leaf = true
-
-	entry({"admin", "services", "ubuntu","status"}, call("get_container_status"))
-	entry({"admin", "services", "ubuntu","stop"}, post("stop_container"))
-	entry({"admin", "services", "ubuntu","start"}, post("start_container"))
-	entry({"admin", "services", "ubuntu","install"}, post("install_container"))
-	entry({"admin", "services", "ubuntu","uninstall"}, post("uninstall_container"))
+  entry({"admin", "services", "ubuntu"}, call("redirect_index"), _("Ubuntu"), 30).dependent = true
+  entry({"admin", "services", "ubuntu", "pages"}, call("ubuntu_index")).leaf = true
+  entry({"admin", "services", "ubuntu", "form"}, call("ubuntu_form"))
+  entry({"admin", "services", "ubuntu", "submit"}, call("ubuntu_submit"))
+  entry({"admin", "services", "ubuntu", "log"}, call("ubuntu_log"))
 
 end
 
-local sys  = require "luci.sys"
-local uci  = require "luci.model.uci".cursor()
-local keyword  = "ubuntu"
-local util  = require("luci.util")
-local docker = require "luci.model.docker"
+local const_log_end = "XU6J03M6"
+local appname = "ubuntu"
+local page_index = {"admin", "services", "ubuntu", "pages"}
 
-function container_status()
-	local docker_path = util.exec("which docker")
-	local docker_install = (string.len(docker_path) > 0)
-	local docker_running = util.exec("ps | grep dockerd | grep -v 'grep' | wc -l")
-	local container_id = util.trim(util.exec("docker ps -aqf 'name="..keyword.."'"))
-	local container_install = (string.len(container_id) > 0)
-	local container_running = container_install and (string.len(util.trim(util.exec("docker ps -qf 'id="..container_id.."'"))) > 0)
-	local port = tonumber(uci:get_first(keyword, keyword, "port", "6901"))
-	local wan_status = util.ubus("network.interface.wan", "status", { })
-	local public_address = ""
-	if wan_status["ipv4-address"] and wan_status["ipv4-address"][1] and wan_status["ipv4-address"][1]["address"] then
-		public_address = wan_status["ipv4-address"][1]["address"]
-	end
-	-- local nxfs      = require "nixio.fs"
-	-- nxfs.writefile("/tmp/test.log", dump["ipv4-address"][1]["address"])
-	local status = {
-		docker_install = docker_install,
-		docker_start = docker_running,
-		container_id = container_id,
-		container_port = (port),
-		container_install = container_install,
-		container_running = container_running,
-		password = uci:get_first(keyword, keyword, "password", ""),
-		user_name = "kasm_user",
-		local_address = "https://10.10.100.9:"..port.."",
-		public_address = "https://"..public_address..":"..port..""
-	}
-
-	return status
+function redirect_index()
+    http.redirect(luci.dispatcher.build_url(unpack(page_index)))
 end
 
-function get_container_status()
-	local status = container_status()
-	luci.http.prepare_content("application/json")
-	luci.http.write_json(status)
+function ubuntu_index()
+    luci.template.render("ubuntu/main", {prefix=luci.dispatcher.build_url(unpack(page_index))})
 end
 
-function stop_container()
-	local status = container_status()
-	local container_id = status.container_id
-	util.exec("docker stop '"..container_id.."'")
+function ubuntu_form()
+    local error = ""
+    local scope = ""
+    local success = 0
+
+    local data = get_data()
+    local result = {
+        data = data,
+        schema = get_schema(data)
+    } 
+    local response = {
+            error = error,
+            scope = scope,
+            success = success,
+            result = result,
+    }
+    http.prepare_content("application/json")
+    http.write_json(response)
 end
 
-function start_container()
-	local status = container_status()
-	local container_id = status.container_id
-	util.exec("docker start '"..container_id.."'")
+function get_schema(data)
+  local actions
+  if data.container_install then
+    actions = {
+      {
+          name = "restart",
+          text = "重启",
+          type = "apply",
+      },
+      {
+          name = "upgrade",
+          text = "更新",
+          type = "apply",
+      },
+      {
+          name = "remove",
+          text = "删除",
+          type = "apply",
+      },
+    } 
+  else
+    actions = {
+      {
+          name = "install",
+          text = "安装",
+          type = "apply",
+      },
+    }
+  end
+    local schema = {
+      actions = actions,
+      containers = get_containers(data),
+      description = "带 Web 远程桌面的 Docker 高性能版 Ubuntu。默认<用户名:kasm_user 密码:password> 访问官网 <a href=\"https://www.kasmweb.com/\" target=\"_blank\">https://www.kasmweb.com/</a>",
+      title = "Ubuntu"
+    }
+    return schema
 end
 
-function install_container()
-
-	local docker_on_disk = tonumber(util.exec("sh /usr/share/ubuntu/install.sh -c")) 
-	local password = luci.http.formvalue("password")
-	local port = luci.http.formvalue("port")
-	local version = luci.http.formvalue("version")
-	
-	uci:tset(keyword, "@"..keyword.."[0]", {
-		password = password or "password",
-		port = port or "6901",
-		version = version or "stanard",
-	})
-	uci:save(keyword)
-	uci:commit(keyword)
-	local image = util.exec("sh /usr/share/ubuntu/install.sh -l") 
-
-	local pull_image = function(image)
-		docker:append_status("Images: " .. "pulling" .. " " .. image .. "...\n")
-		local dk = docker.new()
-		local res = dk.images:create({query = {fromImage=image}}, docker.pull_image_show_status_cb)
-		if res and res.code and res.code == 200 and (res.body[#res.body] and not res.body[#res.body].error and res.body[#res.body].status and (res.body[#res.body].status == "Status: Downloaded newer image for ".. image or res.body[#res.body].status == "Status: Image is up to date for ".. image)) then
-			docker:append_status("done\n")
-		else
-			res.code = (res.code == 200) and 500 or res.code
-			docker:append_status("code:" .. res.code.." ".. (res.body[#res.body] and res.body[#res.body].error or (res.body.message or res.message)).. "\n")
-		end
-	end
-
-	local install_ubuntu = function()
-		local os   = require "os"
-		local fs   = require "nixio.fs"
-		local c = ("sh /usr/share/ubuntu/install.sh -i >/tmp/log/ubuntu.stdout 2>/tmp/log/ubuntu.stderr")
-		-- docker:append_status(c)
-
-		local r = os.execute(c)
-		local e = fs.readfile("/tmp/log/ubuntu.stderr")
-		local o = fs.readfile("/tmp/log/ubuntu.stdout")
-
-		fs.unlink("/tmp/log/ubuntu.stderr")
-		fs.unlink("/tmp/log/ubuntu.stdout")
-
-		if r == 0 then
-			docker:append_status(o)
-		else
-			docker:append_status( e )
-		end
-	end
-
-	-- local status = {
-	-- 	shell = shell,
-	-- 	image_name = image,
-	-- }
-	-- luci.http.prepare_content("application/json")
-	-- luci.http.write_json(status)
-	-- docker:append_status("docker not in disk" .. docker_on_disk .."")
-
-	if docker_on_disk == 0 then
-		docker:write_status("docker not in disk\n")
-	else
-		if image then
-			docker:write_status("ubuntu installing\n")
-			pull_image(image)
-			install_ubuntu()
-		else
-			docker:write_status("ubuntu image not defined!\n")
-		end
-	end
-
-	
-
+function get_containers(data) 
+    local containers = {
+        status_container(data),
+        main_container(data)
+    }
+    return containers
 end
 
+function status_container(data)
+  local status_value
 
-function uninstall_container()
-	local status = container_status()
-	local container_id = status.container_id
-	util.exec("docker container rm '"..container_id.."'")
+  if data.container_install then
+    status_value = "Ubuntu 运行中"
+  else
+    status_value = "Ubuntu 未运行"
+  end
+
+  local status_c1 = {
+    labels = {
+      {
+        key = "状态：",
+        value = status_value
+      },
+      {
+        key = "访问：",
+        value = ""
+        -- value = "'<a href=\"https://' + location.host + ':6901\" target=\"_blank\">Ubuntu 桌面</a>'"
+      }
+
+    },
+    description = "访问链接是一个自签名的 https，需要浏览器同意才能访问！",
+    title = "服务状态"
+  }
+  return status_c1
 end
 
--- 总结：
--- docker是否安装
--- 容器是否安装
--- 缺少在lua和htm中运行命令的方法
--- 获取容器id docker ps -aqf'name=ubuntu'
--- 启动容器 docker start 78a8455e6d38
--- 停止容器 docker stop 78a8455e6d38
+function main_container(data)
+    local main_c2 = {
+        properties = {
+          {
+            name = "port",
+            required = true,
+            title = "端口",
+            type = "string"
+          },
+          {
+            name = "password",
+            required = true,
+            title = "密码",
+            type = "string"
+          },
+          {
+            name = "version",
+            required = true,
+            title = "安装版本",
+            type = "string",
+            enum = {"standard", "full"},
+            enumNames = {"Standard Version", "Full Version"}
+          },
+        },
+        description = "请选择合适的版本进行安装：",
+        title = "服务操作"
+      }
+      return main_c2
+end
 
+function get_data() 
+  local uci = require "luci.model.uci".cursor()
+  local docker_path = util.exec("which docker")
+  local docker_install = (string.len(docker_path) > 0)
+  -- docker ps -aqf
+  local container_id = util.trim(util.exec("docker ps -qf 'name="..appname.."'"))
+  local container_install = (string.len(container_id) > 0)
+  local port = tonumber(uci:get_first(appname, appname, "port", "6901"))
+  local data = {
+    port = port,
+    user_name = "kasm_user",
+    password = uci:get_first(appname, appname, "password", ""),
+    version = uci:get_first(appname, appname, "version", "standard"),
+    container_install = container_install
+  }
+  return data
+end
 
---[[
-todo
-网络请求提示框
- --]]
+function ubuntu_submit()
+    local error = ""
+    local scope = ""
+    local success = 0
+    local result
+    
+    local jsonc = require "luci.jsonc"
+    local json_parse = jsonc.parse
+    local content = http.content()
+    local req = json_parse(content)
+    if req["$apply"] == "upgrade" then
+      result = install_upgrade_ubuntu(req)
+    elseif req["$apply"] == "install" then 
+      result = install_upgrade_ubuntu(req)
+    elseif req["$apply"] == "restart" then 
+      result = restart_ubuntu(req)
+    else
+      result = delete_ubuntu()
+    end
+    http.prepare_content("application/json")
+    local resp = {
+        error = error,
+        scope = scope,
+        success = success,
+        result = result,
+    }
+    http.write_json(resp)
+end
+
+function ubuntu_log()
+  iform.response_log("/var/log/"..appname..".log")
+end
+
+function install_upgrade_ubuntu(req)
+  local password = req["password"]
+  local port = req["port"]
+  local version = req["version"]
+
+  -- save config
+  local uci = require "luci.model.uci".cursor()
+  uci:tset(appname, "@"..appname.."[0]", {
+    password = password or "password",
+    port = port or "6901",
+    version = version or "standard",
+  })
+  uci:save(appname)
+  uci:commit(appname)
+
+  -- local exec_cmd = string.format("start-stop-daemon -q -S -b -x /usr/share/ubuntu/install.sh -- %s", req["$apply"])
+  -- os.execute(exec_cmd)
+  local exec_cmd = string.format("/usr/share/ubuntu/install.sh %s", req["$apply"])
+  iform.fork_exec(exec_cmd)
+
+  local result = {
+    async = true,
+    exec = exec_cmd,
+    async_state = req["$apply"]
+  }
+  return result
+end
+
+function delete_ubuntu()
+  local log = iform.exec_to_log("docker rm -f ubuntu")
+  local result = {
+    async = false,
+    log = log
+  }
+  return result
+end
+
+function restart_ubuntu()
+  local log = iform.exec_to_log("docker restart ubuntu")
+  local result = {
+    async = false,
+    log = log
+  }
+  return result
+end
+

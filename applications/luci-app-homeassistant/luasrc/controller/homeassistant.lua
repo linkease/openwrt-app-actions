@@ -1,80 +1,208 @@
+local util  = require "luci.util"
+local http = require "luci.http"
+local docker = require "luci.model.docker"
+local iform = require "luci.iform"
+
 module("luci.controller.homeassistant", package.seeall)
 
 function index()
-	
-	entry({'admin', 'services', 'homeassistant'}, alias('admin', 'services', 'homeassistant', 'client'), _('homeassistant'), 10).dependent = true -- 首页
-	entry({"admin", "services", "homeassistant",'client'}, cbi("homeassistant/status", {hideresetbtn=true, hidesavebtn=true}), _("homeassistant"), 20).leaf = true
-    entry({'admin', 'services', 'homeassistant', 'script'}, form('homeassistant/script'), _('Script'), 20).leaf = true -- 直接配置脚本
 
-	entry({"admin", "services", "homeassistant","status"}, call("container_status"))
-	entry({"admin", "services", "homeassistant","stop"}, call("stop_container"))
-	entry({"admin", "services", "homeassistant","start"}, call("start_container"))
-	entry({"admin", "services", "homeassistant","install"}, call("install_container"))
-	entry({"admin", "services", "homeassistant","uninstall"}, call("uninstall_container"))
+  entry({"admin", "services", "homeassistant"}, call("redirect_index"), _("HomeAssistant"), 30).dependent = true
+  entry({"admin", "services", "homeassistant", "pages"}, call("homeassistant_index")).leaf = true
+  entry({"admin", "services", "homeassistant", "form"}, call("homeassistant_form"))
+  entry({"admin", "services", "homeassistant", "submit"}, call("homeassistant_submit"))
+  entry({"admin", "services", "homeassistant", "log"}, call("homeassistant_log"))
+
 end
 
-local sys  = require "luci.sys"
-local uci  = require "luci.model.uci".cursor()
-local keyword  = "homeassistant"
-local util  = require("luci.util")
+local const_log_end = "XU6J03M6"
+local appname = "homeassistant"
+local page_index = {"admin", "services", "homeassistant", "pages"}
 
-function container_status()
-	local docker_path = util.exec("which docker")
-	local docker_server_version = util.exec("docker info | grep 'Server Version'")
-	local docker_install = (string.len(docker_path) > 0)
-	local docker_start = (string.len(docker_server_version) > 0)
-	local port = tonumber(uci:get_first(keyword, keyword, "port"))
-	local container_id = util.trim(util.exec("docker ps -aqf'name='"..keyword.."''"))
-	local container_install = (string.len(container_id) > 0)
-	local container_running = (sys.call("docker ps | grep '"..container_id.."' >/dev/null") == 0)
-
-	local status = {
-		docker_install = docker_install,
-		docker_start = docker_start,
-		container_id = container_id,
-		container_install = container_install,
-		container_running = container_running,
-		container_port = (port or 8123),
-	}
-
-	luci.http.prepare_content("application/json")
-	luci.http.write_json(status)
-	return status
+function redirect_index()
+    http.redirect(luci.dispatcher.build_url(unpack(page_index)))
 end
 
-function stop_container()
-	local status = container_status()
-	local container_id = status.container_id
-	util.exec("docker stop '"..container_id.."'")
+function homeassistant_index()
+    luci.template.render("homeassistant/main", {prefix=luci.dispatcher.build_url(unpack(page_index))})
 end
 
-function start_container()
-	local status = container_status()
-	local container_id = status.container_id
-	util.exec("docker start '"..container_id.."'")
+function homeassistant_form()
+    local error = ""
+    local scope = ""
+    local success = 0
+
+    local data = get_data()
+    local result = {
+        data = data,
+        schema = get_schema(data)
+    } 
+    local response = {
+            error = error,
+            scope = scope,
+            success = success,
+            result = result,
+    }
+    http.prepare_content("application/json")
+    http.write_json(response)
 end
 
-function install_container()
-	luci.sys.call('sh /usr/share/homeassistant/install.sh')
-	container_status()
+function get_schema(data)
+  local actions
+  if data.container_install then
+    actions = {
+      {
+          name = "restart",
+          text = "重启",
+          type = "apply",
+      },
+      {
+          name = "upgrade",
+          text = "更新",
+          type = "apply",
+      },
+      {
+          name = "remove",
+          text = "删除",
+          type = "apply",
+      },
+    } 
+  else
+    actions = {
+      {
+          name = "install",
+          text = "安装",
+          type = "apply",
+      },
+    }
+  end
+  local _ = luci.i18n.translate
+  local access = _('access homepage: ')
+  local homepage = '<a href=\"https://www.home-assistant.io/\" target=\"_blank\">https://www.home-assistant.io/</a>'
+  local schema = {
+    actions = actions,
+    containers = get_containers(data),
+    description = _("Open source home automation that puts local control and privacy first. Powered by a worldwide community of tinkerers and DIY enthusiasts.")..access..homepage,
+    title = _("HomeAssistant")
+  }
+  return schema
 end
 
-function uninstall_container()
-	local status = container_status()
-	local container_id = status.container_id
-	util.exec("docker container rm '"..container_id.."'")
+function get_containers(data) 
+    local containers = {
+        status_container(data),
+    }
+    return containers
 end
 
--- 总结：
--- docker是否安装
--- 容器是否安装
--- 缺少在lua和htm中运行命令的方法
--- 获取容器id docker ps -aqf'name=homeassistant'
--- 启动容器 docker start 78a8455e6d38
--- 停止容器 docker stop 78a8455e6d38
+function status_container(data)
+  local status_value
 
+  if data.container_install then
+    status_value = "HomeAssistant 运行中"
+  else
+    status_value = "HomeAssistant 未运行"
+  end
 
---[[
-todo
-网络请求提示框
- --]]
+  local status_c1 = {
+    labels = {
+      {
+        key = "状态：",
+        value = status_value
+      },
+      {
+        key = "默认端口：",
+        value = "8123"
+      },
+      {
+        key = "配置路径：",
+        value = "/root/homeassistant/config"
+      },
+      {
+        key = "访问：",
+        value = ""
+      }
+
+    },
+    description = "HomeAssistant 安装即可，不需要任何配置，默认信息如下：",
+    title = "服务状态"
+  }
+  return status_c1
+end
+
+function get_data() 
+  local uci = require "luci.model.uci".cursor()
+  local docker_path = util.exec("which docker")
+  local docker_install = (string.len(docker_path) > 0)
+  local container_id = util.trim(util.exec("docker ps -qf 'name="..appname.."'"))
+  local container_install = (string.len(container_id) > 0)
+  local data = {
+    port = "8123",
+    container_install = container_install
+  }
+  return data
+end
+
+function homeassistant_submit()
+    local error = ""
+    local scope = ""
+    local success = 0
+    local result
+    
+    local jsonc = require "luci.jsonc"
+    local json_parse = jsonc.parse
+    local content = http.content()
+    local req = json_parse(content)
+    if req["$apply"] == "upgrade" then
+      result = install_upgrade_homeassistant(req)
+    elseif req["$apply"] == "install" then 
+      result = install_upgrade_homeassistant(req)
+    elseif req["$apply"] == "restart" then 
+      result = restart_homeassistant(req)
+    else
+      result = delete_homeassistant()
+    end
+    http.prepare_content("application/json")
+    local resp = {
+        error = error,
+        scope = scope,
+        success = success,
+        result = result,
+    }
+    http.write_json(resp)
+end
+
+function homeassistant_log()
+  iform.response_log("/var/log/"..appname..".log")
+end
+
+function install_upgrade_homeassistant(req)
+  local exec_cmd = string.format("/usr/share/homeassistant/install.sh %s", req["$apply"])
+  iform.fork_exec(exec_cmd)
+
+  local result = {
+    async = true,
+    exec = exec_cmd,
+    async_state = req["$apply"]
+  }
+  return result
+end
+
+function delete_homeassistant()
+  local log = iform.exec_to_log("docker rm -f homeassistant")
+  local result = {
+    async = false,
+    log = log
+  }
+  return result
+end
+
+function restart_homeassistant()
+  local log = iform.exec_to_log("docker restart homeassistant")
+  local result = {
+    async = false,
+    log = log
+  }
+  return result
+end
+
