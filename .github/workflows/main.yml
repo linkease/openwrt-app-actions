@@ -8,17 +8,36 @@ on:
         description: 'build applications, eg: "luci-app-store luci-app-ddnsto". "all" means build all'
         required: true
         default: 'all'
+      target:
+        description: 'build target ["arm64", "x64", "mipsel", "all"]'
+        required: true
+        default: 'all'
 
 env:
   TZ: Asia/Shanghai
 
 jobs:
+  matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Detect build target
+        id: set-matrix
+        env:
+          MATRIX_TARGET: ${{ github.event.inputs.target }}
+        run: |
+          if [ "x${MATRIX_TARGET}" = "x" -o "x${MATRIX_TARGET}" = "xall" ]; then \
+            echo "::set-output name=matrix::{\"target\":[\"arm64\", \"x64\", \"mipsel\"]}"; \
+          else \
+            echo "::set-output name=matrix::{\"target\":[\"${MATRIX_TARGET}\"]}"; \
+          fi
   build:
+    needs: matrix
     runs-on: ubuntu-latest
     name: Build IPKs for ${{ matrix.target }}
     strategy:
-      matrix:
-        target: [arm64, x64, mipsel]
+      matrix: ${{fromJson(needs.matrix.outputs.matrix)}}
     steps:
       - name: Job Info
         run: |
@@ -59,6 +78,9 @@ jobs:
         run: |
           rm -f ${SDK_NAME}/package/linux/modules/*
           rm -f ${SDK_NAME}/package/kernel/linux/modules/*
+          grep -lFr '$(call KernelPackage,' ${SDK_NAME}/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          grep -lFr '$(call KernelPackage,' ${SDK_NAME}/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          find ${SDK_NAME}/target/linux -name 'modules.mk' | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
           grep 'src-git base ' ${SDK_NAME}/feeds.conf.default > ${SDK_NAME}/feeds.conf
           grep 'src-git luci ' ${SDK_NAME}/feeds.conf.default >> ${SDK_NAME}/feeds.conf
 
@@ -66,15 +88,15 @@ jobs:
         run: |
           cat <<EOF >${SDK_NAME}/.config
           # CONFIG_SIGNED_PACKAGES is not set
+          CONFIG_LUCI_LANG_zh_Hans=y
+          CONFIG_LUCI_LANG_zh-cn=y
           EOF
 
       - name: Load custom feeds
         run: |
           echo "" >> ${SDK_NAME}/feeds.conf
           arr="${{ github.event.inputs.applications }}"
-          if [ "$arr" = "all" ]; then
-            echo "src-link apps `pwd`/apps/applications" >> ${SDK_NAME}/feeds.conf
-          else
+          if [ "$arr" != "all" ]; then
             cd apps
             mkdir build
             for var in ${arr}
@@ -83,9 +105,11 @@ jobs:
               cp -a applications/$var  build/$var || true
             done
             ls -l build/
+            rm -rf applications
+            mv build applications
             cd ..
-            echo "src-link apps `pwd`/apps/build" >> ${SDK_NAME}/feeds.conf
           fi
+          echo "src-link apps `pwd`/apps/applications" >> ${SDK_NAME}/feeds.conf
           cat apps/feeds.conf >> ${SDK_NAME}/feeds.conf
           echo "" >> ${SDK_NAME}/feeds.conf
           echo "Final feeds.conf:"
@@ -96,6 +120,9 @@ jobs:
           apps="${{ github.event.inputs.applications }}"
           cd ${SDK_NAME}
           ./scripts/feeds update -a
+          grep -lFr '$(call KernelPackage,' feeds/base/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          grep -lFr '$(call KernelPackage,' feeds/base/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
+          patch -d feeds/luci -p1 -f -i `pwd`/../apps/.github/workflows/luci.patch
           if [ "$apps" = "all" ]; then
             ./scripts/feeds install -a -p apps -d y
             for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ../apps/feeds.conf`
@@ -112,6 +139,7 @@ jobs:
         run: |
           cd ${SDK_NAME}
           make defconfig
+          grep '^CONFIG_PACKAGE_' .config
           echo "::set-output name=status::success"
 
       - name: Download sources
@@ -140,7 +168,7 @@ jobs:
 
       - name: Last fail log
         if: failure()
-        run: tail -n 200 /tmp/openwrt-sdk-build.log
+        run: tail -n 200 /tmp/openwrt-sdk-build.log && false
 
       - name: PreUpload - Clean
         id: preupload
