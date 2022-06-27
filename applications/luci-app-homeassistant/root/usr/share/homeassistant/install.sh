@@ -54,7 +54,7 @@ get_image() {
 }
 
 do_install() {
-  echo "docker pull ${IMAGE_NAME}" >>${LOGFILE}
+  echo "docker pull ${IMAGE_NAME}" >${LOGFILE}
   docker pull ${IMAGE_NAME} >>${LOGFILE} 2>&1
   docker rm -f homeassistant
 

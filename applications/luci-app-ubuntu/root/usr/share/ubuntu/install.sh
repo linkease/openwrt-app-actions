@@ -62,10 +62,9 @@ do_install() {
   local PORT=`uci get ubuntu.@ubuntu[0].port 2>/dev/null`
   [ -z "$PASSWORD" ] && PASSWORD="password"
   [ -z "$PORT" ] && PORT=6901
-  echo "docker create pcnet" >>${LOGFILE}
-  docker network ls -f "name=docker-pcnet" | grep -q docker-pcnet || \
-  docker network create -d bridge --subnet=10.10.100.0/24 --ip-range=10.10.100.0/24 --gateway=10.10.100.1 docker-pcnet
-   
+  echo "docker create pcnet" >${LOGFILE}
+  local mntv="/mnt:/mnt"
+  mountpoint -q /mnt && mntv="$mntv:rslave"
   get_image
   echo "docker pull ${IMAGE_NAME}" >>${LOGFILE}
   docker pull ${IMAGE_NAME} >>${LOGFILE} 2>&1
@@ -75,8 +74,7 @@ do_install() {
 
   docker run -d --name ubuntu \
    --dns=223.5.5.5 -u=0:0 \
-    -v=/mnt:/mnt:rslave \
-    --ip=10.10.100.9 \
+    -v=${mntv} \
     --shm-size=512m \
     -p ${PORT}:6901 \
     -e VNC_PW=${PASSWORD} \
