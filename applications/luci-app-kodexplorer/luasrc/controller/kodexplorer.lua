@@ -160,7 +160,7 @@ function get_data()
   end
   local docker_path = util.exec("which docker")
   local docker_install = (string.len(docker_path) > 0)
-  local container_id = util.trim(util.exec("docker ps -aqf 'name="..appname.."'"))
+  local container_id = util.trim(util.exec("docker ps -qf 'name="..appname.."'"))
   local container_install = (string.len(container_id) > 0)
   local port = tonumber(uci:get_first(appname, appname, "port", "8081"))
   local data = {

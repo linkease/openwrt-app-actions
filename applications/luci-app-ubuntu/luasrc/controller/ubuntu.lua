@@ -155,7 +155,8 @@ function get_data()
   local uci = require "luci.model.uci".cursor()
   local docker_path = util.exec("which docker")
   local docker_install = (string.len(docker_path) > 0)
-  local container_id = util.trim(util.exec("docker ps -aqf 'name="..appname.."'"))
+  -- docker ps -aqf
+  local container_id = util.trim(util.exec("docker ps -qf 'name="..appname.."'"))
   local container_install = (string.len(container_id) > 0)
   local port = tonumber(uci:get_first(appname, appname, "port", "6901"))
   local data = {
