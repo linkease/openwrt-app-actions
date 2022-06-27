@@ -1,6 +1,5 @@
 local util  = require "luci.util"
 local http = require "luci.http"
-local docker = require "luci.model.docker"
 local iform = require "luci.iform"
 local jsonc = require "luci.jsonc"
 
