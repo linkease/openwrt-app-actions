@@ -267,7 +267,7 @@ function blocks()
     local obj = jsonc.parse(ret)
     for _, val in pairs(obj["blockdevices"]) do
       local fsize = val["fssize"]
-      if string.len(fsize) > 10 and val["mountpoint"] then
+      if fsize ~= nil and string.len(fsize) > 10 and val["mountpoint"] then
         -- fsize > 1G
         vals[#vals+1] = val["mountpoint"]
       end
