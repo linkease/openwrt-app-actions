@@ -128,8 +128,8 @@ function main_container(data)
           required = true,
           title = "实例1的存储位置：",
           type = "string",
-          enum = dup_array(data.blocks),
-          enumNames = dup_array(data.blocks)
+          enum = dup_to_enums(data.blocks),
+          enumNames = dup_to_enums(data.blocks)
         },
       },
       description = "请选择合适的存储位置进行安装：",
@@ -254,7 +254,10 @@ function blocks()
   return vals
 end
 
-function dup_array(a)
+function dup_to_enums(a)
+  if #a == 0 then
+    return nil
+  end
   local a2 = {}
   for _, val in pairs(a) do
     table.insert(a2, val)

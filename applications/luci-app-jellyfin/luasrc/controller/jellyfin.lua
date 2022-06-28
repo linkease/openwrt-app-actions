@@ -276,10 +276,3 @@ function blocks()
   return vals
 end
 
-function dup_array(a)
-  local a2 = {}
-  for _, val in pairs(a) do
-    table.insert(a2, val)
-  end
-  return a2
-end
