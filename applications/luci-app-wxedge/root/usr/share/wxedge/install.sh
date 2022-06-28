@@ -52,7 +52,7 @@ do_install() {
   docker run -d --name wxedge \
     -e PLACE=CTKS --privileged \
     --network=host --tmpfs /run --tmpfs /tmp \
-    -v ${CACHE_PATH}:/storage:rw -v ${CACHE_PATH}:/var/lib/containerd \
+    -v ${CACHE_PATH}:/storage:rw -v ${CACHE_PATH}/containerd:/var/lib/containerd \
     --restart=unless-stopped ${IMAGE_NAME} >>${LOGFILE} 2>&1
 
   RET=$?
