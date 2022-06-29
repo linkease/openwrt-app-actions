@@ -49,6 +49,8 @@ do_install() {
   docker pull ${IMAGE_NAME} >>${LOGFILE} 2>&1
   docker rm -f wxedge
 
+  # -e NIC=eth0
+  # -e LISTEN_ADDR="0.0.0:18888"
   docker run -d --name wxedge \
     -e PLACE=CTKS --privileged \
     --network=host --tmpfs /run --tmpfs /tmp \
