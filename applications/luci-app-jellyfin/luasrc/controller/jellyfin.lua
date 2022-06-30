@@ -78,7 +78,7 @@ function get_schema(data)
   end
   local _ = luci.i18n.translate
   local access = _('access homepage: ')
-  local homepage = '<a href=\"https://kodcloud.com/\" target=\"_blank\">https://kodcloud.com/</a>'
+  local homepage = '<a href=\"https://jellyfin.org/\" target=\"_blank\">https://jellyfin.org/</a>'
   local schema = {
     actions = actions,
     containers = get_containers(data),
