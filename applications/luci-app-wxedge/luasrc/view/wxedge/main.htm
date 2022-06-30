@@ -11,7 +11,17 @@
   window.IstoreosFormConfig = {
     getApi:"/cgi-bin/luci/admin/services/wxedge/form/",
     logApi:"/cgi-bin/luci/admin/services/wxedge/log",
-    submitApi:"/cgi-bin/luci/admin/services/wxedge/submit"
+    submitApi:"/cgi-bin/luci/admin/services/wxedge/submit",
+    getHook:function(resp){
+      var c1 = resp.result.schema.containers[0];
+      var idx = 1;
+      if  (resp.result.data.container_install) {
+        c1.labels[idx].value = '<a href="http://'+location.host+':'+resp.result.data.port+'" target="_blank">绑定链接</a>';
+      } else {
+        c1.labels[idx].value = "安装并运行之后，才能用网页访问";
+      }
+      return resp;
+    },
   }
 </script>
 <script type="module" crossorigin src="/luci-static/iform/1.0/index.js?v=<%=math.random(1,100000)%>"></script>
