@@ -155,6 +155,7 @@ function get_data()
   local container_install = (string.len(docker_path) > 0) and (string.len(container_id) > 0)
 
   local data = {
+    port = 18888,
     instance1 = uci:get_first(appname, appname, "cache_path", default_path),
     blocks = blk1,
     container_install = container_install
