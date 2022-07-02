@@ -62,7 +62,8 @@ do_install() {
   local mntv="/mnt:/mnt"
   mountpoint -q /mnt && mntv="$mntv:rslave"
   docker run -d \
-    --name nastools \
+    --name=nastools \
+    --dns=172.17.0.1 \
     --hostname nastools \
     -p ${HTTP_PORT}:3000 \
     -v ${CONFIG_PATH}:/config -v ${mntv} \

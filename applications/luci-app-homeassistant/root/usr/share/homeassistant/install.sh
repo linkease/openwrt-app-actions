@@ -59,7 +59,8 @@ do_install() {
   docker rm -f homeassistant
 
   docker run -d \
-    --name homeassistant \
+    --name=homeassistant \
+    --dns=172.17.0.1 \
     --privileged \
     --restart=unless-stopped \
     -e TZ="Asia/Shanghai" \

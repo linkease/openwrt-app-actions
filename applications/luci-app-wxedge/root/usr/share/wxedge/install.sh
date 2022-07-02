@@ -51,7 +51,8 @@ do_install() {
 
   # -e NIC=eth0
   # -e LISTEN_ADDR="0.0.0:18888"
-  docker run -d --name wxedge \
+  docker run -d --name=wxedge \
+    --dns=172.17.0.1 \
     -e PLACE=CTKS --privileged \
     --network=host --tmpfs /run --tmpfs /tmp \
     -v ${CACHE_PATH}:/storage:rw -v ${CACHE_PATH}/containerd:/var/lib/containerd \
