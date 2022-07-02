@@ -87,6 +87,7 @@ do_install_detail() {
 
   if [ "${ARCH}" = "amd64" ]; then
     cmd="docker run --restart=unless-stopped -d \
+    --dns=172.17.0.1 \
     -p $port:8096 -v \"$config:/config\""
   else
     cmd="docker run --restart=unless-stopped -d \

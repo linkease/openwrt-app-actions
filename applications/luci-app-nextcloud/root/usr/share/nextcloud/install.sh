@@ -53,6 +53,7 @@ do_install() {
 
   docker run -d \
     --name nextcloud \
+    --dns=172.17.0.1 \
     --restart=unless-stopped \
     -p ${port}:80 \
     -v /mnt:/mnt:rslave \

@@ -60,6 +60,7 @@ do_install() {
   mountpoint -q /mnt && mntv="$mntv:rslave"
   docker run -d \
     --name=heimdall \
+    --dns=172.17.0.1 \
     -e TZ=Asia/Shanghai \
     -p ${HTTP_PORT}:80 \
     -p ${HTTPS_PORT}:443 \
