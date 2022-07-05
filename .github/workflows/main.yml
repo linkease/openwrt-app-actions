@@ -115,6 +115,26 @@ jobs:
           echo "Final feeds.conf:"
           cat ${SDK_NAME}/feeds.conf
 
+      - name: 'Restore feeds from cache'
+        id: feeds-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'feeds-cache'
+        with:
+          path: |
+            ${{ github.workspace }}/${{ env.SDK_NAME }}/feeds/packages
+            ${{ github.workspace }}/${{ env.SDK_NAME }}/feeds/luci
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-pl-2
+
+      - name: 'Restore staging from cache'
+        id: staging-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'staging-cache'
+        with:
+          path: ${{ github.workspace }}/${{ env.SDK_NAME }}/staging_dir
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-hht
+
       - name: Update feeds
         run: |
           apps="${{ github.event.inputs.applications }}"
@@ -122,7 +142,7 @@ jobs:
           ./scripts/feeds update -a
           grep -lFr '$(call KernelPackage,' feeds/base/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
           grep -lFr '$(call KernelPackage,' feeds/base/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
-          patch -d feeds/luci -p1 -f -i `pwd`/../apps/.github/workflows/luci.patch
+          patch -d feeds/luci -p1 -f -N -i `pwd`/../apps/.github/workflows/luci.patch
           if [ "$apps" = "all" ]; then
             ./scripts/feeds install -a -p apps -d y
             for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ../apps/feeds.conf`
@@ -142,13 +162,34 @@ jobs:
           grep '^CONFIG_PACKAGE_' .config
           echo "::set-output name=status::success"
 
+      - name: 'Restore downloads from cache'
+        id: dl-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'dl-cache'
+        with:
+          path: ${{ github.workspace }}/.dl
+          key: ${{ env.CACHE_NAME }}
+
       - name: Download sources
         id: download
         if: steps.defconfig.outputs.status == 'success'
         run: |
+          [ -d "${{ github.workspace }}/.dl" ] || mkdir -p "${{ github.workspace }}/.dl"
           cd ${SDK_NAME}
+          rm -rf dl
+          ln -s "${{ github.workspace }}/.dl" dl
           make -j4 download
           echo "::set-output name=status::success"
+
+      - name: 'Restore ccache from cache'
+        id: ccache-cache
+        uses: actions/cache@v3
+        env:
+          CACHE_NAME: 'ccache-cache'
+        with:
+          path: ${{ github.workspace }}/${{ env.SDK_NAME }}/.ccache
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}
 
       - name: PreCompile IPKs
         id: precompile
@@ -183,3 +224,9 @@ jobs:
         with:
           name: ${{ env.SDK_ARCH }}
           path: ${{ env.SDK_NAME }}/bin/packages/${{ env.SDK_ARCH }}
+
+      - name: PreCache - Clean
+        run: |
+          git -C "${SDK_NAME}/feeds/luci" reset --hard HEAD^
+          cd ${SDK_NAME}/staging_dir
+          rm -rf packages target-*
