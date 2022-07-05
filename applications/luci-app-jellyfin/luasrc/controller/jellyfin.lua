@@ -36,7 +36,7 @@ function jellyfin_form()
     local result = {
         data = data,
         schema = get_schema(data)
-    } 
+    }
     local response = {
             error = error,
             scope = scope,
@@ -128,26 +128,39 @@ function main_container(data)
   local main_c2 = {
       properties = {
         {
+          name = "hostnet",
+          required = true,
+          title = _("Host network"),
+          type = "boolean",
+          ["ui:options"] = {
+            description = _("Jellyfin running in host network, for DLNA application, port is always 8096 if enabled")
+          },
+        },
+        {
           name = "port",
           required = true,
-          title = "端口",
-          type = "string"
+          title = _("Port"),
+          type = "string",
+          ["ui:hidden"] = "{{rootValue.hostnet == '1'}}",
         },
         {
           name = "media_path",
-          title = _("Media path:"),
+          title = _("Media path"),
           type = "string",
         },
         {
           name = "config_path",
           required = true,
-          title = _("Config path:"),
+          title = _("Config path"),
           type = "string",
         },
         {
           name = "cache_path",
-          title = _("Transcode cache path:"),
+          title = _("Transcode cache path"),
           type = "string",
+          ["ui:options"] = {
+            description = _("Default use 'transcodes' in 'config path' if not set, please make sure there has enough space")
+          },
         },
       },
       description = "请选择合适的存储位置进行安装：",
@@ -171,8 +184,9 @@ function get_data()
   local docker_install = (string.len(docker_path) > 0)
   local container_id = util.trim(util.exec("docker ps -qf 'name="..appname.."'"))
   local container_install = (string.len(container_id) > 0)
-  local port = tonumber(uci:get_first(appname, appname, "port", "8081"))
+  local port = tonumber(uci:get_first(appname, appname, "port", "8096"))
   local data = {
+    hostnet = uci:get_first(appname, appname, "hostnet", "0") == "1" and true or false,
     port = port,
     cache_path = uci:get_first(appname, appname, "cache_path", ""),
     media_path = uci:get_first(appname, appname, "media_path", ""),
@@ -221,10 +235,11 @@ function install_upgrade_jellyfin(req)
   -- save config
   local uci = require "luci.model.uci".cursor()
   uci:tset(appname, "@"..appname.."[0]", {
+    hostnet = req["hostnet"] and 1 or 0,
+    port = port or "",
     media_path = req["media_path"],
     config_path = req["config_path"],
     cache_path = req["cache_path"],
-    port = port or "8096",
   })
   uci:save(appname)
   uci:commit(appname)

@@ -71,6 +71,7 @@ do_install() {
 }
 
 do_install_detail() {
+  local hostnet=`uci get jellyfin.@jellyfin[0].hostnet 2>/dev/null`
   local media=`uci get jellyfin.@jellyfin[0].media_path 2>/dev/null`
   local config=`uci get jellyfin.@jellyfin[0].config_path 2>/dev/null`
   local cache=`uci get jellyfin.@jellyfin[0].cache_path 2>/dev/null`
@@ -83,14 +84,9 @@ do_install_detail() {
 
   [ -z "$port" ] && port=8096
 
-  local cmd=""
-
-  if [ "${ARCH}" = "amd64" ]; then
-    cmd="docker run --restart=unless-stopped -d \
-    --dns=172.17.0.1 \
-    -p $port:8096 -v \"$config:/config\""
-  else
-    cmd="docker run --restart=unless-stopped -d \
+  local cmd="docker run --restart=unless-stopped -d -v \"$config:/config\" "
+  if [ "${ARCH}" = "arm64" ]; then
+    cmd="$cmd\
     --device /dev/rpc0:/dev/rpc0 \
     --device /dev/rpc1:/dev/rpc1 \
     --device /dev/rpc2:/dev/rpc2 \
@@ -111,9 +107,16 @@ do_install_detail() {
     -v /tmp/shm:/dev/shm \
     -v /sys/class/uio:/sys/class/uio \
     -v /var/tmp/vowb:/var/tmp/vowb \
-    --pid=host \
+    --pid=host "
+  fi
+  if [ "$hostnet" = 1 ]; then
+    cmd="$cmd\
+    --dns=127.0.0.1 \
+    --network=host "
+  else
+    cmd="$cmd\
     --dns=172.17.0.1 \
-    -p $port:8096 -v \"$config:/config\""
+    -p $port:8096 "
   fi
 
   [ -z "$cache" ] || cmd="$cmd -v \"$cache:/config/transcodes\""
@@ -144,7 +147,7 @@ do_run() {
 }
 
 usage() {
-  echo "usage: wxedge sub-command"
+  echo "usage: $0 sub-command"
   echo "where sub-command is one of:"
   echo "      install                Install the jellyfin"
   echo "      upgrade                Upgrade the jellyfin"
