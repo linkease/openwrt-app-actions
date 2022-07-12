@@ -72,8 +72,9 @@ jobs:
 
       - name: Unpack SDK
         run: |
-          tar -xJf ${SDK_NAME}.tar.xz
-          ln -s `pwd`/${SDK_NAME} ~/openwrt-sdk
+          mkdir ~/openwrt-sdk
+          tar -xJf `pwd`/${SDK_NAME}.tar.xz --strip-components=1 -C ~/openwrt-sdk
+          ln -s ${HOME}/openwrt-sdk ${SDK_NAME}
 
       - name: Clean Code
         run: |
