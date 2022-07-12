@@ -72,7 +72,9 @@ jobs:
         run: wget ${SDK_URL}${SDK_NAME}.tar.xz
 
       - name: Unpack SDK
-        run: tar -xJf ${SDK_NAME}.tar.xz
+        run: |
+          tar -xJf ${SDK_NAME}.tar.xz
+          ln -s `pwd`/${SDK_NAME} ~/openwrt-sdk
 
       - name: Clean Code
         run: |
@@ -138,14 +140,14 @@ jobs:
       - name: Update feeds
         run: |
           apps="${{ github.event.inputs.applications }}"
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           ./scripts/feeds update -a
           grep -lFr '$(call KernelPackage,' feeds/base/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
           grep -lFr '$(call KernelPackage,' feeds/base/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
-          patch -d feeds/luci -p1 -f -N -i `pwd`/../apps/.github/workflows/luci.patch
+          patch -d feeds/luci -p1 -f -N -i ${{ github.workspace }}/apps/.github/workflows/luci.patch
           if [ "$apps" = "all" ]; then
             ./scripts/feeds install -a -p apps -d y
-            for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ../apps/feeds.conf`
+            for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ${{ github.workspace }}/apps/feeds.conf`
             do
               echo add all in repo $repo
               ./scripts/feeds install -a -p $repo -d y
@@ -157,7 +159,7 @@ jobs:
       - name: Defconfig
         id: defconfig
         run: |
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           make defconfig
           grep '^CONFIG_PACKAGE_' .config
           echo "::set-output name=status::success"
@@ -176,7 +178,7 @@ jobs:
         if: steps.defconfig.outputs.status == 'success'
         run: |
           [ -d "${{ github.workspace }}/.dl" ] || mkdir -p "${{ github.workspace }}/.dl"
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           rm -rf dl
           ln -s "${{ github.workspace }}/.dl" dl
           make -j4 download
@@ -195,7 +197,7 @@ jobs:
         id: precompile
         if: steps.download.outputs.status == 'success'
         run: |
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           make -j4 package/compile
           echo "::set-output name=status::success"
 
@@ -203,7 +205,7 @@ jobs:
         id: compile
         if: failure() && steps.download.outputs.status == 'success'
         run: |
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           bash -c 'set -o pipefail ; make -j1 V=s defconfig package/compile 2>&1 | tee /tmp/openwrt-sdk-build.log'
           echo "::set-output name=status::success"
 
