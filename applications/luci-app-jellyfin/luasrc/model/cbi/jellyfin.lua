@@ -8,7 +8,7 @@ local m, s, o
 m = taskd.docker_map("jellyfin", "jellyfin", "/usr/share/jellyfin/install.sh",
 	translate("Jellyfin"),
 	translate("Jellyfin is the volunteer-built media solution that puts you in control of your media. Stream to any device from your own server, with no strings attached. Your media, your server, your way.")
-		.. translate("Official website: ") .. '<a href=\"https://jellyfin.org/\" target=\"_blank\">https://jellyfin.org/</a>')
+		.. translate("Official website:") .. ' <a href=\"https://jellyfin.org/\" target=\"_blank\">https://jellyfin.org/</a>')
 
 s = m:section(SimpleSection, translate("Service Status"), translate("Jellyfin status:"))
 s:append(Template("jellyfin/status"))
