@@ -62,7 +62,6 @@ jobs:
           sudo rm -rf /swapfile /etc/apt/sources.list.d/* /usr/share/dotnet /usr/local/lib/android /opt/ghc
           sudo -E apt-get -qq update
           sudo -E apt-get -qq install build-essential asciidoc binutils bzip2 gawk gettext git libncurses5-dev libz-dev patch unzip zlib1g-dev lib32gcc1 libc6-dev-i386 subversion flex uglifyjs gcc-multilib g++-multilib p7zip p7zip-full msmtp libssl-dev texinfo libglib2.0-dev xmlto qemu-utils upx libelf-dev autoconf automake libtool autopoint device-tree-compiler antlr3 gperf rsync
-          sudo -E apt-get -qq install default-jre
           sudo -E apt-get -qq autoremove --purge
           sudo -E apt-get -qq clean
           sudo timedatectl set-timezone "$TZ"
@@ -72,7 +71,10 @@ jobs:
         run: wget ${SDK_URL}${SDK_NAME}.tar.xz
 
       - name: Unpack SDK
-        run: tar -xJf ${SDK_NAME}.tar.xz
+        run: |
+          mkdir ~/openwrt-sdk
+          tar -xJf `pwd`/${SDK_NAME}.tar.xz --strip-components=1 -C ~/openwrt-sdk
+          ln -s ${HOME}/openwrt-sdk ${SDK_NAME}
 
       - name: Clean Code
         run: |
@@ -122,9 +124,9 @@ jobs:
           CACHE_NAME: 'feeds-cache'
         with:
           path: |
-            ${{ github.workspace }}/${{ env.SDK_NAME }}/feeds/packages
-            ${{ github.workspace }}/${{ env.SDK_NAME }}/feeds/luci
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-pl-2
+            ~/openwrt-sdk/feeds/packages
+            ~/openwrt-sdk/feeds/luci
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-pl-3
 
       - name: 'Restore staging from cache'
         id: staging-cache
@@ -132,33 +134,34 @@ jobs:
         env:
           CACHE_NAME: 'staging-cache'
         with:
-          path: ${{ github.workspace }}/${{ env.SDK_NAME }}/staging_dir
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-hht
+          path: ~/openwrt-sdk/staging_dir
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-hht-2
 
       - name: Update feeds
         run: |
           apps="${{ github.event.inputs.applications }}"
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           ./scripts/feeds update -a
           grep -lFr '$(call KernelPackage,' feeds/base/package/linux | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
           grep -lFr '$(call KernelPackage,' feeds/base/package/kernel | xargs -rn1 sed -i 's/ FILES:=/ XFILES:=/g' || true
-          patch -d feeds/luci -p1 -f -N -i `pwd`/../apps/.github/workflows/luci.patch
+          patch -d feeds/luci -p1 -f -N -i ${{ github.workspace }}/apps/.github/workflows/luci.patch
           if [ "$apps" = "all" ]; then
             ./scripts/feeds install -a -p apps -d y
-            for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ../apps/feeds.conf`
+            for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ${{ github.workspace }}/apps/feeds.conf`
             do
               echo add all in repo $repo
               ./scripts/feeds install -a -p $repo -d y
             done
           else
-            ./scripts/feeds install ${apps} -d y
+            ./scripts/feeds install -d y ${apps}
           fi
 
       - name: Defconfig
         id: defconfig
         run: |
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           make defconfig
+          sed -i 's/^CONFIG_PACKAGE_\(.*\)=m$/# CONFIG_PACKAGE_\1 is not set/' .config
           grep '^CONFIG_PACKAGE_' .config
           echo "::set-output name=status::success"
 
@@ -176,7 +179,7 @@ jobs:
         if: steps.defconfig.outputs.status == 'success'
         run: |
           [ -d "${{ github.workspace }}/.dl" ] || mkdir -p "${{ github.workspace }}/.dl"
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           rm -rf dl
           ln -s "${{ github.workspace }}/.dl" dl
           make -j4 download
@@ -188,14 +191,14 @@ jobs:
         env:
           CACHE_NAME: 'ccache-cache'
         with:
-          path: ${{ github.workspace }}/${{ env.SDK_NAME }}/.ccache
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}
+          path: ~/openwrt-sdk/.ccache
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-2
 
       - name: PreCompile IPKs
         id: precompile
         if: steps.download.outputs.status == 'success'
         run: |
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           make -j4 package/compile
           echo "::set-output name=status::success"
 
@@ -203,7 +206,7 @@ jobs:
         id: compile
         if: failure() && steps.download.outputs.status == 'success'
         run: |
-          cd ${SDK_NAME}
+          cd ~/openwrt-sdk
           bash -c 'set -o pipefail ; make -j1 V=s defconfig package/compile 2>&1 | tee /tmp/openwrt-sdk-build.log'
           echo "::set-output name=status::success"
 
