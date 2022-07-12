@@ -7,7 +7,7 @@ PKG_RELEASE:=
 
 LUCI_TITLE:=LuCI support for jellyfin
 LUCI_PKGARCH:=all
-LUCI_DEPENDS:=+docker +luci-lib-iform
+LUCI_DEPENDS:=+docker +luci-lib-taskd
 
 define Package/luci-app-jellyfin/conffiles
 /etc/config/jellyfin
