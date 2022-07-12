@@ -124,9 +124,9 @@ jobs:
           CACHE_NAME: 'feeds-cache'
         with:
           path: |
-            ${{ github.workspace }}/${{ env.SDK_NAME }}/feeds/packages
-            ${{ github.workspace }}/${{ env.SDK_NAME }}/feeds/luci
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-pl-2
+            ~/openwrt-sdk/feeds/packages
+            ~/openwrt-sdk/feeds/luci
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-pl-3
 
       - name: 'Restore staging from cache'
         id: staging-cache
@@ -134,8 +134,8 @@ jobs:
         env:
           CACHE_NAME: 'staging-cache'
         with:
-          path: ${{ github.workspace }}/${{ env.SDK_NAME }}/staging_dir
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-hht
+          path: ~/openwrt-sdk/staging_dir
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-hht-2
 
       - name: Update feeds
         run: |
@@ -191,8 +191,8 @@ jobs:
         env:
           CACHE_NAME: 'ccache-cache'
         with:
-          path: ${{ github.workspace }}/${{ env.SDK_NAME }}/.ccache
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}
+          path: ~/openwrt-sdk/.ccache
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-2
 
       - name: PreCompile IPKs
         id: precompile
