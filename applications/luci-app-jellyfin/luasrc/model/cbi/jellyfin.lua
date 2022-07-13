@@ -27,13 +27,13 @@ o.datatype = "port"
 o:depends("hostnet", 0)
 
 o = s:option(Value, "media_path", translate("Media path"))
-o.datatype = "directory"
+o.datatype = "string"
 
 o = s:option(Value, "config_path", translate("Config path").."<b>*</b>")
 o.rmempty = false
-o.datatype = "directory"
+o.datatype = "string"
 
 o = s:option(Value, "cache_path", translate("Transcode cache path"), translate("Default use 'transcodes' in 'config path' if not set, please make sure there has enough space"))
-o.datatype = "directory"
+o.datatype = "string"
 
 return m
