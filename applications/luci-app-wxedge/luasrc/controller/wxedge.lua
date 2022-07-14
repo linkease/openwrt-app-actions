@@ -80,7 +80,7 @@ function get_schema(data)
   local schema = {
       actions = actions,
       containers = get_containers(data),
-      description = "「网心云-容器魔方」由网心云推出的一款 docker 容器镜像软件，通过在简单安装后即可快速加入网心云共享计算生态网络，用户可根据每日的贡献量获得相应的现金收益回报。了解更多，请登录「<a href=\"https://www.onethingcloud.com/\">官网</a>」",
+      description = "「网心云-容器魔方」由网心云推出的一款 docker 容器镜像软件，通过在简单安装后即可快速加入网心云共享计算生态网络，用户可根据每日的贡献量获得相应的现金收益回报。了解更多，请登录「<a href=\"https://www.onethingcloud.com/\">网心云官网</a>」",
       title = "网心云-容器魔方"
   }
   return schema
