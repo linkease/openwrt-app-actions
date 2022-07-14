@@ -130,9 +130,9 @@ function main_container(data)
           type = "string",
           enum = dup_to_enums(data.blocks),
           enumNames = dup_to_enums(data.blocks),
-		  ["ui:options"] = {
-			description: "可前往「挂载磁盘」添加路径，路径选择后请勿轻易改动"
-		  }
+          ["ui:options"] = {
+              description = "可前往「挂载磁盘」添加路径，路径选择后请勿轻易改动"
+          }
         },
       },
       description = "请选择合适的存储位置进行安装，安装位置容量越大，收益越高：",
