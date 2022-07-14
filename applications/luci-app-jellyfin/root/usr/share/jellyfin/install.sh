@@ -106,7 +106,7 @@ usage() {
   echo "      upgrade                Upgrade the jellyfin"
   echo "      rm/start/stop/restart  Remove/Start/Stop/Restart the jellyfin"
   echo "      status                 Jellyfin status"
-  echo "      status                 Jellyfin port"
+  echo "      port                   Jellyfin port"
 }
 
 case ${ACTION} in
