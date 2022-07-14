@@ -16,9 +16,9 @@
       var c1 = resp.result.schema.containers[0];
       var idx = 1;
       if  (resp.result.data.container_install) {
-        c1.labels[idx].value = '<a href="http://'+location.host+':'+resp.result.data.port+'" target="_blank">绑定链接</a>';
+        c1.labels[idx].value = '<a href="http://'+location.host+':'+resp.result.data.port+'" target="_blank" class="cbi-button cbi-button-success">进入容器魔方</a>';
       } else {
-        c1.labels[idx].value = "安装并运行之后，才能用网页访问";
+        c1.labels[idx].value = "请继续完成安装，才能运行「容器魔方」";
       }
       return resp;
     },

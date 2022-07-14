@@ -80,8 +80,8 @@ function get_schema(data)
   local schema = {
       actions = actions,
       containers = get_containers(data),
-      description = "本插件能让设备快速加入网心云共享计算生态网络，为网心科技星域云贡献设备的上行带宽和存储资源，用户根据每日的贡献量可获得相应的现金收益回报。 具体请访问它的<a href=\"https://www.onethingcloud.com/\">官网</a>",
-      title = "网心云"
+      description = "「网心云-容器魔方」由网心云推出的一款 docker 容器镜像软件，通过在简单安装后即可快速加入网心云共享计算生态网络，用户可根据每日的贡献量获得相应的现金收益回报。了解更多，请登录「<a href=\"https://www.onethingcloud.com/\">官网</a>」",
+      title = "网心云-容器魔方"
   }
   return schema
 end
@@ -126,13 +126,16 @@ function main_container(data)
         {
           name = "instance1",
           required = true,
-          title = "实例1的存储位置：",
+          title = "存储路径：",
           type = "string",
           enum = dup_to_enums(data.blocks),
-          enumNames = dup_to_enums(data.blocks)
+          enumNames = dup_to_enums(data.blocks),
+		  ["ui:options"] = {
+			description: "可前往「挂载磁盘」添加路径，路径选择后请勿轻易改动"
+		  }
         },
       },
-      description = "请选择合适的存储位置进行安装：",
+      description = "请选择合适的存储位置进行安装，安装位置容量越大，收益越高：",
       title = "服务操作"
     }
     return main_c2
