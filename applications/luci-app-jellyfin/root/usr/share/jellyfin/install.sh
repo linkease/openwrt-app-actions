@@ -76,6 +76,10 @@ do_install_detail() {
     -v /sys/class/uio:/sys/class/uio \
     -v /var/tmp/vowb:/var/tmp/vowb \
     --pid=host "
+  elif [ -d /dev/dri ]; then
+    cmd="$cmd\
+    --device /dev/dri:/dev/dri \
+    --privileged "
   fi
   if [ "$hostnet" = 1 ]; then
     cmd="$cmd\
