@@ -4,27 +4,22 @@
 ACTION=${1}
 shift 1
 
-ARCH=''
+ARCH="default"
 IMAGE_NAME='default'
 
 get_image() {
-  ARCH="arm64"
-  if echo `uname -m` | grep -Eqi 'x86_64'; then
-    ARCH="amd64"
-  elif  echo `uname -m` | grep -Eqi 'aarch64'; then
-    ARCH="arm64"
-  else
-    ARCH="arm64"
+  if grep -Eq ',rtd-?129.$' /proc/device-tree/compatible 2>/dev/null; then
+    ARCH="rtd129x"
   fi
-
-  if [ "${ARCH}" = "amd64" ]; then
-    IMAGE_NAME="jellyfin/jellyfin"
-  else
-    if [ "$IMAGE_NAME" == "default" ]; then
-        IMAGE_NAME="jjm2473/jellyfin-rtk:latest"
-        if uname -r | grep -q '^4\.9\.'; then
-          IMAGE_NAME="jjm2473/jellyfin-rtk:4.9-latest"
-        fi
+  IMAGE_NAME=`uci get jellyfin.@jellyfin[0].image 2>/dev/null`
+  if [ -z "$IMAGE_NAME" -o "$IMAGE_NAME" == "default" ]; then
+    if [ "${ARCH}" = "rtd129x" ]; then
+      IMAGE_NAME="jjm2473/jellyfin-rtk:latest"
+      if uname -r | grep -q '^4\.9\.'; then
+        IMAGE_NAME="jjm2473/jellyfin-rtk:4.9-latest"
+      fi
+    else
+      IMAGE_NAME="jellyfin/jellyfin"
     fi
   fi
 }
@@ -53,7 +48,7 @@ do_install_detail() {
   [ -z "$port" ] && port=8096
 
   local cmd="docker run --restart=unless-stopped -d -v \"$config:/config\" "
-  if [ "${ARCH}" = "arm64" ]; then
+  if [ "${ARCH}" = "rtd129x" ]; then
     cmd="$cmd\
     --device /dev/rpc0:/dev/rpc0 \
     --device /dev/rpc1:/dev/rpc1 \
