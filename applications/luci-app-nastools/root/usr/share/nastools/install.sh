@@ -41,7 +41,7 @@ run_action() {
 do_install() {
   local CONFIG_PATH=`uci get nastools.@nastools[0].config_path 2>/dev/null`
   local HTTP_PORT=`uci get nastools.@nastools[0].http_port 2>/dev/null`
-  local AUTO_UPDATE=`uci get nastools.@nastools[0].https_port 2>/dev/null`
+  local AUTO_UPDATE=`uci get nastools.@nastools[0].auto_upgrade 2>/dev/null`
   if [ -z "${CONFIG_PATH}" ]; then
       echo "config path is empty!" >${LOGFILE}
       exit 1

@@ -1,7 +1,7 @@
 msgid "NasTools"
 msgstr "NasTool 工具集"
 
-msgid "access homepage: "
+msgid "Access homepage:"
 msgstr "访问主页："
 
 msgid "NasTools is a tools for resource aggregation running in NAS."

@@ -77,12 +77,12 @@ function get_schema(data)
     }
   end
   local _ = luci.i18n.translate
-  local access = _('access homepage: ')
+  local access = _('Access homepage:')
   local homepage = '<a href=\"https://github.com/jxxghp/nas-tools\" target=\"_blank\">NasTools</a>'
   local schema = {
     actions = actions,
     containers = get_containers(data),
-    description = _("NasTools is a tools for resource aggregation running in NAS.")..access..homepage,
+    description = _("NasTools is a tools for resource aggregation running in NAS.")..access.." "..homepage,
     title = _("NasTools")
   }
   return schema
@@ -133,7 +133,7 @@ function main_container(data)
           type = "string"
         },
         {
-          name = "auto_update",
+          name = "auto_upgrade",
           required = true,
           title = "自动更新",
           type = "boolean"
@@ -171,7 +171,7 @@ function get_data()
   local http_port = tonumber(uci:get_first(appname, appname, "http_port", "3003"))
   local data = {
     http_port = http_port,
-    auto_update = false,
+    auto_upgrade = uci:get_first(appname, appname, "auto_upgrade", default_path) == "1",
     config_path = uci:get_first(appname, appname, "config_path", default_path),
     blocks = blk1,
     container_install = container_install
@@ -213,19 +213,19 @@ end
 
 function install_upgrade_nastools(req)
   local http_port = req["http_port"]
-  local auto_update = req["auto_update"]
-  local auto_update_num
-  if auto_update then
-    auto_update_num = 1
+  local auto_upgrade = req["auto_upgrade"]
+  local auto_upgrade_num
+  if auto_upgrade then
+    auto_upgrade_num = 1
   else
-    auto_update_num = 0
+    auto_upgrade_num = 0
   end
 
   -- save config
   local uci = require "luci.model.uci".cursor()
   uci:tset(appname, "@"..appname.."[0]", {
     http_port = http_port or "3003",
-    auto_update = auto_update_num,
+    auto_upgrade = auto_upgrade_num,
     config_path = req["config_path"],
   })
   uci:save(appname)
