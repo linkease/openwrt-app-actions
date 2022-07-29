@@ -86,6 +86,9 @@ do_install_detail() {
     -p $port:8096 "
   fi
 
+  local tz="`cat /tmp/TZ`"
+  [ -z "$tz" ] || cmd="$cmd -e TZ=$tz"
+
   [ -z "$cache" ] || cmd="$cmd -v \"$cache:/config/transcodes\""
   [ -z "$media" ] || cmd="$cmd -v \"$media:/media\""
 
