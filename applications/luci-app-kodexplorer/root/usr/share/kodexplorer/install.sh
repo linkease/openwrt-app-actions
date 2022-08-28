@@ -52,6 +52,7 @@ do_install() {
   mountpoint -q /mnt && mntv="$mntv:rslave"
   docker run -d --name kodexplorer \
     --dns=172.17.0.1 \
+    --restart=unless-stopped \
     -p ${PORT}:80 \
     -v ${CACHE}:/var/www/html -v ${mntv} \
     $IMAGE_NAME >>${LOGFILE} 2>&1
