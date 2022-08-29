@@ -30,7 +30,11 @@ jobs:
           if [ "x${MATRIX_TARGET}" = "x" -o "x${MATRIX_TARGET}" = "xall" ]; then \
             echo "::set-output name=matrix::{\"target\":[\"arm64\", \"x64\", \"mipsel\"]}"; \
           else \
-            echo "::set-output name=matrix::{\"target\":[\"${MATRIX_TARGET}\"]}"; \
+            targets=""; \
+            for target in ${MATRIX_TARGET}; do \
+              targets=", \"$target\"";
+            done; \
+            echo "::set-output name=matrix::{\"target\":[${targets#, }]}"; \
           fi
   build:
     needs: matrix
