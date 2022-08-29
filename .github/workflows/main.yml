@@ -32,7 +32,7 @@ jobs:
           else \
             targets=""; \
             for target in ${MATRIX_TARGET}; do \
-              targets=", \"$target\"";
+              targets="$targets, \"$target\"";
             done; \
             echo "${targets#, }"; \
             echo "::set-output name=matrix::{\"target\":[${targets#, }]}"; \
