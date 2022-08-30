@@ -41,7 +41,7 @@ o.rmempty = false
 o.datatype = "string"
 for _, dir in pairs(blks) do
 	dir = dir .. "/wxedge1"
-	o.value(dir, dir)
+	o:value(dir, dir)
 end
 if #blks > 0 then
     o.default = blks[1] .. "/wxedge1"
