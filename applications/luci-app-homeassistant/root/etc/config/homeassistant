@@ -1,3 +1,2 @@
 config homeassistant
-	option 'port' '8123'
-	option 'enabled' '1'
+	option 'config_path' '/root/homeassistant/config'

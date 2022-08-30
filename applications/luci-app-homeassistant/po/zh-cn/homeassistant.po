@@ -1,27 +1,35 @@
-msgid "The homeassistant service is running."
-msgstr "homeassistant已启动"
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
 
-msgid "The homeassistant service is not running."
-msgstr "homeassistant服务未启动"
+msgid "Official website:"
+msgstr "官方网站："
 
-msgid "The homeassistant service is not installed."
-msgstr "homeassistant服务未安装"
+msgid "Open source home automation that puts local control and privacy first. Powered by a worldwide community of tinkerers and DIY enthusiasts."
+msgstr "将本地控制和隐私放在首位的开源家庭自动化，由全世界 DIY 爱好者组成的社区驱动。"
 
-msgid "open homeassistant"
-msgstr "打开homeassistant"
+msgid "Config path"
+msgstr "配置文件路径"
 
-msgid "stop homeassistant"
-msgstr "停止homeassistant"
+msgid "Service Status"
+msgstr "服务状态"
 
-msgid "run homeassistant"
-msgstr "启动homeassistant"
+msgid "Home Assistant status:"
+msgstr "Home Assistant 的状态信息如下："
 
-msgid "uninstall homeassistant"
-msgstr "删除homeassistant"
+msgid "Setup"
+msgstr "安装配置"
 
-msgid "install homeassistant"
-msgstr "安装homeassistant"
+msgid "The following parameters will only take effect during installation or upgrade:"
+msgstr "以下参数只在安装或者升级时才会生效："
 
-msgid "Collecting data..."
-msgstr "收集数据..."
+msgid "Status"
+msgstr "状态"
 
+msgid "Home Assistant is running"
+msgstr "Home Assistant 运行中"
+
+msgid "Home Assistant is not running"
+msgstr "Home Assistant 未运行"
+
+msgid "Open the Home Assistant"
+msgstr "打开 Home Assistant"
