@@ -1,3 +1,2 @@
 config wxedge
-	option 'image' 'onething1/wxedge:latest'
-	option 'cache_path' '/wxedge'
+	option 'cache_path' ''
