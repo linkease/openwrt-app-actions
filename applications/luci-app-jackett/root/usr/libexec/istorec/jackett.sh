@@ -27,7 +27,7 @@ do_install_detail() {
       exit 1
   fi
   if [ -z "$save_path" ]; then
-      echo "config path is empty!"
+      echo "save path is empty!"
       exit 1
   fi
 
