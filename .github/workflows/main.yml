@@ -28,13 +28,13 @@ jobs:
           MATRIX_TARGET: ${{ github.event.inputs.target }}
         run: |
           if [ "x${MATRIX_TARGET}" = "x" -o "x${MATRIX_TARGET}" = "xall" ]; then \
-            echo "::set-output name=matrix::{\"target\":[\"arm64\", \"x64\", \"mipsel\"]}"; \
+            echo "matrix={\"target\":[\"arm64\", \"x64\", \"mipsel\"]}" >> $GITHUB_OUTPUT; \
           else \
             targets=""; \
             for target in ${MATRIX_TARGET}; do \
               targets="$targets, \"$target\"";
             done; \
-            echo "::set-output name=matrix::{\"target\":[${targets#, }]}"; \
+            echo "matrix={\"target\":[${targets#, }]}" >> $GITHUB_OUTPUT; \
           fi
   build:
     needs: matrix
@@ -167,7 +167,7 @@ jobs:
           make defconfig
           sed -i 's/^CONFIG_PACKAGE_\(.*\)=m$/# CONFIG_PACKAGE_\1 is not set/' .config
           grep '^CONFIG_PACKAGE_' .config
-          echo "::set-output name=status::success"
+          echo "status=success" >> $GITHUB_OUTPUT
 
       - name: 'Restore downloads from cache'
         id: dl-cache
@@ -187,7 +187,7 @@ jobs:
           rm -rf dl
           ln -s "${{ github.workspace }}/.dl" dl
           make -j4 download
-          echo "::set-output name=status::success"
+          echo "status=success" >> $GITHUB_OUTPUT
 
       - name: 'Restore ccache from cache'
         id: ccache-cache
@@ -204,7 +204,7 @@ jobs:
         run: |
           cd ~/openwrt-sdk
           make -j4 package/compile
-          echo "::set-output name=status::success"
+          echo "status=success" >> $GITHUB_OUTPUT
 
       - name: ReCompile IPKs
         id: compile
@@ -212,7 +212,7 @@ jobs:
         run: |
           cd ~/openwrt-sdk
           bash -c 'set -o pipefail ; make -j1 V=s defconfig package/compile 2>&1 | tee /tmp/openwrt-sdk-build.log'
-          echo "::set-output name=status::success"
+          echo "status=success" >> $GITHUB_OUTPUT
 
       - name: Last fail log
         if: failure()
