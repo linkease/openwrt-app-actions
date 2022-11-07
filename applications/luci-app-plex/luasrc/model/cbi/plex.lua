@@ -3,6 +3,7 @@ LuCI - Lua Configuration Interface
 ]]--
 
 local taskd = require "luci.model.tasks"
+local plex_model = require "luci.model.plex"
 local m, s, o
 
 m = taskd.docker_map("plex", "plex", "/usr/libexec/istorec/plex.sh",
@@ -31,14 +32,36 @@ o.default = "32400"
 o.datatype = "port"
 o:depends("hostnet", 0)
 
+o = s:option(Value, "image_name", translate("Image").."<b>*</b>")
+o.rmempty = false
+o.datatype = "string"
+o:value("plexinc/pms-docker:latest", "plexinc/pms-docker:latest")
+o:value("plexinc/pms-docker:1.29.1.6316-f4cdfea9c", "plexinc/pms-docker:1.29.1.6316-f4cdfea9c")
+o.default = "plexinc/pms-docker:latest"
+
+local blocks = plex_model.blocks()
+local home = plex_model.home()
+
 o = s:option(Value, "config_path", translate("Config path").."<b>*</b>")
 o.rmempty = false
 o.datatype = "string"
 
+local paths, default_path = plex_model.find_paths(blocks, home, "config")
+for _, val in pairs(paths) do
+  o:value(val, val)
+end
+o.default = default_path
+
 o = s:option(Value, "media_path", translate("Media path"))
 o.datatype = "string"
+o.default = plex_model.media_path(home)
 
 o = s:option(Value, "cache_path", translate("Transcode cache path"), translate("Default use 'transcodes' in 'config path' if not set, please make sure there has enough space"))
 o.datatype = "string"
+local paths, default_path = plex_model.find_paths(blocks, home, "transcodes")
+for _, val in pairs(paths) do
+  o:value(val, val)
+end
+o.default = default_path
 
 return m

@@ -13,7 +13,7 @@ do_install() {
   local media=`uci get plex.@plex[0].media_path 2>/dev/null`
   local cache=`uci get plex.@plex[0].cache_path 2>/dev/null`
 
-  [-z "$image_name" ] && image_name="plexinc/pms-docker:latest"
+  [ -z "$image_name" ] && image_name="plexinc/pms-docker:latest"
   echo "docker pull ${image_name}"
   docker pull ${image_name}
   docker rm -f plex
