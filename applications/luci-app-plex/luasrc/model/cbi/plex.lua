@@ -8,7 +8,7 @@ local m, s, o
 
 m = taskd.docker_map("plex", "plex", "/usr/libexec/istorec/plex.sh",
 	translate("Plex"),
-	translate("Plex is an elegant solution to organise all your web applications.")
+	translate("Plex is an streaming media service and a client–server media player platform, made by Plex, Inc.")
 		.. translate("Official website:") .. ' <a href=\"https://www.plex.tv/\" target=\"_blank\">https://www.plex.tv/</a>')
 
 s = m:section(SimpleSection, translate("Service Status"), translate("Plex status:"))
