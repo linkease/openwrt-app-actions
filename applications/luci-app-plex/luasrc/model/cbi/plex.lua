@@ -14,7 +14,7 @@ m = taskd.docker_map("plex", "plex", "/usr/libexec/istorec/plex.sh",
 s = m:section(SimpleSection, translate("Service Status"), translate("Plex status:"))
 s:append(Template("plex/status"))
 
-s = m:section(TypedSection, "plex", translate("Setup"), translate("The following parameters will only take effect during installation or upgrade:"))
+s = m:section(TypedSection, "main", translate("Setup"), translate("The following parameters will only take effect during installation or upgrade:"))
 s.addremove=false
 s.anonymous=true
 
@@ -22,8 +22,7 @@ o = s:option(Flag, "hostnet", translate("Host network"), translate("Plex running
 o.default = 0
 o.rmempty = false
 
-o = s:option(Value, "claim_token", translate("Plex Claim").."<b>*</b>")
-o.rmempty = false
+o = s:option(Value, "claim_token", translate("Plex Claim"))
 o.datatype = "string"
 
 o = s:option(Value, "port", translate("Port").."<b>*</b>")
@@ -46,7 +45,7 @@ o = s:option(Value, "config_path", translate("Config path").."<b>*</b>")
 o.rmempty = false
 o.datatype = "string"
 
-local paths, default_path = plex_model.find_paths(blocks, home, "config")
+local paths, default_path = plex_model.find_paths(blocks, home, "Configs")
 for _, val in pairs(paths) do
   o:value(val, val)
 end
@@ -54,11 +53,10 @@ o.default = default_path
 
 o = s:option(Value, "media_path", translate("Media path"))
 o.datatype = "string"
-o.default = plex_model.media_path(home)
 
 o = s:option(Value, "cache_path", translate("Transcode cache path"), translate("Default use 'transcodes' in 'config path' if not set, please make sure there has enough space"))
 o.datatype = "string"
-local paths, default_path = plex_model.find_paths(blocks, home, "transcodes")
+local paths, default_path = plex_model.find_paths(blocks, home, "Caches")
 for _, val in pairs(paths) do
   o:value(val, val)
 end

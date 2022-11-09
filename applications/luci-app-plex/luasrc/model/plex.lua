@@ -23,32 +23,32 @@ end
 
 plex.home = function()
   local uci = require "luci.model.uci".cursor()
-  local data = uci:get_first("linkease", "linkease", "local_home", "/root")
-  return data
+  local home_dirs = {}
+  home_dirs["main_dir"] = uci:get_first("quickstart", "main", "main_dir", "/root")
+  home_dirs["Configs"] = uci:get_first("quickstart", "main", "conf_dir", home_dirs["main_dir"].."/Configs")
+  home_dirs["Downloads"] = uci:get_first("quickstart", "main", "dl_dir", home_dirs["main_dir"].."/Downloads")
+  home_dirs["Caches"] = uci:get_first("quickstart", "main", "tmp_dir", home_dirs["main_dir"].."/Caches")
+  return home_dirs
 end
 
-plex.find_paths = function(blocks, home, path_name)
+plex.find_paths = function(blocks, home_dirs, path_name)
   local default_path = ''
   local configs = {}
+
+  default_path = home_dirs[path_name] .. "/Plex"
   if #blocks == 0 then
-    default_path = home .. "/Programs/plex/" .. path_name
     table.insert(configs, default_path)
   else
     for _, val in pairs(blocks) do 
-      table.insert(configs, val .. "/Programs/plex/" .. path_name)
+      table.insert(configs, val .. "/" .. path_name .. "/Plex")
     end
-    default_path = configs[1]
+    local without_conf_dir = "/root/" .. path_name .. "/Plex"
+    if default_path == without_conf_dir then
+      default_path = configs[1]
+    end
   end
 
   return configs, default_path
-end
-
-plex.media_path = function(home)
-  if home == "/root" then
-    return ""
-  else
-    return home .. "/Downloads"
-  end
 end
 
 return plex

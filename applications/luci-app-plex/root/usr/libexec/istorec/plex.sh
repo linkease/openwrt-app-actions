@@ -5,13 +5,13 @@ ACTION=${1}
 shift 1
 
 do_install() {
-  local hostnet=`uci get plex.@plex[0].hostnet 2>/dev/null`
-  local claim_token==`uci get plex.@plex[0].claim_token 2>/dev/null`
-  local port=`uci get plex.@plex[0].port 2>/dev/null`
-  local image_name=`uci get plex.@plex[0].image_name 2>/dev/null`
-  local config=`uci get plex.@plex[0].config_path 2>/dev/null`
-  local media=`uci get plex.@plex[0].media_path 2>/dev/null`
-  local cache=`uci get plex.@plex[0].cache_path 2>/dev/null`
+  local hostnet=`uci get plex.@main[0].hostnet 2>/dev/null`
+  local claim_token==`uci get plex.@main[0].claim_token 2>/dev/null`
+  local port=`uci get plex.@main[0].port 2>/dev/null`
+  local image_name=`uci get plex.@main[0].image_name 2>/dev/null`
+  local config=`uci get plex.@main[0].config_path 2>/dev/null`
+  local media=`uci get plex.@main[0].media_path 2>/dev/null`
+  local cache=`uci get plex.@main[0].cache_path 2>/dev/null`
 
   [ -z "$image_name" ] && image_name="plexinc/pms-docker:latest"
   echo "docker pull ${image_name}"
@@ -25,7 +25,7 @@ do_install() {
 
   [ -z "$port" ] && port=32400
 
-  local cmd="docker run --restart=unless-stopped -d -e PLEX_CLAIM="$claim_token" -v \"$config:/config\" "
+  local cmd="docker run --restart=unless-stopped -d -h PlexServer -v \"$config:/config\" "
 
   if [ -d /dev/dri ]; then
     cmd="$cmd\
@@ -43,7 +43,6 @@ do_install() {
     -p 3005:3005/tcp \
     -p 8324:8324/tcp \
     -p 32469:32469/tcp \
-    -p 1900:1900/udp \
     -p 32410:32410/udp \
     -p 32412:32412/udp \
     -p 32413:32413/udp \
@@ -54,12 +53,14 @@ do_install() {
   local tz="`cat /tmp/TZ`"
   [ -z "$tz" ] || cmd="$cmd -e TZ=$tz"
 
-  [ -z "$cache" ] || cmd="$cmd -v \"$cache:/config/transcodes\""
-  [ -z "$media" ] || cmd="$cmd -v \"$media:/media\""
+  [ -z "$claim_token" ] || cmd="$cmd -e \"PLEX_CLAIM=$claim_token\""
+
+  [ -z "$cache" ] || cmd="$cmd -v \"$cache:/transcode\""
+  [ -z "$media" ] || cmd="$cmd -v \"$media:/data\""
 
   cmd="$cmd -v /mnt:/mnt"
   mountpoint -q /mnt && cmd="$cmd:rslave"
-  cmd="$cmd --name plex \"$IMAGE_NAME\""
+  cmd="$cmd --name plex \"$image_name\""
 
   echo "$cmd"
   eval "$cmd"
@@ -71,8 +72,8 @@ usage() {
   echo "      install                Install the plex"
   echo "      upgrade                Upgrade the plex"
   echo "      rm/start/stop/restart  Remove/Start/Stop/Restart the plex"
-  echo "      status                 Heimdall status"
-  echo "      port                   Heimdall port"
+  echo "      status                 Plex status"
+  echo "      port                   Plex port"
 }
 
 case ${ACTION} in
@@ -92,7 +93,8 @@ case ${ACTION} in
     docker ps --all -f 'name=plex' --format '{{.State}}'
   ;;
   "port")
-    docker ps --all -f 'name=plex' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
+    local port=`uci get plex.@main[0].port 2>/dev/null`
+    echo $port
   ;;
   *)
     usage
