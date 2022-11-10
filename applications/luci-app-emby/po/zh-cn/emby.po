@@ -36,3 +36,6 @@ msgstr "Emby 未运行"
 
 msgid "Open Emby"
 msgstr "打开 Emby"
+
+msgid "Not required, all disk is mounted in"
+msgstr "可不填，所有硬盘都在"
