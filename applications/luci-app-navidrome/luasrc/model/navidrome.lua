@@ -1,9 +1,9 @@
 local util  = require "luci.util"
 local jsonc = require "luci.jsonc"
 
-local lanraragi = {}
+local navidrome = {}
 
-lanraragi.blocks = function()
+navidrome.blocks = function()
   local f = io.popen("lsblk -s -f -b -o NAME,FSSIZE,MOUNTPOINT --json", "r")
   local vals = {}
   if f then
@@ -21,7 +21,7 @@ lanraragi.blocks = function()
   return vals
 end
 
-lanraragi.home = function()
+navidrome.home = function()
   local uci = require "luci.model.uci".cursor()
   local home_dirs = {}
   home_dirs["main_dir"] = uci:get_first("quickstart", "main", "main_dir", "/root")
@@ -31,8 +31,8 @@ lanraragi.home = function()
   return home_dirs
 end
 
-lanraragi.find_paths = function(blocks, home_dirs, path_name)
-  local appname = '/LANraragi'
+navidrome.find_paths = function(blocks, home_dirs, path_name)
+  local appname = '/Navidrome'
   local default_path = ''
   local configs = {}
 
@@ -51,4 +51,4 @@ lanraragi.find_paths = function(blocks, home_dirs, path_name)
   return configs, default_path
 end
 
-return lanraragi
+return navidrome
