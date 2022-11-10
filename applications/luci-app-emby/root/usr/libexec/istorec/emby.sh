@@ -62,8 +62,8 @@ usage() {
   echo "      install                Install the emby"
   echo "      upgrade                Upgrade the emby"
   echo "      rm/start/stop/restart  Remove/Start/Stop/Restart the emby"
-  echo "      status                 Plex status"
-  echo "      port                   Plex port"
+  echo "      status                 Emby status"
+  echo "      port                   Emby port"
 }
 
 case ${ACTION} in
