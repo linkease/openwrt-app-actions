@@ -12,7 +12,7 @@ do_install() {
   local media=`uci get emby.@main[0].media_path 2>/dev/null`
   local cache=`uci get emby.@main[0].cache_path 2>/dev/null`
 
-  [ -z "$image_name" ] && image_name="embyinc/pms-docker:latest"
+  [ -z "$image_name" ] && image_name="emby/embyserver"
   echo "docker pull ${image_name}"
   docker pull ${image_name}
   docker rm -f emby
@@ -83,7 +83,7 @@ case ${ACTION} in
     docker ps --all -f 'name=emby' --format '{{.State}}'
   ;;
   "port")
-    docker ps --all -f 'name=jellyfin' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
+    docker ps --all -f 'name=emby' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
   ;;
   *)
     usage

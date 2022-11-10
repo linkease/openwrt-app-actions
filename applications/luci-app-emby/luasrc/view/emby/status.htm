@@ -18,14 +18,14 @@ local container_running = container_status == "running"
 if container_running then
     local port=util.trim(util.exec("/usr/libexec/istorec/emby.sh port"))
     if port == "" then
-        port="32400"
+        port="8096"
     end
 -%>
 <div class="cbi-value cbi-value-last">
     <label class="cbi-value-title">&nbsp;</label>
     <div class="cbi-value-field">
 
-    <input type="button" class="btn cbi-button cbi-button-apply" name="start" value="<%:Open Emby%>" onclick="window.open('http://'+location.hostname+':<%=port%>/web/', '_blank')">
+    <input type="button" class="btn cbi-button cbi-button-apply" name="start" value="<%:Open Emby%>" onclick="window.open('http://'+location.hostname+':<%=port%>', '_blank')">
     </div>
 </div>
 <% end %>
