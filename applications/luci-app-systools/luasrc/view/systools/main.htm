@@ -1,0 +1,45 @@
+<%+header%>
+
+<script>
+    (function(){
+    })();
+</script>
+<div id="app">
+</div>
+
+<script>
+  window.IstoreosData = {};
+  window.IstoreosFormConfig = {
+    getApi:"/cgi-bin/luci/admin/services/systools/form/",
+    logApi:"/cgi-bin/luci/admin/services/systools/log",
+    submitApi:"/cgi-bin/luci/admin/services/systools/submit",
+    getHook:function(resp){
+      var c1 = resp.result.schema.containers[0];
+      if  (resp.result.data.container_install) {
+        c1.labels[1].value = '<a href="https://'+location.host+':'+resp.result.data.port+'" target="_blank">SysTools 桌面链接</a>';
+      } else {
+        c1.labels[1].value = "安装并运行之后，才能用网页访问";
+      }
+      window.IstoreosData = resp.result.data;
+      console.log("resp=", resp.result.data);
+      return resp;
+    },
+    onFormChange: function(changedField, val) {
+      console.log("formChanged=", val)
+      if (changedField === "tool" && window.IstoreosData["tool"] !== val["tool"]) { 
+        val["reload"] = true;
+        val["tool"] = 'test'
+        const loading = true
+        window.istoreos.reloadFromGetApi(val, loading)
+      }
+    },
+    submitHook:function(params){
+      console.log(params);
+      return params;
+    }
+  }
+</script>
+<script type="module" crossorigin src="/luci-static/iform/1.1/index.js?v=<%=math.random(1,100000)%>"></script>
+<link rel="stylesheet" href="/luci-static/iform/1.1/style.css?v=<%=math.random(1,100000)%>">
+
+<%+footer%>
