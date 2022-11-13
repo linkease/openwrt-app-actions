@@ -1,5 +1,7 @@
 <%+header%>
 
+<%+tasks/embed%>
+
 <script>
     (function(){
     })();
@@ -14,18 +16,12 @@
     logApi:"/cgi-bin/luci/admin/services/systools/log",
     submitApi:"/cgi-bin/luci/admin/services/systools/submit",
     getHook:function(resp){
-      var c1 = resp.result.schema.containers[0];
-      if  (resp.result.data.container_install) {
-        c1.labels[1].value = '<a href="https://'+location.host+':'+resp.result.data.port+'" target="_blank">SysTools 桌面链接</a>';
-      } else {
-        c1.labels[1].value = "安装并运行之后，才能用网页访问";
-      }
       window.IstoreosData = resp.result.data;
       console.log("resp=", resp.result.data);
       return resp;
     },
     onFormChange: function(changedField, val) {
-      console.log("formChanged=", val)
+      console.log("changedField=", changedField, "formChanged=", val)
       if (changedField === "tool" && window.IstoreosData["tool"] !== val["tool"]) { 
         val["reload"] = true;
         val["tool"] = 'test'
