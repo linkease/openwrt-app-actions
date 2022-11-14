@@ -1,5 +1,5 @@
-msgid "SysTools"
-msgstr "系统工具"
+msgid "System Convenient Tools"
+msgstr "系统便利工具"
 
 msgid "Execute"
 msgstr "执行"

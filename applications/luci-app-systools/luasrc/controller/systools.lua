@@ -8,14 +8,14 @@ module("luci.controller.systools", package.seeall)
 
 function index()
 
-  entry({"admin", "services", "systools"}, call("redirect_index"), _("SysTools"), 30).dependent = true
-  entry({"admin", "services", "systools", "pages"}, call("systools_index")).leaf = true
-  entry({"admin", "services", "systools", "form"}, call("systools_form"))
-  entry({"admin", "services", "systools", "submit"}, call("systools_submit"))
+  entry({"admin", "system", "systools"}, call("redirect_index"), _("System Convenient Tools"), 30).dependent = true
+  entry({"admin", "system", "systools", "pages"}, call("systools_index")).leaf = true
+  entry({"admin", "system", "systools", "form"}, call("systools_form"))
+  entry({"admin", "system", "systools", "submit"}, call("systools_submit"))
 
 end
 
-local page_index = {"admin", "services", "systools", "pages"}
+local page_index = {"admin", "system", "systools", "pages"}
 
 function redirect_index()
     http.redirect(luci.dispatcher.build_url(unpack(page_index)))
