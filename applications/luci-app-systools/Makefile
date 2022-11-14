@@ -2,16 +2,12 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_VERSION:=1.0.6
-PKG_RELEASE:=20220626
+PKG_VERSION:=1.0.1
+PKG_RELEASE:=20221115
 
-LUCI_TITLE:=LuCI support for ubuntu
+LUCI_TITLE:=LuCI support for SysTools
 LUCI_PKGARCH:=all
-LUCI_DEPENDS:=+docker +luci-lib-iform
-
-define Package/luci-app-ubuntu/conffiles
-/etc/config/ubuntu
-endef
+LUCI_DEPENDS:=+docker +luci-lib-iform +luci-lib-taskd +speedtestcli
 
 include $(TOPDIR)/feeds/luci/luci.mk
 
