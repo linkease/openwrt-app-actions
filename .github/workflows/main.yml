@@ -101,20 +101,6 @@ jobs:
       - name: Load custom feeds
         run: |
           echo "" >> ${SDK_NAME}/feeds.conf
-          arr="${{ github.event.inputs.applications }}"
-          if [ "$arr" != "all" ]; then
-            cd apps
-            mkdir build
-            for var in ${arr}
-            do
-              echo add app $var
-              cp -a applications/$var  build/$var || true
-            done
-            ls -l build/
-            rm -rf applications
-            mv build applications
-            cd ..
-          fi
           echo "src-link apps `pwd`/apps/applications" >> ${SDK_NAME}/feeds.conf
           cat apps/feeds.conf >> ${SDK_NAME}/feeds.conf
           echo "" >> ${SDK_NAME}/feeds.conf
