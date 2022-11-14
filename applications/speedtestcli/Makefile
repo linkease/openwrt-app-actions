@@ -9,7 +9,7 @@ include $(TOPDIR)/rules.mk
 PKG_ARCH_SPEEDTEST:=$(ARCH)
 
 PKG_NAME:=speedtestcli
-PKG_VERSION:=1.1.1
+PKG_VERSION:=1.2.0
 PKG_RELEASE:=$(PKG_ARCH_SPEEDTEST)-1
 PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_VERSION).tar.gz
 PKG_SOURCE_URL:=http://fw.koolcenter.com/binary/SpeedTestCli/
