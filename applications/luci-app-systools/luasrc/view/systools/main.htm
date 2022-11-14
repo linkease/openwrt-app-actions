@@ -12,9 +12,9 @@
 <script>
   window.IstoreosData = {};
   window.IstoreosFormConfig = {
-    getApi:"/cgi-bin/luci/admin/services/systools/form/",
-    logApi:"/cgi-bin/luci/admin/services/systools/log",
-    submitApi:"/cgi-bin/luci/admin/services/systools/submit",
+    getApi:"/cgi-bin/luci/admin/system/systools/form/",
+    submitApi:"/cgi-bin/luci/admin/system/systools/submit",
+    logApi:"/cgi-bin/luci/admin/system/systools/log",
     getHook:function(resp){
       window.IstoreosData = resp.result.data;
       //console.log("resp=", resp.result.data);
@@ -29,7 +29,7 @@
       }
     },
     submitHook:function(params){
-      console.log(params);
+      //console.log(params);
       return params;
     }
   }
