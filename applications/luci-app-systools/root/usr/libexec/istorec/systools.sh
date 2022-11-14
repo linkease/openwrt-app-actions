@@ -4,43 +4,35 @@
 ACTION=${1}
 shift 1
 
-do_install() {
-  echo "starting"
-  sleep  120
-  echo "started"
-}
-
 usage() {
   echo "usage: $0 sub-command"
   echo "where sub-command is one of:"
-  echo "      install                Install the emby"
-  echo "      upgrade                Upgrade the emby"
-  echo "      rm/start/stop/restart  Remove/Start/Stop/Restart the emby"
-  echo "      status                 Emby status"
-  echo "      port                   Emby port"
+  echo "      turn_off_ipv6                   Disable IPv6"
+  echo "      reset_rom_pkgs                  Reset pkgs from rom"
+  echo "      qb_reset_password               Reset qBitorent password"
+  echo "      disk_power_mode                 Show disk power status"
+  echo "      speedtest                       Start a speedtest"
 }
 
 case ${ACTION} in
-  "install")
-    do_install
+  "turn_off_ipv6")
+    /usr/share/systools/turn_off_ipv6.run
   ;;
-  "upgrade")
-    do_install
+  "reset_rom_pkgs")
+    /usr/share/systools/reset_rom_pkgs.run
   ;;
-  "rm")
-    docker rm -f emby
+  "qb_reset_password")
+    /usr/share/systools/qb_reset_password.run
   ;;
-  "start" | "stop" | "restart")
-    docker ${ACTION} emby
+  "disk_power_mode")
+    /usr/share/systools/disk_power_mode.run
   ;;
-  "status")
-    docker ps --all -f 'name=emby' --format '{{.State}}'
-  ;;
-  "port")
-    docker ps --all -f 'name=emby' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
+  "speedtest")
+    /usr/share/systools/speedtest.run ${1}
   ;;
   *)
     usage
     exit 1
   ;;
 esac
+

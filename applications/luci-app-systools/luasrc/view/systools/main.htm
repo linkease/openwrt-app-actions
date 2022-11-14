@@ -17,16 +17,15 @@
     submitApi:"/cgi-bin/luci/admin/services/systools/submit",
     getHook:function(resp){
       window.IstoreosData = resp.result.data;
-      console.log("resp=", resp.result.data);
+      //console.log("resp=", resp.result.data);
       return resp;
     },
     onFormChange: function(changedField, val) {
-      console.log("changedField=", changedField, "formChanged=", val)
-      if (changedField === "tool" && window.IstoreosData["tool"] !== val["tool"]) { 
-        val["reload"] = true;
-        val["tool"] = 'test'
-        const loading = true
-        window.istoreos.reloadFromGetApi(val, loading)
+      //console.log("changedField=", changedField, "formData=", val)
+      if (changedField === "tool" && 
+        val["tool"] == "speedtest" &&
+        window.IstoreosData["tool"] !== val["tool"]) { 
+        window.istoreos.reloadFromGetApi(val, true)
       }
     },
     submitHook:function(params){
