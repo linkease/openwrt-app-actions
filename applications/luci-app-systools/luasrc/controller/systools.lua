@@ -58,7 +58,7 @@ function get_schema(data, extra)
     actions = actions,
     containers = get_containers(data, extra),
     description = lng.translate("Some convenient tools which can fix some errors."),
-    title = lng.translate("SysTools")
+    title = lng.translate("System Convenient Tools")
   }
   return schema
 end
