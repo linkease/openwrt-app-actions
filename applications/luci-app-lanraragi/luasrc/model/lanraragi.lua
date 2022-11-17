@@ -40,7 +40,7 @@ lanraragi.find_paths = function(blocks, home_dirs, path_name)
     return
   else
     if path_name == "Public" then
-      appname = "/Book"
+      appname = "/Comics"
     end
     for _, val in pairs(blocks) do 
       table.insert(configs, val .. "/" .. path_name .. appname)
