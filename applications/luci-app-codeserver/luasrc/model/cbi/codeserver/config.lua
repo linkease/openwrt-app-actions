@@ -8,7 +8,7 @@ local m, s, o
 
 m = taskd.docker_map("codeserver", "codeserver", "/usr/libexec/istorec/codeserver.sh",
 	translate("CodeServer"),
-	translate("CodeServer offloads development from local workstations to your on-prem and public cloud infrastructure.")
+	translate("CodeServer is a web version of VSCode.")
 		.. translate("Official website:") .. ' <a href=\"https://coder.com/\" target=\"_blank\">https://coder.com/</a>')
 
 s = m:section(SimpleSection, translate("Service Status"), translate("CodeServer status:"))

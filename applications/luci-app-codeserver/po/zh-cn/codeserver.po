@@ -4,8 +4,8 @@ msgstr "Content-Type: text/plain; charset=UTF-8"
 msgid "Official website:"
 msgstr "官方网站："
 
-msgid "CodeServer offloads development from local workstations to your on-prem and public cloud infrastructure."
-msgstr "CodeServer 是一个在线开发平台。"
+msgid "CodeServer is a web version of VSCode."
+msgstr "CodeServer 就一个在线版本的 VSCode，可以在线开发。"
 
 msgid "Config path"
 msgstr "配置文件路径"
