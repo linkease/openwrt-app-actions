@@ -25,7 +25,7 @@ o.datatype = "string"
 local blocks = penpot_model.blocks()
 local home = penpot_model.home()
 
-o = s:option(Value, "config_path", translate("Config path").."<b>*</b>", translate("Manually edit template at") .. " <a href='/cgi-bin/luci/admin/services/linkease/file#/?path=/root/usr/share/penpot/' target='_blank'>/root/usr/share/penpot/</a>")
+o = s:option(Value, "config_path", translate("Config path").."<b>*</b>", translate("Manually edit template at") .. " <a href='/cgi-bin/luci/admin/services/linkease/file/?path=/root/usr/share/penpot' target='_blank'>/root/usr/share/penpot</a>")
 o.rmempty = false
 o.datatype = "string"
 
