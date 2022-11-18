@@ -40,3 +40,5 @@ msgstr "打开 Penpot"
 msgid "Console"
 msgstr "控制台"
 
+msgid "Manually edit template at"
+msgstr "可以手动手改配置文件的模板，路径在："
