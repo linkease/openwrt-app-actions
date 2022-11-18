@@ -23,7 +23,7 @@ o.default = 0
 o.rmempty = false
 
 o = s:option(Value, "http_port", translate("HTTP Port").."<b>*</b>")
-o.default = "8096"
+o.default = "8097"
 o.datatype = "port"
 o:depends("hostnet", 0)
 
