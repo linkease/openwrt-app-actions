@@ -29,6 +29,7 @@ o:depends("action", "create-user")
 
 o = s:option(Value, "fullname", "Your Full Name")
 o.datatype = "string"
+o.placeholder = "Full Name"
 o:depends("action", "create-user")
 
 local t=Template("penpot/tool")
