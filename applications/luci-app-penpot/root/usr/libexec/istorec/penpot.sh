@@ -31,6 +31,7 @@ do_install() {
   docker-compose up -d
   echo "Wait 120 to intialize"
   sleep 120
+  echo "Now you should create a user manually"
 }
 
 usage() {
