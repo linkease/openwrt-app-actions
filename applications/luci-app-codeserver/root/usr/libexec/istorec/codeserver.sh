@@ -77,6 +77,12 @@ case ${ACTION} in
   "port")
     docker ps --all -f 'name=codeserver' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
   ;;
+  "git-config")
+    docker exec codeserver git config --global user.name "${1}"
+    docker exec codeserver git config --global user.email "${2}"
+    echo "git config --global user.name ${1}"
+    echo "git config --global user.email ${2}"
+  ;;
   *)
     usage
     exit 1

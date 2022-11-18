@@ -37,3 +37,9 @@ msgstr "CodeServer 未运行"
 msgid "Open CodeServer"
 msgstr "打开 CodeServer"
 
+msgid "Console"
+msgstr "控制台"
+
+msgid "Only works in LAN"
+msgstr "只在内网环境下工作。"
+
