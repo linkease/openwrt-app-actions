@@ -39,3 +39,6 @@ msgstr "Xteve 未运行"
 
 msgid "Open Xteve"
 msgstr "打开 Xteve"
+
+msgid "Unsupported Architecture"
+msgstr "不支持此架构"
