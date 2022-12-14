@@ -34,6 +34,10 @@ define Package/$(PKG_NAME)/description
  Use AirPlay to stream to UPnP/Sonos & Chromecast devices
 endef
 
+define Package/$(PKG_NAME)/conffiles
+/etc/config/airconnect
+endef
+
 define Build/Configure
 endef
 
@@ -41,7 +45,7 @@ define Build/Compile
 endef
 
 define Package/$(PKG_NAME)/install
-	$(INSTALL_DIR) $(1)/usr/bin
+	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/config $(1)/etc/init.d
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/aircast-linux-$(ARCH)-static $(1)/usr/bin/aircast
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/airupnp-linux-$(ARCH)-static $(1)/usr/bin/airupnp
 	$(INSTALL_CONF) ./files/airconnect.config $(1)/etc/config/airconnect
