@@ -28,7 +28,7 @@ define Package/$(PKG_NAME)
 	CATEGORY:=Network
 	SUBMENU:=Web Servers/Proxies
 	TITLE:=xunyou
-	DEPENDS:=
+	DEPENDS:=+coreutils-nohup
 endef
 
 define Package/$(PKG_NAME)/description
