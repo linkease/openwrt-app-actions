@@ -175,6 +175,12 @@ jobs:
           make -j4 download
           echo "status=success" >> $GITHUB_OUTPUT
 
+      - name: ReDownload
+        if: failure()
+        run: |
+          cd ~/openwrt-sdk
+          make -j1 V=s download
+
       - name: 'Restore ccache from cache'
         id: ccache-cache
         uses: actions/cache@v3
