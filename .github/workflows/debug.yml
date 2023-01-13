@@ -41,6 +41,10 @@ jobs:
           echo "### Update user: $USER password ###"
           echo -e "password\npassword" | sudo passwd "$USER"
 
+      - name: Tmux
+        run: |
+          tmux new-session -d -s tmux || true
+
       - name: Print info
         run: |
           ip addr
