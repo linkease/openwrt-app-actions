@@ -176,7 +176,7 @@ jobs:
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: ReDownload
-        if: failure()
+        if: failure() && steps.defconfig.outputs.status == 'success'
         run: |
           cd ~/openwrt-sdk
           make -j1 V=s download
@@ -207,7 +207,7 @@ jobs:
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: Last fail log
-        if: failure()
+        if: failure() && steps.download.outputs.status == 'success'
         run: tail -n 200 /tmp/openwrt-sdk-build.log && false
 
       - name: PreUpload - Clean
