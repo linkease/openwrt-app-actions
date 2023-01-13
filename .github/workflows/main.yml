@@ -11,13 +11,7 @@ on:
       target:
         description: 'build target ["arm64", "x64", "mipsel", "all"]'
         required: true
-        default: 'arm64'
-        type: choice
-        options:
-          - arm64
-          - x64
-          - mipsel
-          - all
+        default: 'all'
 
 
 env:
