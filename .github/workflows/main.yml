@@ -11,7 +11,14 @@ on:
       target:
         description: 'build target ["arm64", "x64", "mipsel", "all"]'
         required: true
-        default: 'all'
+        default: 'arm64'
+        type: choice
+        options:
+          - arm64
+          - x64
+          - mipsel
+          - all
+
 
 env:
   TZ: Asia/Shanghai
@@ -49,7 +56,7 @@ jobs:
           echo "::notice title=Apps::$apps"
 
       - name: Checkout
-        uses: actions/checkout@main
+        uses: actions/checkout@v2
         with:
           path: 'apps'
 

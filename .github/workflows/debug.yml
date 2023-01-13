@@ -1,0 +1,52 @@
+name: Debug
+
+on:
+  workflow_dispatch:
+    inputs:
+      target:
+        description: 'target ["arm64", "x64", "mipsel"]'
+        required: true
+        default: 'arm64'
+        type: choice
+        options:
+          - arm64
+          - x64
+          - mipsel
+
+env:
+  TZ: Asia/Shanghai
+
+jobs:
+  debug:
+    runs-on: ubuntu-latest
+    name: Debug
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+        with:
+          path: 'apps'
+
+      - name: Import Env
+        env:
+          MATRIX_TARGET: ${{ github.event.inputs.target }}
+        run: cat apps/.github/workflows/${MATRIX_TARGET}.env >> "$GITHUB_ENV"
+
+      - name: Download ddnsto
+        run: |
+          wget -O /tmp/ddnsto https://fw.koolcenter.com/binary/ddnsto/linux/ddnsto.amd64
+          chmod 755 /tmp/ddnsto
+
+      - name: Configure password
+        run: |
+          echo "### Update user: $USER password ###"
+          echo -e "password\npassword" | sudo passwd "$USER"
+
+      - name: Print info
+        run: |
+          ip addr
+
+      - name: Run ddnsto
+        env:
+          DDNSTO_TOKEN: ${{ secrets.DDNSTO_TOKEN }}
+        run: |
+          /tmp/ddnsto -u $DDNSTO_TOKEN
