@@ -1,0 +1,13 @@
+
+include $(TOPDIR)/rules.mk
+
+PKG_VERSION:=1.0.0-2023403
+PKG_RELEASE:=
+PKG_MAINTAINER:=jjm2473 <jjm2473@gmail.com>
+
+LUCI_TITLE:=Easy Access AP / Modem
+LUCI_PKGARCH:=all
+
+include $(TOPDIR)/feeds/luci/luci.mk
+
+# call BuildPackage - OpenWrt buildroot signature
