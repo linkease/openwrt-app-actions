@@ -164,6 +164,27 @@ EOF
     uci commit network
 }
 
+clean_config() {
+    local wan_zone=`find_uci_section firewall zone name 'wan' | head -1`
+    [[ -z "$wan_zone" ]] || uci -q batch <<-EOF >/dev/null
+        del_list firewall.$wan_zone.network=vap_lan
+        del_list firewall.$wan_zone.network=vap_wan
+        commit firewall
+EOF
+    local lan_dev=`find_uci_section network device name 'br-lan' | head -1`
+    [[ -z "$lan_dev" ]] || {
+        uci del_list "network.$lan_dev.ports=vap-lan"
+    }
+
+    uci -q batch <<-EOF >/dev/null
+        set network.vap_lan.auto=0
+        set network.vap_wan.auto=0
+        delete network.veth_lan_peer
+        delete network.veth_lan
+        commit network
+EOF
+}
+
 start_service() {
     config_load ap_modem
     config_get_bool enabled "config" enabled 0
@@ -175,12 +196,13 @@ EOF
     if [[ "$enabled" = "1" ]]; then
         generate_config
     else
-        uci -q batch <<-EOF >/dev/null
-            set network.vap_lan.auto=0
-            set network.vap_wan.auto=0
-            commit network
-EOF
+        clean_config
     fi
     /etc/init.d/network reload
     return 0
+}
+
+stop_service() {
+    clean_config
+    /etc/init.d/network reload
 }
