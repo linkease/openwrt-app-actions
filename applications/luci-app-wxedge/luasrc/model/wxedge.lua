@@ -24,9 +24,9 @@ end
 
 wxedge.default_image = function()
   if string.find(nixio.uname().machine, "x86_64") then
-    return "registry.hub.docker.com/onething1/wxedge"
+    return "onething1/wxedge"
   else
-    return "registry.hub.docker.com/onething1/wxedge:2.4.3"
+    return "onething1/wxedge:2.4.3"
   end
 end
 

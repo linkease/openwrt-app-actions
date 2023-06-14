@@ -21,6 +21,8 @@ local default_image = wxedge_model.default_image()
 o = s:option(Value, "image_name", translate("Image").."<b>*</b>")
 o.rmempty = false
 o.datatype = "string"
+o:value("onething1/wxedge", "onething1/wxedge")
+o:value("onething1/wxedge:2.4.3", "onething1/wxedge:2.4.3")
 o:value("registry.hub.docker.com/onething1/wxedge", "registry.hub.docker.com/onething1/wxedge")
 o:value("registry.hub.docker.com/onething1/wxedge:2.4.3", "registry.hub.docker.com/onething1/wxedge:2.4.3")
 o.default = default_image
