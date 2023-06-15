@@ -11,15 +11,7 @@ local uid = uci:get_first("bmtedge", "bmtedge", "uid", ""),
     <label class="cbi-value-title"><%:Status%></label>
     <div class="cbi-value-field">
         <% if container_running then %>
-        <button class="cbi-button cbi-button-success" disabled="true"><%:BlueMountain Edge is running%></button>
-
-        <div class="cbi-value cbi-value-last">
-            <label class="cbi-value-title">&nbsp;</label>
-            <div class="cbi-value-field">
-            <input type="button" class="btn cbi-button cbi-button-apply" id="btnShowQr" name="start" value="显示二维码" />
-            </div>
-        </div>
-
+        <button class="cbi-button cbi-button-success" id="btnShowQr"><%:Running, click to show QR%></button>
         <% else %>
         <button class="cbi-button cbi-button-negative" disabled="true"><%:BlueMountain Edge is not running%></button>
         <% end %>
@@ -32,28 +24,25 @@ local uid = uci:get_first("bmtedge", "bmtedge", "uid", ""),
     height: 256px;
     ">
     </div>
-    <h6>用“蓝山云”小程序扫码，请查看：<a href="https://doc.linkease.com" target="_blank">教程</a></h6>
+    <h6>用“蓝山云”小程序扫码，请查看：<a href="https://doc.linkease.com/zh/guide/istoreos/software/bmtedge.html" target="_blank">教程</a></h6>
 </div>
 
   <script>
     (function() {
     'use strict';
     var shown = false;
-    var tryShowTips = function() {
+    var tryShowQr = function() {
         if (shown) {
             return;
         }
         shown = true;
+        new QRCode(document.getElementById("qrimage"), "lsyK17032_"+"<%=uid%>");
         $("#winContainer").show();
-        $("#winContainer").find(".button").click(function(){
-          $("#winContainer").hide();
-          show = false;
-        });
     };
 
-    $('#btnShowQr').click(function(){ 
-        new QRCode(document.getElementById("qrimage"), "lsyK17032_"+"<%=uid%>");
-        tryShowTips();
+    $('#btnShowQr').click(function(e){ 
+        e.preventDefault();
+        tryShowQr();
     });
 
 })();
