@@ -4,7 +4,7 @@ local container_status = util.trim(util.exec("/usr/libexec/istorec/bmtedge.sh st
 local container_install = (string.len(container_status) > 0)
 local container_running = container_status == "running"
 local uci = require "luci.model.uci".cursor()
-local uid = uci:get_first("bmtedge", "bmtedge", "uid", ""),
+local uid = uci:get_first("bmtedge", "bmtedge", "uid", "")
 -%>
 <div class="cbi-value">
     <label class="cbi-value-title"><%:Status%></label>
