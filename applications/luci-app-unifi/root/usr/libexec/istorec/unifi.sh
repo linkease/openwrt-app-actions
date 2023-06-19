@@ -75,14 +75,7 @@ case ${ACTION} in
     docker ps --all -f 'name=unifi' --format '{{.State}}'
   ;;
   "port")
-    local hostnet=`uci get -q unifi.@main[0].hostnet 2>/dev/null`
-    if [ "$hostnet" = 1 ]; then
-      echo 8443
-    else
-      local http_port=`uci get -q unifi.@main[0].http_port 2>/dev/null`
-      [ -z "$http_port" ] && http_port=8083
-      echo $http_port
-    fi
+    docker ps --all -f 'name=unifi' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*->8443/tcp' | sed 's/0.0.0.0:\([0-9]*\)->.*/\1/'
   ;;
   *)
     usage
