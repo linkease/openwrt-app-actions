@@ -27,8 +27,7 @@ define Package/$(PKG_NAME)
 	SECTION:=net
 	CATEGORY:=Network
 	SUBMENU:=Web Servers/Proxies
-	TITLE:=LinkEase - the file cloud
-	DEPENDS:=@(arm||x86_64||aarch64) +ffmpeg-remux
+	TITLE:=VmEase - webvirtcloud helper
 	PKGARCH:=all
 	URL:=https://doc.linkease.com/zh/guide/istoreos/software/webvirtcloud.html
 endef
