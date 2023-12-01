@@ -9,7 +9,7 @@ local m, s, o
 m = taskd.docker_map("webvirtcloud", "webvirtcloud", "/usr/libexec/istorec/webvirtcloud.sh",
 	translate("KVM WebVirtCloud"),
 	translate("KVM web manager in iStoreOS using webvirtcloud.") .. " login: admin/admin. " 
-		.. translate("Official website:") .. ' <a href=\"https://github.com/retspen/webvirtcloud\" target=\"_blank\">https://github.com/retspen/webvirtcloud</a>')
+		.. translate("Official website:") .. ' <a href=\"https://webvirt.cloud/\" target=\"_blank\">https://webvirt.cloud/</a>')
 
 s = m:section(SimpleSection, translate("Service Status"), translate("WebVirtCloud status:"))
 s:append(Template("webvirtcloud/status"))
