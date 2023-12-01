@@ -1,4 +1,4 @@
-config main
+config webvirtcloud
 	option 'config_path' ''
 	option 'http_port' '6009'
 	option 'image_name' 'linkease/webvirtcloud:latest'
@@ -6,4 +6,3 @@ config main
 # option 'bootargs' ''
 # option 'vfioargs' ''
 # option 'mod_ignores' ''
-

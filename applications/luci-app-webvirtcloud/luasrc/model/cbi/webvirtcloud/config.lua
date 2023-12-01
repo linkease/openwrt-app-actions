@@ -8,7 +8,7 @@ local m, s, o
 
 m = taskd.docker_map("webvirtcloud", "webvirtcloud", "/usr/libexec/istorec/webvirtcloud.sh",
 	translate("KVM WebVirtCloud"),
-	translate("KVM web manager in iStoreOS using webvirtcloud.")
+	translate("KVM web manager in iStoreOS using webvirtcloud.") .. " login: admin/admin. " 
 		.. translate("Official website:") .. ' <a href=\"https://github.com/retspen/webvirtcloud\" target=\"_blank\">https://github.com/retspen/webvirtcloud</a>')
 
 s = m:section(SimpleSection, translate("Service Status"), translate("WebVirtCloud status:"))
@@ -17,6 +17,10 @@ s:append(Template("webvirtcloud/status"))
 s = m:section(TypedSection, "webvirtcloud", translate("Setup"), translate("The following parameters will only take effect during installation or upgrade:"))
 s.addremove=false
 s.anonymous=true
+
+o = s:option(Value, "http_port", translate("HTTP Port").."<b>*</b>")
+o.default = "6009"
+o.datatype = "port"
 
 o = s:option(Value, "image_name", translate("Image").."<b>*</b>")
 o.rmempty = false

@@ -4,10 +4,10 @@ ACTION=${1}
 shift 1
 
 do_install() {
-  local config=`uci get webvirtcloud.@main[0].config_path 2>/dev/null`
-  local IMAGE_NAME=`uci get webvirtcloud.@main[0].image_name 2>/dev/null`
-  local tz=`uci get webvirtcloud.@main[0].time_zone 2>/dev/null`
-  local port=`uci get webvirtcloud.@main[0].http_port 2>/dev/null`
+  local config=`uci get webvirtcloud.@webvirtcloud[0].config_path 2>/dev/null`
+  local IMAGE_NAME=`uci get webvirtcloud.@webvirtcloud[0].image_name 2>/dev/null`
+  local tz=`uci get webvirtcloud.@webvirtcloud[0].time_zone 2>/dev/null`
+  local port=`uci get webvirtcloud.@webvirtcloud[0].http_port 2>/dev/null`
 
   if [ -z "$config" ]; then
       echo "config path is empty!"
@@ -29,10 +29,10 @@ do_install() {
     -v \"$config/libvirt:/etc/libvirt\" \
     -v \"$config/images:/var/lib/libvirt/images\" \
     -v /usr/sbin/vmeasedaemon:/usr/sbin/vmwebvirt \
-    -v /var/run/vmease/:/var/run/vmease/ \
+    -v /var/run/vmease:/srv/vmease \
     -p $port:80 \
     --privileged \
-    --dns=127.0.0.1 \
+    --dns=172.17.0.1 \
     --dns=223.5.5.5 "
 
   if [ -z "$tz" ]; then
@@ -44,6 +44,10 @@ do_install() {
 
   echo "$cmd"
   eval "$cmd"
+
+  sleep 5
+  echo "Running status:"
+  /usr/sbin/vmeasedaemon runningStatus --pretty
 }
 
 do_gpu_passthrough() {
