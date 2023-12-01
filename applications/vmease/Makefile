@@ -55,6 +55,7 @@ define Build/Compile
 endef
 
 define Package/$(PKG_NAME)/install
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/etc/config $(1)/etc/init.d $(1)/etc/uci-defaults
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/vmeasedaemon.$(PKG_ARCH_VMEASE) $(1)/usr/sbin/vmeasedaemon
 	$(INSTALL_BIN) ./files/vmease.init $(1)/etc/init.d/vmease
 	$(INSTALL_BIN) ./files/vmease.uci-default $(1)/etc/uci-defaults/vmease
