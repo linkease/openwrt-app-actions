@@ -24,7 +24,6 @@ do_install() {
     --tmpfs /tmp \
     --tmpfs /run/lock \
     -v /sys/fs/cgroup:/sys/fs/cgroup \
-    -v /mnt:/mnt:rslave \
     -v \"$config/dbconfig:/srv/webvirtcloud/dbconfig\" \
     -v \"$config/libvirt:/etc/libvirt\" \
     -v \"$config/images:/var/lib/libvirt/images\" \
@@ -39,6 +38,9 @@ do_install() {
     tz="`uci get system.@system[0].zonename`"
   fi
   [ -z "$tz" ] || cmd="$cmd -e TZ=\"$tz\""
+
+  cmd="$cmd -v /mnt:/mnt"
+  mountpoint -q /mnt && cmd="$cmd:rslave"
 
   cmd="$cmd --name webvirtcloud \"$IMAGE_NAME\""
 
