@@ -15,6 +15,10 @@ do_install() {
   fi
   [ -z "$port" ] && port=6009
 
+  echo "start vmease"
+  /etc/init.d/vmease start
+  sleep 1
+
   echo "docker pull ${IMAGE_NAME}"
   docker pull ${IMAGE_NAME}
   docker rm -f webvirtcloud
@@ -77,7 +81,18 @@ case ${ACTION} in
   "rm")
     docker rm -f webvirtcloud
   ;;
-  "start" | "stop" | "restart")
+  "start")
+    /etc/init.d/vmease start
+    sleep 1
+    docker ${ACTION} webvirtcloud
+  ;;
+  "stop")
+    /etc/init.d/vmease stop
+    docker ${ACTION} webvirtcloud
+  ;;
+  "restart")
+    /etc/init.d/vmease start
+    sleep 1
     docker ${ACTION} webvirtcloud
   ;;
   "status")
