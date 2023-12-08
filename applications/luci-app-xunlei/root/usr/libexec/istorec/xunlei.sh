@@ -37,7 +37,7 @@ do_install() {
     -p $port:2345 "
   fi
 
-  local tz="`uci get system.@system[0].zonename`"
+  local tz="`uci get system.@system[0].zonename | sed 's/ /_/g'`"
   [ -z "$tz" ] || cmd="$cmd -e TZ=$tz"
 
   cmd="$cmd --name xunlei \"$image_name\""

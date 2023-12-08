@@ -39,7 +39,7 @@ do_install() {
   cmd="$cmd -v /mnt:/mnt"
   mountpoint -q /mnt && cmd="$cmd:rslave"
 
-  local tz="`uci get system.@system[0].zonename`"
+  local tz="`uci get system.@system[0].zonename | sed 's/ /_/g'`"
   [ -z "$tz" ] || cmd="$cmd -e TZ=$tz"
 
   cmd="$cmd --name kodexplorer \"$IMAGE_NAME\""
