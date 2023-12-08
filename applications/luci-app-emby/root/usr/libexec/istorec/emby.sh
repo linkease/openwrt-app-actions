@@ -25,7 +25,7 @@ do_install() {
   # not conflict with jellyfin
   [ -z "$http_port" ] && http_port=8097
 
-  local cmd="docker run --restart=unless-stopped -d -v \"$config:/config\" "
+  local cmd="docker run --restart=unless-stopped -d -u 0 -e UID=0 -e GID=0 -e GIDLIST=0 -v \"$config:/config\" "
 
   if [ -d /dev/dri ]; then
     cmd="$cmd\
@@ -43,7 +43,7 @@ do_install() {
     -p $http_port:8096 "
   fi
 
-  local tz="`uci get system.@system[0].zonename`"
+  local tz="`uci get system.@system[0].zonename | sed 's/ /_/g'`"
   [ -z "$tz" ] || cmd="$cmd -e TZ=$tz"
 
   [ -z "$cache" ] || cmd="$cmd -v \"$cache:/config/cache\""
