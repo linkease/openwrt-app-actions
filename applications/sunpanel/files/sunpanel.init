@@ -14,8 +14,9 @@ start_service() {
   config_load "$NAME"
   config_foreach get_config "$NAME"
   [ $enabled != 1 ] && return 1
-  [ -z $config_path ] && return 1
-  [ ! -d $config_path ] && return 1
+  parentdir='$(dirname "$config_path")'
+  [ -z $parentdir ] && return 1
+  mkdir -p "$config_path"
   lua /usr/libexec/istorec/sunpanel_conf.lua $NAME /usr/share/$NAME/conf.temp $config_path/conf.ini
 
 	procd_open_instance
