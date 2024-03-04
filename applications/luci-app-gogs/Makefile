@@ -5,7 +5,7 @@ include $(TOPDIR)/rules.mk
 PKG_VERSION:=1.0.3-20240304
 PKG_RELEASE:=
 
-LUCI_TITLE:=LuCI support for Emby
+LUCI_TITLE:=LuCI support for Gogs
 LUCI_PKGARCH:=all
 LUCI_DEPENDS:=+lsblk +docker +luci-lib-taskd
 
