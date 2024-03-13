@@ -13,7 +13,6 @@ do_install() {
     echo "config path is empty!"
     exit 1
   fi
-
   [ -z "$image_name" ] && image_name="joyqi/typecho:nightly-php7.4"
   echo "docker pull ${image_name}"
   docker pull ${image_name}
@@ -21,7 +20,9 @@ do_install() {
 
   [ -z "$port" ] && port=9080
 
-  local cmd="docker run --restart=unless-stopped -d -h TypeChoServer -v \"$config:/config\" "
+  mkdir -p $config
+  chmod 777 $config
+  local cmd="docker run --restart=unless-stopped -d -h TypeChoServer -v \"$config:/app/usr\" "
 
   cmd="$cmd\
   --dns=172.17.0.1 \
@@ -29,6 +30,7 @@ do_install() {
 
   local tz="`uci get system.@system[0].zonename | sed 's/ /_/g'`"
   [ -z "$tz" ] || cmd="$cmd -e TZ=$tz"
+
   cmd="$cmd -v /mnt:/mnt"
   mountpoint -q /mnt && cmd="$cmd:rslave"
   cmd="$cmd --name typecho \"$image_name\""

@@ -1,6 +1,4 @@
 config main
-	option 'hostnet' '0'
-	option 'claim_token' ''
 	option 'port' '9080'
 	option 'config_path' ''
 
