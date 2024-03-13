@@ -5,7 +5,6 @@ import (
 	"io"
 	"os"
 	"path/filepath"
-	"syscall"
 )
 
 type ChangePathFunc func(srcFile, dstFile string) string
@@ -23,12 +22,7 @@ func CopyDirectory(scrDir, dest string, overwrite bool, changePathFn ChangePathF
 			return err
 		}
 
-		var statOk bool
-		stat, ok := fileInfo.Sys().(*syscall.Stat_t)
-		if ok {
-			statOk = true
-		}
-
+		ostat := fileInfo.Sys()
 		destPath := filepath.Join(dest, entry.Name())
 		destPath = changePathFn(sourcePath, destPath)
 
@@ -50,10 +44,9 @@ func CopyDirectory(scrDir, dest string, overwrite bool, changePathFn ChangePathF
 			}
 		}
 
-		if statOk {
-			if err := os.Lchown(destPath, int(stat.Uid), int(stat.Gid)); err != nil {
-				return err
-			}
+		err = chown(destPath, ostat)
+		if err != nil {
+			return err
 		}
 
 		fInfo, err := entry.Info()
