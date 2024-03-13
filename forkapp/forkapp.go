@@ -101,9 +101,10 @@ func uploadOrInstall(c *cli.Context) error {
 			fmt.Println("Path:", targetScript, "not found")
 			return nil
 		}
-		cmd := fmt.Sprintf("cd \"%s\" ./%s", path.Join(toPath, filepath.Base(fromPath)), filepath.Base(scriptPath))
-		_, err = SshRunCmd(sshConn, cmd)
-		if err != nil {
+		cmd := fmt.Sprintf("cd \"%s\" && ./%s", path.Join(toPath, filepath.Base(fromPath)), filepath.Base(scriptPath))
+		var rlt []byte
+		rlt, err = SshRunCmd(sshConn, cmd)
+		if err != nil || !strings.Contains(string(rlt), "Ok") {
 			fmt.Println("Run", cmd, "failed")
 		}
 	}

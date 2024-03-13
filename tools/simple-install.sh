@@ -19,9 +19,16 @@ if [ ! -d luasrc ]; then
 fi
 
 mkdir -p /usr/lib/lua/luci/view/${APPNAME}
-cp ./luasrc/controller/${APPNAME}.lua /usr/lib/lua/luci/controller/
-cp ./luasrc/view/${APPNAME}/* /usr/lib/lua/luci/view/${APPNAME}/
-cp -rf ./luasrc/model/* /usr/lib/lua/luci/model/
+if [ -f ./luasrc/controller/${APPNAME}.lua ]; then
+  cp ./luasrc/controller/${APPNAME}.lua /usr/lib/lua/luci/controller/
+fi
+if [ -d ./luasrc/view/${APPNAME} ]; then
+  cp ./luasrc/view/${APPNAME}/* /usr/lib/lua/luci/view/${APPNAME}/
+fi
+if [ -d ./luasrc/model ]; then
+  cp -rf ./luasrc/model/* /usr/lib/lua/luci/model/
+fi
 cp -rf ./root/* /
 rm -rf /tmp/luci-*
+echo "Ok"
 
