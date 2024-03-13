@@ -4,8 +4,8 @@ msgstr "Content-Type: text/plain; charset=UTF-8"
 msgid "Official website:"
 msgstr "官方网站："
 
-msgid "TypeCho is an streaming media service and a client–server media player platform, made by TypeCho, Inc."
-msgstr "TypeCho 是一个多媒体串流平台。"
+msgid "TypeCho is a lightweight blog."
+msgstr "TypeCho 是一个轻量级博客。"
 
 msgid "Config path"
 msgstr "配置文件路径"

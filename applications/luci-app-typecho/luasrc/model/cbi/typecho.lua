@@ -9,8 +9,8 @@ local m, s, o
 
 m = taskd.docker_map("typecho", "typecho", "/usr/libexec/istorec/typecho.sh",
 	translate("TypeCho"),
-	translate("TypeCho is an streaming media service and a client–server media player platform, made by TypeCho, Inc.")
-		.. translate("Official website:") .. ' <a href=\"https://www.typecho.tv/\" target=\"_blank\">https://www.typecho.tv/</a>')
+	translate("TypeCho is a lightweight blog.")
+		.. translate("Official website:") .. ' <a href=\"https://typecho.org/\" target=\"_blank\">https://typecho.org/</a>')
 
 local dk = docker.new({socket_path="/var/run/docker.sock"})
 local dockerd_running = dk:_ping().code == 200
