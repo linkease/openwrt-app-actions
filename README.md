@@ -7,3 +7,9 @@
 
 3. 等待编译完成，点击任务进入详情页
 4. 在详情页下载插件压缩包![image](https://user-images.githubusercontent.com/1214708/153843272-81843b45-6dc8-4945-871f-a9a467f63c33.png)
+
+## ForkApp
+
+1. ./forkapp forkapp -from ../applications/luci-app-plex -to ../applications/luci-app-demo
+2. ./forkapp upload -ip 192.168.100.1 -pwd "password" -from ../applications/luci-app-demo -to /root/
+3. ./forkapp upload -ip 192.168.100.1 -pwd "password" -from ../applications/luci-app-demo -to /root/ -script ../tools/simple-install.sh -install
