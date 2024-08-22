@@ -81,7 +81,7 @@ do_install_detail() {
     cmd="$cmd\
     -t \
     --privileged "
-    for dev in iep rga dri dma_heap mpp_service mpp-service vpu_service vpu-service \
+    for dev in iep rga dri dma_heap mali0 mpp_service mpp-service vpu_service vpu-service \
         hevc_service hevc-service rkvdec rkvenc avsd vepu h265e ; do
       [ -e "/dev/$dev" ] && cmd="$cmd --device /dev/$dev"
     done
