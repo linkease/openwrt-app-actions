@@ -73,10 +73,10 @@ case ${ACTION} in
     docker ${ACTION} kodexplorer
   ;;
   "status")
-    docker ps --all -f 'name=kodexplorer' --format '{{.State}}'
+    docker ps --all -f 'name=^/kodexplorer$' --format '{{.State}}'
   ;;
   "port")
-    docker ps --all -f 'name=kodexplorer' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
+    docker ps --all -f 'name=^/kodexplorer$' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
   ;;
   *)
     usage

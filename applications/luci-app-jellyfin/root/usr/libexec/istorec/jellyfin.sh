@@ -139,10 +139,10 @@ case ${ACTION} in
     docker ${ACTION} jellyfin
   ;;
   "status")
-    docker ps --all -f 'name=jellyfin' --format '{{.State}}'
+    docker ps --all -f 'name=^/jellyfin$' --format '{{.State}}'
   ;;
   "port")
-    docker ps --all -f 'name=jellyfin' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*->8096/tcp' | sed 's/0.0.0.0:\([0-9]*\)->.*/\1/'
+    docker ps --all -f 'name=^/jellyfin$' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*->8096/tcp' | sed 's/0.0.0.0:\([0-9]*\)->.*/\1/'
   ;;
   *)
     usage
