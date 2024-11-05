@@ -27,6 +27,7 @@ o = s:option(Value, "image", translate("Image"))
 o.datatype = "string"
 o:value("", translate("Default"))
 o:value("supermanito/arcadia:beta", "supermanito/arcadia:beta")
+o:value("registry.cn-hangzhou.aliyuncs.com/supermanito/arcadia:beta", "registry.cn-hangzhou.aliyuncs.com/supermanito/arcadia:beta")
 
 o = s:option(Flag, "hostnet", translate("Host network"), translate("Arcadia running in host network, port is always 5678 if enabled"))
 o.default = 0
