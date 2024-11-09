@@ -5,6 +5,25 @@ shift 1
 
 do_install() {
   local IMAGE_NAME=`uci get istoredup.@istoredup[0].image_name 2>/dev/null`
+  source /etc/openwrt_release
+  case ${DISTRIB_TARGET} in
+  *x86)
+    echo "Unsupported ${DISTRIB_TARGET} NOW"
+    exit 1
+    ;;
+  *rk35xx)
+    echo "${DISTRIB_TARGET} supported"
+    ;;
+  *rk33xx)
+    echo "Unsupported ${DISTRIB_TARGET} NOW"
+    exit 1
+    ;;
+  *)
+    echo "Unsupported ${DISTRIB_TARGET} NOW"
+    exit 1
+    ;;
+  esac
+
   echo "docker pull ${IMAGE_NAME}"
   docker pull ${IMAGE_NAME}
   docker rm -f istoredup
@@ -66,7 +85,7 @@ case ${ACTION} in
   ;;
   "show-ip")
     IP=`docker exec istoredup ip -f inet addr show br-lan|sed -En -e 's/.*inet ([0-9.]+).*/\1/p'`
-    if [ -z "$IP"]; then
+    if [ -z "$IP" ]; then
       echo "reset ip"
       docker exec istoredup /etc/init.d/setupvmease start
       sleep 5
