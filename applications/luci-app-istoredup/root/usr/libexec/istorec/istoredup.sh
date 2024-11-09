@@ -17,7 +17,7 @@ do_install() {
 
   local cmd="docker run --restart=unless-stopped -d \
     -h iStoreDuplica \
-    -v /var/run/vmease:/var/run/vmease \
+    -v /var/run/vmease:/host/run/vmease \
     --privileged \
     --net=dsm-net \
     --sysctl net.netfilter.nf_conntrack_acct=1 \
@@ -30,6 +30,9 @@ do_install() {
 
   echo "$cmd"
   eval "$cmd"
+  echo "wait running"
+  sleep 5
+  echo "done"
 }
 
 usage() {
@@ -62,7 +65,14 @@ case ${ACTION} in
     docker exec istoredup ip -f inet addr show br-lan|sed -En -e 's/.*inet ([0-9.]+).*/\1/p'
   ;;
   "show-ip")
-    docker exec istoredup ip -f inet addr show br-lan|sed -En -e 's/.*inet ([0-9.]+).*/\1/p'
+    IP=`docker exec istoredup ip -f inet addr show br-lan|sed -En -e 's/.*inet ([0-9.]+).*/\1/p'`
+    if [ -z "$IP"]; then
+      echo "reset ip"
+      docker exec istoredup /etc/init.d/setupvmease start
+      sleep 5
+      IP=`docker exec istoredup ip -f inet addr show br-lan|sed -En -e 's/.*inet ([0-9.]+).*/\1/p'`
+    fi
+    echo $IP
   ;;
   *)
     usage
