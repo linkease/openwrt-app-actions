@@ -59,10 +59,10 @@ case ${ACTION} in
     docker ps --all -f 'name=^/istoredup$' --format '{{.State}}'
   ;;
   "port")
-    echo 80
+    docker exec istoredup ip -f inet addr show br-lan|sed -En -e 's/.*inet ([0-9.]+).*/\1/p'
   ;;
   "show-ip")
-    do_hacs_install
+    docker exec istoredup ip -f inet addr show br-lan|sed -En -e 's/.*inet ([0-9.]+).*/\1/p'
   ;;
   *)
     usage

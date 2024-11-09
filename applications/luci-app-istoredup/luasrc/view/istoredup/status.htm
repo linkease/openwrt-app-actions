@@ -18,14 +18,14 @@ local container_running = container_status == "running"
 if container_running then
     local port=util.trim(util.exec("/usr/libexec/istorec/istoredup.sh port"))
     if port == "" then
-        port="8123"
+        port="error"
     end
 -%>
 <div class="cbi-value cbi-value-last">
     <label class="cbi-value-title">&nbsp;</label>
     <div class="cbi-value-field">
 
-    <input type="button" class="btn cbi-button cbi-button-apply" name="start" value="<%:Open the iStoreDup%>" onclick="window.open('http://'+location.hostname+':<%=port%>/', '_blank')">
+    <input type="button" class="btn cbi-button cbi-button-apply" name="start" value="<%:Open the iStoreDup%>" onclick="window.open('http://<%=port%>/', '_blank')">
     </div>
 </div>
 <% end %>
