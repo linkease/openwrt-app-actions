@@ -46,5 +46,3 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/speedtest.$(PKG_ARCH_SPEEDTEST) $(1)/usr/bin/speedtest
 endef
 
-$(eval $(call BuildPackage,$(PKG_NAME)))
-

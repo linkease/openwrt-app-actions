@@ -60,5 +60,3 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./files/vmease.uci-default $(1)/etc/uci-defaults/vmease
 endef
 
-$(eval $(call BuildPackage,$(PKG_NAME)))
-

@@ -53,5 +53,3 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./files/xunyou.init $(1)/etc/init.d/xunyou
 	$(INSTALL_BIN) ./files/xunyou.uci-default $(1)/etc/uci-defaults/xunyou
 endef
-
-$(eval $(call BuildPackage,xunyou))

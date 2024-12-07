@@ -51,5 +51,3 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_CONF) ./files/airconnect.config $(1)/etc/config/airconnect
 	$(INSTALL_BIN) ./files/airconnect.init $(1)/etc/init.d/airconnect
 endef
-
-$(eval $(call BuildPackage,airconnect))

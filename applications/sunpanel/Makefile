@@ -63,4 +63,3 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./files/sunpanel.uci-default $(1)/etc/uci-defaults/sunpanel
 endef
 
-$(eval $(call BuildPackage,$(PKG_NAME)))
