@@ -1,15 +1,14 @@
-From 3862e93bffe7408876137c486c99ef92f1e8e9e4 Mon Sep 17 00:00:00 2001
+From 55db7a1f7f650f965e783301387246f9f62fa1ec Mon Sep 17 00:00:00 2001
 From: Liangbin Lian <jjm2473@gmail.com>
 Date: Wed, 11 Dec 2024 11:20:45 +0800
-Subject: [PATCH] compat 23
+Subject: [PATCH] luci.mk: postinst compat openwrt 23
 
-Signed-off-by: Liangbin Lian <jjm2473@gmail.com>
 ---
- luci.mk | 6 ++++--
- 1 file changed, 4 insertions(+), 2 deletions(-)
+ luci.mk | 8 +++++---
+ 1 file changed, 5 insertions(+), 3 deletions(-)
 
 diff --git a/luci.mk b/luci.mk
-index aca52e08cd..66f6a78c67 100644
+index aca52e08cd..b28284c892 100644
 --- a/luci.mk
 +++ b/luci.mk
 @@ -53,6 +53,8 @@ LUCI_LANG.uk=Українська (Ukrainian)
@@ -21,15 +20,17 @@ index aca52e08cd..66f6a78c67 100644
  
  # Submenu titles
  LUCI_MENU.col=1. Collections
-@@ -211,7 +213,7 @@ endef
+@@ -211,8 +213,8 @@ endef
  ifndef Package/$(PKG_NAME)/postinst
  define Package/$(PKG_NAME)/postinst
  [ -n "$${IPKG_INSTROOT}" ] || {$(foreach script,$(LUCI_DEFAULTS),
 -	(. /etc/uci-defaults/$(script)) && rm -f /etc/uci-defaults/$(script))
+-	rm -f /tmp/luci-indexcache
 +	[ -f /etc/uci-defaults/$(script) ] && (. /etc/uci-defaults/$(script)) && rm -f /etc/uci-defaults/$(script))
- 	rm -f /tmp/luci-indexcache
++	rm -f /tmp/luci-indexcache /tmp/luci-indexcache.*
  	rm -rf /tmp/luci-modulecache/
  	killall -HUP rpcd 2>/dev/null
+ 	exit 0
 @@ -325,7 +327,7 @@ define LuciTranslation
  
    define Package/luci-i18n-$(LUCI_BASENAME)-$(1)/postinst
