@@ -7,7 +7,7 @@ local docker = require "luci.docker"
 local ubuntu2_model = require "luci.model.ubuntu2"
 local m, s, o
 
-m = taskd.docker_map("ubuntu2", "ubuntu2", "/usr/libexec/istorec/ubuntu2.sh",
+m = taskd.docker_map("ubuntu2", "main", "/usr/libexec/istorec/ubuntu2.sh",
 	translate("Ubuntu2"),
 	translate("Ubuntu2 is a high-Performance ubuntu with web remote desktop. [username: abc, password is empty]")
 		.. translate("Official website:") .. ' <a href=\"https://www.kasmweb.com\" target=\"_blank\">https://www.kasmweb.com</a>')

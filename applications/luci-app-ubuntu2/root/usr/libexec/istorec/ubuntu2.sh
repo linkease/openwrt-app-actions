@@ -8,12 +8,12 @@ do_install() {
   local https_port=`uci get ubuntu2.@main[0].https_port 2>/dev/null`
   local image_name=`uci get ubuntu2.@main[0].image_name 2>/dev/null`
   local config=`uci get ubuntu2.@main[0].config_path 2>/dev/null`
-  if [ -z ${IMAGE_NAME} ]; then
+  if [ -z ${image_name} ]; then
     local arch=`uname -m`
     if [ "$arch" = "x86_64" ]; then
-      IMAGE_NAME=linkease/desktop-ubuntu2-standard-amd64:latest
+      image_name=linkease/desktop-ubuntu2-standard-amd64:latest
     else
-      IMAGE_NAME=linkease/desktop-ubuntu2-standard-arm64:latest
+      image_name=linkease/desktop-ubuntu2-standard-arm64:latest
     fi
   fi
 
