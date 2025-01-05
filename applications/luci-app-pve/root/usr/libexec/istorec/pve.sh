@@ -4,6 +4,14 @@ ACTION=${1}
 shift 1
 
 do_install() {
+  if echo `uname -m` | grep -Eqi 'x86_64'; then
+    echo "Support x86_64"
+  else
+    echo "Not x86_64, only support x86_64, exit"
+    sleep 3
+    exit 1
+  fi
+
   local config=`uci get pve.@pve[0].config_path 2>/dev/null`
   local root_pwd=`uci get pve.@pve[0].root_pwd 2>/dev/null`
   local IMAGE_NAME=`uci get pve.@pve[0].image_name 2>/dev/null`
