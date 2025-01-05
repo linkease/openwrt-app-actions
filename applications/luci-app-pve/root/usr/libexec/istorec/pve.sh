@@ -30,6 +30,7 @@ do_install() {
     --tmpfs /run/lock \
 	  --hostname pve \
     -e "ISTOREOS=1" \
+    -v \"/var/run:/host/var/run\" \
     -v \"$config/vz:/var/lib/vz\" \
     -v \"$config/pve-cluster:/var/lib/pve-cluster\" \
     -v \"/dev/vfio:/dev/vfio\" \
