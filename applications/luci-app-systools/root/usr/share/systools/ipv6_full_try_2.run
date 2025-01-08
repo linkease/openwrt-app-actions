@@ -24,27 +24,6 @@ ipv6_dns_on() {
 	uci -q delete 'dhcp.@dnsmasq[0].filter_aaaa'
 }
 
-ipv6_relay_mode() {
-	uci -q batch <<-EOF >/dev/null
-		del network.wan6.auto
-
-		set dhcp.wan6=dhcp
-		set dhcp.wan6.interface='wan6'
-		set dhcp.wan6.ignore='1'
-		set dhcp.wan6.master='1'
-		set dhcp.wan6.ra='relay'
-		set dhcp.wan6.dhcpv6='relay'
-		set dhcp.wan6.ndp='relay'
-
-		set dhcp.lan.ra='relay'
-		del dhcp.lan.ra_slaac
-		del dhcp.lan.ra_flags
-		set dhcp.lan.dhcpv6='relay'
-		set dhcp.lan.ndp='relay'
-EOF
-	ipv6_dns_on
-}
-
 ipv6_pppoe_mode() {
 	ipv6_disable_lan_server
 	ipv6_dns_on
@@ -63,17 +42,20 @@ is_wan_pppoe() {
 
 # disable ipv6 nat
 ipv6_disable_nat
+ipv6_pppoe_mode
 
 if is_lan_gateway; then
 	echo "Single-Port Router (LAN Gateway) mode"
-	ipv6_pppoe_mode
 elif is_wan_pppoe; then
 	echo "PPPoE mode"
-	ipv6_pppoe_mode
 	uci -q delete network.wan.ipv6
 else
 	echo "DHCP-Client mode, but disable lan server"
-	ipv6_pppoe_mode
+  # enable ra server
+  uci -q set dhcp.lan.ra='server'
+  uci -q add_list dhcp.lan.ra_flags='managed-config'
+  uci -q add_list dhcp.lan.ra_flags='other-config'
+  uci -q set dhcp.lan.dhcpv6='server'
 fi
 
 uci -q batch <<-EOF >/dev/null
