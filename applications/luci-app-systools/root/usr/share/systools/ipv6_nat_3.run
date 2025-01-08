@@ -31,9 +31,17 @@ ipv6_pppoe_mode() {
 echo "IPv6 NAT mode"
 ipv6_enable_nat
 ipv6_pppoe_mode
+
+uci set network.globals.ula_prefix="$(uci get network.globals.ula_prefix | sed 's/^./d/')"
+
 uci -q set network.wan6.reqaddress='try'
 uci -q set network.wan6.reqprefix='auto'
 uci -q set network.wan6.sourcefilter='0'
+
+uci -q set dhcp.lan.ra='server'
+uci -q add_list dhcp.lan.ra_flags='managed-config'
+uci -q add_list dhcp.lan.ra_flags='other-config'
+uci -q set dhcp.lan.dhcpv6='server'
 
 uci -q batch <<-EOF >/dev/null
   commit firewall
