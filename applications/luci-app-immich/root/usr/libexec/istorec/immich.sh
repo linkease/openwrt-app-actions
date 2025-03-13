@@ -93,10 +93,10 @@ case ${ACTION} in
     cd $config && docker-compose ${ACTION}
   ;;
   "status")
-    docker ps --all -f 'name=^/linkease-immich_frontend_1$' --format '{{.State}}'
+    docker ps --all -f 'name=^/immich_server$' --format '{{.State}}'
   ;;
   "port")
-    docker ps --all -f 'name=^/linkease-immich_frontend_1$' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
+    docker ps --all -f 'name=^/immich_server$' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
   ;;
   *)
     usage
