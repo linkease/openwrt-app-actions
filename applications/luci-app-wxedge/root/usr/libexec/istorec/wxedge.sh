@@ -39,6 +39,8 @@ istoreenhance_pull() {
     # 判断是否安装 iStoreEnhance
       if [ -z "$isInstall" ]; then
       echo "download failed, install istoreenhance to speedup, \"https://doc.linkease.com/zh/guide/istore/software/istoreenhance.html\""
+      else
+        echo "download failed, enable istoreenhance to speedup"
       fi
       exit 1
     fi
