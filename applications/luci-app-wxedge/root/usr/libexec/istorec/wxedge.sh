@@ -10,9 +10,11 @@ shift 1
 # 4. 反之运行docker pull
 istoreenhance_pull() {
   local image_name="$1"
+  local isInstall=$(command -v iStoreEnhance)
+  local isRun=$(pgrep iStoreEnhance)
 
   # 判断iStoreEnhance是否运行
-  if pgrep "iStoreEnhance" >/dev/null; then
+  if [ -n "$isRun" ]; then
     # 使用 docker info 获取包含 registry.linkease.net 的镜像服务器地址
     local registry_mirror=$(docker info 2>/dev/null | awk -F': ' '/Registry Mirrors:/ {found=1; next} found && NF {if ($0 ~ /registry.linkease.net/) {print; exit}}')
 
@@ -24,19 +26,24 @@ istoreenhance_pull() {
       echo "istoreenhance_pull ${full_image_name}"
       # 直接拉取镜像
       docker pull "$full_image_name"
-      if [ $? -eq 0 ]; then
-        return 0
+    fi
+    else
+      echo "not found registry.linkease.net"
+      echo "docker pull ${image_name}"
+      docker pull "$image_name"
+    fi
+  else
+    # 否则运行 docker pull
+    echo "docker pull ${image_name}"
+    docker pull "$image_name"
+    if [ $? -ne 0 ]; then
+    # 判断是否安装 iStoreEnhance
+      if [ -z "$isInstall" ]; then
+      echo "download failed, install istoreenhance to speedup, \"https://doc.linkease.com/zh/guide/istore/software/istoreenhance.html\""
       fi
+      exit 1
     fi
   fi
-
-  # 否则运行 docker pull
-  echo "docker pull ${image_name}"
-  docker pull "$image_name"
-  if [ $? -ne 0 ]; then
-    return 1
-  fi
-  return 0
 }
 
 do_install() {
@@ -50,10 +57,6 @@ do_install() {
 
   [ -z "$image_name" ] && image_name="onething1/wxedge"
   istoreenhance_pull "$image_name"
-  if [ $? -ne 0 ]; then
-    echo "download failed, install istoreenhance to speedup, \"https://doc.linkease.com/zh/guide/istore/software/istoreenhance.html\""
-    exit 1
-  fi
   docker rm -f wxedge
 
   local cmd="docker run --restart=unless-stopped -d \
