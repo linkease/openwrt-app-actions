@@ -20,13 +20,12 @@ istoreenhance_pull() {
 
     if [[ -n "$registry_mirror" ]]; then
       # 提取主机和端口部分
-      local registry_host=$(echo "$registry_mirror" | sed -E 's|^https?://([^/]+).*|\1|')
+      local registry_host=$(echo ${registry_mirror} | sed -E 's|^https?://([^/]+).*|\1|')
       # 拼接完整的镜像地址
       local full_image_name="$registry_host/$image_name"
       echo "istoreenhance_pull ${full_image_name}"
       # 直接拉取镜像
       docker pull "$full_image_name"
-    fi
     else
       echo "not found registry.linkease.net"
       echo "docker pull ${image_name}"
@@ -40,6 +39,8 @@ istoreenhance_pull() {
     # 判断是否安装 iStoreEnhance
       if [ -z "$isInstall" ]; then
       echo "download failed, install istoreenhance to speedup, \"https://doc.linkease.com/zh/guide/istore/software/istoreenhance.html\""
+      else
+        echo "download failed, enable istoreenhance to speedup"
       fi
       exit 1
     fi
