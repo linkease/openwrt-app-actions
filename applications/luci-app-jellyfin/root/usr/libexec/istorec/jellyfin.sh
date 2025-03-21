@@ -10,37 +10,29 @@ IMAGE_NAME='default'
 
 istoreenhance_pull() {
   local image_name="$1"
-  local isInstall=$(command -v iStoreEnhance)
-  local isRun=$(pgrep iStoreEnhance)
+  echo "docker pull ${image_name}"
+  docker pull "$image_name"
+  if [ $? -ne 0 ]; then
+    local isInstall=$(command -v iStoreEnhance)
+    local isRun=$(pgrep iStoreEnhance)
+      # 判断iStoreEnhance是否运行
+    if [ -n "$isRun" ]; then
+      # 使用 docker info 获取包含 registry.linkease.net 的镜像服务器地址
+      local registry_mirror=$(docker info 2>/dev/null | awk -F': ' '/Registry Mirrors:/ {found=1; next} found && NF {if ($0 ~ /registry.linkease.net/) {print; exit}}')
 
-  # 判断iStoreEnhance是否运行
-  if [ -n "$isRun" ]; then
-    # 使用 docker info 获取包含 registry.linkease.net 的镜像服务器地址
-    local registry_mirror=$(docker info 2>/dev/null | awk -F': ' '/Registry Mirrors:/ {found=1; next} found && NF {if ($0 ~ /registry.linkease.net/) {print; exit}}')
-    echo "istoreenhance_pull ${image_name}"
-    docker pull "$image_name"
-    if [ $? -ne 0 ]; then
       if [[ -n "$registry_mirror" ]]; then
         echo "istoreenhance_pull failed"
       else
-          echo "download failed, not found registry.linkease.net"
+        echo "download failed, not found registry.linkease.net"
       fi
-      exit 1
-    fi
-    
-  else
-    # 否则运行 docker pull
-    echo "docker pull ${image_name}"
-    docker pull "$image_name"
-    if [ $? -ne 0 ]; then
-    # 判断是否安装 iStoreEnhance
+    else
       if [ -z "$isInstall" ]; then
         echo "download failed, install istoreenhance to speedup, \"https://doc.linkease.com/zh/guide/istore/software/istoreenhance.html\""
       else
         echo "download failed, enable istoreenhance to speedup"
       fi
-      exit 1
     fi
+    exit 1
   fi
 }
 
