@@ -15,16 +15,15 @@ istoreenhance_pull() {
     local registry_mirror=$(docker info 2>/dev/null | awk -F': ' '/Registry Mirrors:/ {found=1; next} found && NF {if ($0 ~ /registry.linkease.net/) {print; exit}}')
 
     if [[ -n "$registry_mirror" ]]; then
-      # 提取主机和端口部分
-      local registry_host=$(echo ${registry_mirror} | sed -E 's|^https?://([^/]+).*|\1|')
-      # 拼接完整的镜像地址
-      local full_image_name="$registry_host/$image_name"
-      echo "istoreenhance_pull ${full_image_name}"
-      # 直接拉取镜像
-      docker pull "$full_image_name"
+      echo "istoreenhance_pull ${image_name}"
+      docker pull "$image_name"
       if [ $? -ne 0 ]; then
-        echo "istoreenhance_pull failed"
-      exit 1
+        if [[ -n "$registry_mirror" ]]; then
+          echo "istoreenhance_pull failed"
+        else
+          echo "download failed, not found registry.linkease.net"
+        fi
+        exit 1
       fi
     else
       echo "istoreenhance_pull ${image_name}"
