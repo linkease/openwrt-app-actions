@@ -14,8 +14,8 @@ do_install() {
     exit 1
   fi
 
-  [ -z "$port" ] && port=3005
-  [ -z "$image_name" ] && image_name="justsong/one-api:v0.6.10"
+  [ -z "$port" ] && port=3001
+  [ -z "$image_name" ] && image_name="louislam/uptime-kuma:1"
   echo "docker pull ${image_name}"
   docker pull ${image_name}
   RET=$?
@@ -26,8 +26,8 @@ do_install() {
   docker rm -f uptimekuma
 
   local cmd="docker run --restart=unless-stopped -d -h UptimeKumaServer \
-    -p $port:3000 \
-    -v \"$config:/data\" "
+    -p $port:3001 \
+    -v \"$config:/app/data\" "
 
   cmd="$cmd\
   --dns=172.17.0.1 \

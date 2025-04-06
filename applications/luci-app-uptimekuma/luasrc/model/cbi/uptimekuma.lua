@@ -9,8 +9,8 @@ local m, s, o
 
 m = taskd.docker_map("uptimekuma", "uptimekuma", "/usr/libexec/istorec/uptimekuma.sh",
 	translate("UptimeKuma"),
-	translate("UptimeKuma is LLM API Management & Distribution System, supporting OpenAI, Azure, Anthropic Claude, Google Gemini, and DeepSeek. login: root/123456")
-		.. translate("Official website:") .. ' <a href=\"https://openai.justsong.cn/\" target=\"_blank\">https://openai.justsong.cn/</a>')
+	translate("Uptime Kuma is an easy-to-use self-hosted monitoring tool.")
+		.. translate("Official website:") .. ' <a href=\"https://uptime.kuma.pet/\" target=\"_blank\">https://uptime.kuma.pet/</a>')
 
 local dk = docker.new({socket_path="/var/run/docker.sock"})
 local dockerd_running = dk:_ping().code == 200
@@ -39,9 +39,9 @@ o:depends("hostnet", 0)
 o = s:option(Value, "image_name", translate("Image").."<b>*</b>")
 o.rmempty = false
 o.datatype = "string"
-o:value("justsong/one-api:latest", "justsong/one-api:latest")
-o:value("justsong/one-api:v0.6.10", "justsong/one-api:v0.6.10")
-o.default = "justsong/one-api:v0.6.10"
+o:value("louislam/uptime-kuma:1", "louislam/uptime-kuma:1")
+o:value("louislam/uptime-kuma:beta", "louislam/uptime-kuma:beta")
+o.default = "louislam/uptime-kuma:1"
 
 local blocks = uptimekuma_model.blocks()
 local home = uptimekuma_model.home()

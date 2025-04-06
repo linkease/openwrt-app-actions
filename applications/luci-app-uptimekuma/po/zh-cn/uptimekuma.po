@@ -4,8 +4,8 @@ msgstr "Content-Type: text/plain; charset=UTF-8"
 msgid "Official website:"
 msgstr "官方网站："
 
-msgid "UptimeKuma is LLM API Management & Distribution System, supporting OpenAI, Azure, Anthropic Claude, Google Gemini, and DeepSeek. login: root/123456"
-msgstr "UptimeKuma 是LLM API 管理 & 分发系统，支持 OpenAI、Azure、Anthropic Claude、Google Gemini、DeepSeek。登录：root/123456"
+msgid "Uptime Kuma is an easy-to-use self-hosted monitoring tool."
+msgstr "Uptime Kuma 是一款易于使用的自托管监控工具。"
 
 msgid "Config path"
 msgstr "配置文件路径"
