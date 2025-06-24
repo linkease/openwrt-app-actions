@@ -27,17 +27,17 @@ o.datatype = "string"
 o:value("images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956", "images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956")
 o.default = "images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956"
 
-local blks = demon_model.blocks()
+local blks = demon_model.caches()
 local dir
 o = s:option(Value, "cache_path", translate("Cache path").."<b>*</b>", "请选择合适的存储位置进行安装，安装位置容量越大，收益越高。安装后请勿轻易改动")
 o.rmempty = false
 o.datatype = "string"
 for _, dir in pairs(blks) do
-	dir = dir .. "/demon1"
+	dir = dir
 	o:value(dir, dir)
 end
 if #blks > 0 then
-    o.default = blks[1] .. "/demon1"
+    o.default = blks[1]
 end
 
 return m

@@ -16,6 +16,7 @@ do_install() {
   [ -z "$image_name" ] && image_name="images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956"
   docker pull "$image_name"
   docker rm -f onethingdemon
+  docker rm -f wxedge
 
   local cmd="docker run --restart=unless-stopped -d \
     --privileged \
