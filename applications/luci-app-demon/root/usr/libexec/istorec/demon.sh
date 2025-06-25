@@ -26,11 +26,12 @@ do_install() {
     --privileged \
     --network=host \
     --dns=127.0.0.1 \
+    --dns=223.5.5.5 \
     --tmpfs /run \
     --tmpfs /tmp \
     -v \"$path:/storage\" \
     -v \"$path/containerd:/var/lib/containerd\" \
-    -e LISTEN_ADDR=$port \
+    -e \"LISTEN_ADDR=:${port}\" \
     -e PLACE=CTKS"
 
   local tz="`uci get system.@system[0].zonename | sed 's/ /_/g'`"
