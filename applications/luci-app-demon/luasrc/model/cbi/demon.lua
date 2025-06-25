@@ -8,7 +8,7 @@ local m, s, o
 
 m = taskd.docker_map("demon", "demon", "/usr/libexec/istorec/demon.sh",
 	translate("Onething Demon"),
-	"「容器魔王」由网心云推出的一款 docker 容器镜像软件，通过在简单安装后即可快速加入网心云共享计算生态网络，用户可根据每日的贡献量获得相应的现金收益回报。了解更多，请登录「<a href=\"https://www.onethingcloud.com/\" target=\"_blank\" >网心云官网</a>」并查看<a href=\"https://doc.linkease.com/zh/guide/istoreos/software/demon.html\" target=\"_blank\">「教程」</a>")
+	"【魔王现世】每月至高可赚「千元」，现在上线秒领「30天20%收益加成」，挂机托管自动赚米，拿到手软！点击「<a href=\"https://www.onethingcloud.com/\" target=\"_blank\" >网心云官网</a>」并查看<a href=\"https://doc.linkease.com/zh/guide/istoreos/software/demon.html\" target=\"_blank\">「教程」</a>")
 
 s = m:section(SimpleSection, translate("Service Status"), translate("Onething Demon status:"), "注意容器魔王会以超级权限运行！")
 s:append(Template("demon/status"))

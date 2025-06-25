@@ -5,12 +5,16 @@ shift 1
 
 
 do_install() {
-  local path=`uci get demon.@demon[0].cache_path 2>/dev/null`
-  local image_name=`uci get demon.@demon[0].image_name 2>/dev/null`
+  local path=`uci -q get demon.@demon[0].cache_path 2>/dev/null`
+  local image_name=`uci -q get demon.@demon[0].image_name 2>/dev/null`
+  local port=`uci -q get demon.@demon[0].port 2>/dev/null`
 
   if [ -z "$path" ]; then
       echo "path is empty!"
       exit 1
+  fi
+  if [ -z "$port" ]; then
+      port=18888
   fi
 
   [ -z "$image_name" ] && image_name="images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956"
@@ -26,6 +30,7 @@ do_install() {
     --tmpfs /tmp \
     -v \"$path:/storage\" \
     -v \"$path/containerd:/var/lib/containerd\" \
+    -e LISTEN_ADDR=$port \
     -e PLACE=CTKS"
 
   local tz="`uci get system.@system[0].zonename | sed 's/ /_/g'`"
@@ -82,7 +87,8 @@ EOF
     docker ps --all -f 'name=^/onethingdemon$' --format '{{.State}}'
   ;;
   "port")
-    docker ps --all -f 'name=^/onethingdemon$' --format '{{.Ports}}' | grep -om1 '0.0.0.0:[0-9]*' | sed 's/0.0.0.0://'
+    port=`uci -q get demon.@demon[0].port 2>/dev/null`
+    echo $port
   ;;
   *)
     usage
