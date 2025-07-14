@@ -17,17 +17,7 @@ do_install() {
       port=18888
   fi
 
-  if [ -z ${image_name} ]; then
-    local arch=`uname -m`
-    if [ "$arch" = "x86_64" ]; then
-      image_name="images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956"
-    else
-      echo "Arm64 is not supported now"
-      sleep 5
-      exit 2
-    fi
-  fi
-
+  image_name="images-cluster.xycloud.com/wxedge/wxedge:latest-CTWXKS1748570956"
   docker pull "$image_name"
   docker rm -f onethingdemon
   if [ "$(docker inspect -f '{{.State.Running}}' wxedge 2>/dev/null)" = "true" ]; then

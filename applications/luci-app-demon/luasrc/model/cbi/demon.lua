@@ -24,8 +24,8 @@ o.datatype = "port"
 o = s:option(Value, "image_name", translate("Image").."<b>*</b>")
 o.rmempty = false
 o.datatype = "string"
-o:value("images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956", "images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956")
-o.default = "images-cluster.xycloud.com/wxedge/amd64-wxedge:3.5.1-CTWXKS1748570956"
+o:value("images-cluster.xycloud.com/wxedge/wxedge:latest-CTWXKS1748570956", "images-cluster.xycloud.com/wxedge/wxedge:latest-CTWXKS1748570956")
+o.default = "images-cluster.xycloud.com/wxedge/wxedge:latest-CTWXKS1748570956"
 
 local blks = demon_model.caches()
 local dir
