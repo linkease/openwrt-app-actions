@@ -67,10 +67,13 @@ endef
 
 define Package/$(PKG_NAME)/install
 	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/init.d $(1)/etc/uci-defaults
+	$(INSTALL_DIR) $(1)/usr/share/nftables.d/chain-pre/input $(1)/usr/share/nftables.d/table-post
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/fail2ban_op_bin.$(PKG_ARCH_FAIL2BANOP) $(1)/usr/sbin/fail2ban_op_bin
 	$(INSTALL_CONF) ./files/fail2banop.config $(1)/etc/config/fail2banop
 	$(INSTALL_BIN) ./files/fail2banop.init $(1)/etc/init.d/fail2banop
 	$(INSTALL_BIN) ./files/fail2banop.uci-default $(1)/etc/uci-defaults/fail2banop
+	$(INSTALL_DATA) ./files/nft-hook/chain-pre/input/20-test.nft $(1)/usr/share/nftables.d/chain-pre/input/
+	$(INSTALL_DATA) ./files/nft-hook/table-post/21-test.nft $(1)/usr/share/nftables.d/table-post/
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
