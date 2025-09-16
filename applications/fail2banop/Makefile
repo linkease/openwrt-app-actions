@@ -12,7 +12,7 @@ PKG_ARCH_FAIL2BANOP:=$(ARCH)
 PKG_NAME:=fail2banop
 # use PKG_SOURCE_DATE instead of PKG_VERSION for compitable
 PKG_SOURCE_DATE:=1.0.0
-PKG_RELEASE:=2
+PKG_RELEASE:=4
 ARCH_HEXCODE:=
 ifeq ($(ARCH),x86_64)
 ARCH_HEXCODE=8664
@@ -66,7 +66,7 @@ define Build/Compile
 endef
 
 define Package/$(PKG_NAME)/install
-	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/init.d $(1)/etc/uci-defaults
+	$(INSTALL_DIR) $(1)/etc/config $(1)/etc/init.d $(1)/etc/uci-defaults $(1)/usr/sbin
 	$(INSTALL_DIR) $(1)/usr/share/nftables.d/chain-pre/input $(1)/usr/share/nftables.d/table-post
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/fail2ban_op_bin.$(PKG_ARCH_FAIL2BANOP) $(1)/usr/sbin/fail2ban_op_bin
 	$(INSTALL_CONF) ./files/fail2banop.config $(1)/etc/config/fail2banop
