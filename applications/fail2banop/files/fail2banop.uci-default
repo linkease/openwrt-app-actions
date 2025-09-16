@@ -8,7 +8,7 @@ uci -q batch <<-EOF >/dev/null
 EOF
 
 # Check if fail2ban chain exists in nftables, reload firewall if not
-if ! nft list table inet fw4 2>/dev/null | grep -q fail2ban; then
+if ! nft -t list chain inet fw4 input 2>/dev/null | grep -qF 'ip saddr @fail2banop4 drop'; then
 	/etc/init.d/firewall reload
 fi
 
