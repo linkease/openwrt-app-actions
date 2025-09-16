@@ -16,11 +16,6 @@ start_service() {
   config_foreach get_config "$NAME"
   [ $enabled != 1 ] && return 1
 
-  # Check if fail2ban chain exists in nftables, reload firewall if not
-  if ! nft list table inet fw4 2>/dev/null | grep -q fail2ban; then
-    /etc/init.d/firewall reload
-  fi
-
   procd_open_instance
   procd_set_param command /usr/sbin/fail2ban_op_bin \
     --window="$window" \
@@ -29,6 +24,11 @@ start_service() {
   procd_set_param stderr 1
   procd_set_param respawn
   procd_close_instance
+}
+
+stop_service() {
+  nft flush set inet fw4 fail2banop4
+  nft flush set inet fw4 fail2banop6
 }
 
 service_triggers() {

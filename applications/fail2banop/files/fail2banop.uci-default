@@ -7,6 +7,11 @@ uci -q batch <<-EOF >/dev/null
 	commit ucitrack
 EOF
 
+# Check if fail2ban chain exists in nftables, reload firewall if not
+if ! nft list table inet fw4 2>/dev/null | grep -q fail2ban; then
+	/etc/init.d/firewall reload
+fi
+
 /etc/init.d/fail2banop enable
 
 exit 0
