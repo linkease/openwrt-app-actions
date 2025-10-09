@@ -2,12 +2,13 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_VERSION:=1.0.0-20250406
+# Updated: 2025-10-09
+PKG_VERSION:=1.0.0-20251009
 PKG_RELEASE:=
 
 LUCI_TITLE:=LuCI support for DPanel
 LUCI_PKGARCH:=all
-LUCI_DEPENDS:=+lsblk +zoneinfo-asia +docker +luci-lib-taskd +luci-lib-docker
+LUCI_DEPENDS:=+lsblk +zoneinfo-asia +docker +docker-compose +luci-lib-taskd +luci-lib-docker
 
 define Package/luci-app-dpanel/conffiles
 /etc/config/dpanel
