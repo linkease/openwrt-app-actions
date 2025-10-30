@@ -1,7 +1,9 @@
-<% local util = require "luci.util" local container_status =
-util.trim(util.exec("/usr/libexec/istorec/zdinnav.sh status")) local
-container_install = (string.len(container_status) > 0) local container_running =
-container_status == "running" -%>
+<% 
+local util = require "luci.util" 
+local container_status = util.trim(util.exec("/usr/libexec/istorec/zdinnav.sh status")) 
+local container_install = (string.len(container_status) > 0) 
+local container_running = container_status == "running" 
+-%>
 <style type="text/css" scoped>
   .running-span {
     line-height: 2em;
@@ -40,17 +42,23 @@ container_status == "running" -%>
   <span class="running-span"><%:ZdinNav is running%></span>
   <% else %>
   <span class="stopped-span"><%:ZdinNav is not running%></span>
-  <% end %> <% if container_running then local
-  port=util.trim(util.exec("/usr/libexec/istorec/zdinnav.sh port")) local
-  protocol_type=util.trim(util.exec("/usr/libexec/istorec/zdinnav.sh protocol"))
-  if port == "" then port="9200" end -%>
+  <% end %> 
+  <% 
+   if container_running then 
+      local port=util.trim(util.exec("/usr/libexec/istorec/zdinnav.sh port")) 
+      local protocol_type=util.trim(util.exec("/usr/libexec/istorec/zdinnav.sh protocol"))
+      if port == "" then 
+        port="9200" 
+   end 
+  -%>
   <input
     class="btn cbi-button cbi-button-apply"
     name="start"
     onclick="window.open('<%=protocol_type%>://'+location.hostname+':<%=port%>/', '_blank')"
     type="button"
     value="<%:Open ZdinNav%>"
-  /><% end %>
+  />
+  <% end %>
 </div>
 <script type="text/javascript">
   function onResetPassword() {

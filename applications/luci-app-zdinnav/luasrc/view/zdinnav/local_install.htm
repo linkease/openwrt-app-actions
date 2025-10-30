@@ -1,5 +1,7 @@
-<% local tagval = self.default local tagdatatype = self.datatype %>
-
+<%
+local tagval = self.default 
+local tagdatatype = self.datatype
+-%>
 <script type="text/javascript">
   var selectNameTag =
     "<%=cbid%>".split(".").slice(0, -1).join(".") + ".<%=tagval%>";
