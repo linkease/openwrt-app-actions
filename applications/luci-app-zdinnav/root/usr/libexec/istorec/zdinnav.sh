@@ -245,7 +245,7 @@ do_install() {
   fi
 
   [ -z $port ] && port=9200
-    sed -e "s|PORT_VAR|${port}|g" \
+  sed -e "s|PORT_VAR|${port}|g" \
     -e "s|CONFIG_PATH_VAR|${config}|g" \
     -e "s|DOCKER_URL_VAR|${docker_url}|g" \
     -e "s|VERSION_VAR|${version}|g" \
@@ -261,11 +261,11 @@ do_install() {
 
   # 数据库初始化配置
   sed -e "s|ACCOUNT_VAR|${zdinnav_account}|g" \
-  -e "s|PASSWORD_VAR|${zdinnav_password}|g" \
-  "/usr/share/zdinnav/initializeData.json" > "${config}/configuration/initializeData.json"
+    -e "s|PASSWORD_VAR|${zdinnav_password}|g" \
+    "/usr/share/zdinnav/initializeData.json" > "${config}/configuration/initializeData.json"
   sed -e "s|DBTYPE_VAR|${zdinnav_database}|g" \
-  -e "s|CONNECTIONSTRING_VAR|${zdinnav_connection}|g" \
-  "/usr/share/zdinnav/zdinNavSettings.json" > "${config}/configuration/zdinNavSettings.json"
+    -e "s|CONNECTIONSTRING_VAR|${zdinnav_connection}|g" \
+    "/usr/share/zdinnav/zdinNavSettings.json" > "${config}/configuration/zdinNavSettings.json"
 
   cd $config
 
@@ -340,7 +340,7 @@ do_upgrade() {
     fi
 
   [ -z $port ] && port=9200
-    sed -e "s|PORT_VAR|${port}|g" \
+  sed -e "s|PORT_VAR|${port}|g" \
     -e "s|CONFIG_PATH_VAR|${config}|g" \
     -e "s|DOCKER_URL_VAR|${docker_url}|g" \
     -e "s|VERSION_VAR|${version}|g" \
