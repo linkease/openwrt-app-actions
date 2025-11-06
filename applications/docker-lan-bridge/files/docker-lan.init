@@ -11,7 +11,7 @@ boot() {
 }
 
 start() {
-	# in case docker-lan was destroyed 
+	# in case docker-lan was destroyed
 	ip link add docker-lan type bridge 2>/dev/null
 	ip link set docker-lan-d master docker-lan 2>/dev/null
 
