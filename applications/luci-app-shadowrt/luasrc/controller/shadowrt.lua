@@ -2,7 +2,7 @@
 module("luci.controller.shadowrt", package.seeall)
 
 function index()
-	entry({"admin", "services", "shadowrt"}, alias("admin", "services", "shadowrt", "overview"), _("ShadoWRT"), 30).dependent = true
+	entry({"admin", "services", "shadowrt"}, alias("admin", "services", "shadowrt", "overview"), _("ShadoWRT"), 21).dependent = true
 	entry({"admin", "services", "shadowrt", "overview"}, form("shadowrt/overview"), _("Overview"), 10).dependent = true
 	entry({"admin", "services", "shadowrt", "config"}, cbi("shadowrt/config"), _("Install"), 20).dependent = true
 	entry({"admin", "services", "shadowrt", "action"}, post("shadowrt_action"))

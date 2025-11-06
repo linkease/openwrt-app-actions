@@ -87,7 +87,7 @@ do_install() {
 
 	cmd="$cmd -v /mnt:/mnt"
 	mountpoint -q /mnt && cmd="$cmd:rshared"
-	cmd="$cmd alpine"
+	cmd="$cmd alpine:3.22.2"
 
 	echo "stopping existing container..."
 	docker stop $id >/dev/null 2>&1
