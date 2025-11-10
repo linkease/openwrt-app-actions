@@ -43,6 +43,10 @@ do_install() {
 		docker pull "$alpine_image" || exit 1
 	fi
 
+	if [ -d "$data/$id" ]; then
+		echo "WARNING: $data/$id already exists, may use old data." >&2
+	fi
+
 	local config="{\"id\":\"$id\",\"data\":\"$data\",\"mnt\":\"$mnt\",\"proto\":\"$proto\",\"address\":\"$address\",\"gateway\":\"$gateway\",\"dns\":\"$dns\",\"dhcp_server\":\"$dhcp_server\",\"ports\":\"$ports\"}"
 
 	local cmd="docker run --restart=unless-stopped -d \
