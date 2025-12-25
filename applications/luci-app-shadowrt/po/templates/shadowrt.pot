@@ -1,0 +1,228 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+#: luasrc/view/shadowrt/status.htm:10
+msgid ""
+"\"Copy/Edit\" will redirect to the \"Install\" page. If the ID is changed, a "
+"new instance will be created; otherwise, the existing instance will be "
+"overwritten."
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:81
+msgid "-- Please choose --"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:210
+msgid "Are you sure you want to delete this instance?"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:204
+msgid ""
+"Are you sure you want to reset the network configuration of this instance?"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:68
+msgid "Configuration"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:262
+msgid "Copy/Edit"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:109
+msgid "DHCP Server"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:93
+msgid "DHCP client"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:105
+msgid "DNS Servers"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:77
+msgid "Data Directory"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:264
+msgid "Delete"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:212
+msgid ""
+"Delete instance data as well? (If retained, future instances with the same "
+"ID in the same data directory will use this data)"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:109
+msgid "Enable DHCP server on this instance"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:7
+msgid ""
+"Executing a shutdown within the clone will restart the clone. To shut down, "
+"use the \"Stop\" button below."
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:96
+msgid "Format: xxx.xxx.xxx.xxx/xx"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:101
+msgid "Gateway"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:96
+msgid "IP Address"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:91
+msgid "IP Protocol"
+msgstr ""
+
+#: luasrc/controller/shadowrt.lua:7
+msgid "Install"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:2
+msgid "Instance List"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:5
+msgid "Instructions"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:25
+msgid "Loading view…"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:105
+msgid ""
+"Multiple DNS servers can be separated by spaces, e.g., '8.8.8.8 8.8.4.4'"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:338
+msgid "No instances yet, go to <a href=\"%s\">Install</a>."
+msgstr ""
+
+#: luasrc/controller/shadowrt.lua:6
+msgid "Overview"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:21
+msgid "Refreshing…"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:263
+msgid "Reset Network"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:8
+msgid ""
+"Reset network will restore the instance's network configuration to the state "
+"at installation."
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:82 luasrc/view/shadowrt/status.htm:261
+msgid "Restart"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:255
+msgid "Restarting"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:253
+msgid "Running"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:91
+msgid "Select how this instance gets its IP address"
+msgstr ""
+
+#: luasrc/controller/shadowrt.lua:5 luasrc/model/cbi/shadowrt/overview.lua:7
+#: luasrc/model/cbi/shadowrt/config.lua:63
+msgid "ShadoWRT"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/overview.lua:7
+msgid "ShadoWRT can create isolated clones of iStoreOS/OpenWRT."
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:64
+msgid ""
+"ShadoWRT uses the host's /rom as the base image for its clones, so it only "
+"supports hosts using SquashFS firmware. After the host system is upgraded, "
+"the clones will also use the new version."
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:88
+msgid "Share /mnt"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:88
+msgid "Share host's /mnt directory"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:66
+msgid ""
+"Some services are unavailable in the clone, such as hardware-related "
+"services and OAF. In addition, the Docker service is disabled by default "
+"because the host already has the Docker service. If you need to enable the "
+"Docker service in the clone, you can enable it under the \"Startup\" menu on "
+"the clone's LuCI."
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:79 luasrc/view/shadowrt/status.htm:260
+msgid "Start"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:254
+msgid "Starting"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:92
+msgid "Static address"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:19 luasrc/view/shadowrt/status.htm:301
+msgid "Status"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:76 luasrc/view/shadowrt/status.htm:259
+msgid "Stop"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:256
+msgid "Stopped"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:65
+msgid ""
+"The clone cannot directly access the disk or mount the disk, but /mnt can "
+"share the host's."
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:69
+msgid ""
+"The following network parameters will only take effect during instance fresh "
+"installation or after reset:"
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:73
+msgid ""
+"This ID will be used as hostname and container name, only letters, numbers, "
+"underscore and hyphen are allowed. Same ID will overwrite existing instance, "
+"please avoid using the name as other Docker containers"
+msgstr ""
+
+#: luasrc/view/shadowrt/status.htm:9
+msgid "When deleting, you can choose whether to delete the data."
+msgstr ""
+
+#: luasrc/model/cbi/shadowrt/config.lua:77
+msgid ""
+"Will create sub-directory by ID under the selected path, so the path can be "
+"shared among multiple instances. Please select a file system with good Linux "
+"compatibility, such as ext4, btrfs, zfs, etc."
+msgstr ""
