@@ -167,17 +167,85 @@ jobs:
           path: ${{ github.workspace }}/.dl
           key: ${{ env.CACHE_NAME }}
 
-      - name: Download sources
+      - name: Download sources (verbose + log)
         id: download
         if: steps.defconfig.outputs.status == 'success'
         run: |
+          set -euxo pipefail
           [ -d "${{ github.workspace }}/.dl" ] || mkdir -p "${{ github.workspace }}/.dl"
           cd ~/openwrt-sdk
           rm -rf dl
           ln -s "${{ github.workspace }}/.dl" dl
-          make -j4 download
+
+          # 用 -j1 降低并发导致的“部分下载/竞争”概率，并保证日志更可读
+          make -j1 V=s download 2>&1 | tee /tmp/openwrt-download.log
           echo "status=success" >> $GITHUB_OUTPUT
 
+      - name: Diagnose hash mismatch in downloads
+        if: failure() && steps.defconfig.outputs.status == 'success'
+        run: |
+          set -euxo pipefail
+          log=/tmp/openwrt-download.log
+
+          echo "==== Last 200 lines of download log ===="
+          tail -n 200 "$log" || true
+
+          # 1) 抓取最后一条 hash mismatch 信息
+          line="$(grep -E 'Hash of the local file .* does not match' "$log" | tail -n 1 || true)"
+          echo "==== Mismatch line ===="
+          echo "$line" || true
+
+          # 2) 从 mismatch 行里解析：本地文件路径、算出来的 hash、期望 hash
+          file_path="$(echo "$line" | sed -n 's/.*Hash of the local file \([^ ]*\) does not match.*/\1/p')"
+          local_hash="$(echo "$line" | sed -n 's/.*file: \([0-9a-f]\{64\}\), requested.*/\1/p')"
+          req_hash="$(echo "$line" | sed -n 's/.*requested: \([0-9a-f]\{64\}\).*/\1/p')"
+
+          echo "file_path=${file_path:-<empty>}"
+          echo "local_hash=${local_hash:-<empty>}"
+          echo "req_hash=${req_hash:-<empty>}"
+
+          # 3) 从日志中找对应的 download.pl 命令行（里面带 URL base）
+          fn="$(basename "${file_path:-unknown}")"
+          cmd="$(grep -F 'scripts/download.pl' "$log" | grep -F "\"$fn\"" | tail -n 1 || true)"
+          echo "==== download.pl cmd ===="
+          echo "$cmd" || true
+
+          url_base="$(echo "$cmd" | sed -n 's/.*"\(https:\/\/[^"]*\/\)".*/\1/p')"
+          echo "url_base=${url_base:-<empty>}"
+          echo "url=${url_base}${fn}"
+
+          # 4) 打印 dl 目录现状（很多时候文件已被删除，但目录里可能残留部分文件）
+          echo "==== dl dir listing ===="
+          if [ -n "${file_path:-}" ]; then
+            ls -lah "$(dirname "$file_path")" || true
+          else
+            ls -lah ~/openwrt-sdk/dl || true
+          fi
+
+          # 5) 直接用 curl 重新下载一份到 /tmp，并输出 HTTP 头、文件类型、大小、sha256
+          if [ -n "${url_base:-}" ] && [ -n "${fn:-}" ]; then
+            rm -f "/tmp/$fn" /tmp/dl.headers || true
+            curl -fL --retry 5 --retry-connrefused --retry-delay 2 \
+              -H 'Cache-Control: no-cache' -H 'Pragma: no-cache' \
+              -D /tmp/dl.headers -o "/tmp/$fn" "${url_base}${fn}" || true
+
+            echo "==== HTTP headers ===="
+            cat /tmp/dl.headers || true
+
+            echo "==== downloaded file info ===="
+            ls -lh "/tmp/$fn" || true
+            file "/tmp/$fn" || true
+            sha256sum "/tmp/$fn" || true
+
+            # tar.gz 额外做个完整性检查
+            if echo "$fn" | grep -qE '\.tar\.gz$'; then
+              gzip -t "/tmp/$fn" && echo "gzip OK" || echo "gzip BAD"
+            fi
+          fi
+
+          # 让 step 明确失败，便于你在 Actions UI 里一眼看到诊断输出
+          false
+          
       - name: ReDownload
         if: failure() && steps.defconfig.outputs.status == 'success'
         run: |
