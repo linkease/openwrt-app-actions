@@ -1,5 +1,8 @@
 config ap_modem 'config'
     option enabled '0'
+    option snat_enabled '0'
+    option snat_dest_ip '192.168.1.1'
+    option snat_ip '192.168.1.254'
 
 config interface 'lan'
     # list ipaddr '192.168.31.254'
