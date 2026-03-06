@@ -178,7 +178,7 @@ jobs:
           ln -s "${{ github.workspace }}/.dl" dl
 
           # 用 -j1 降低并发导致的“部分下载/竞争”概率，并保证日志更可读
-          make -j1 V=s download 2>&1 | tee /tmp/openwrt-download.log
+          make -j4 download || make -j1 V=s download 2>&1 | tee /tmp/openwrt-download.log
           echo "status=success" >> $GITHUB_OUTPUT
 
       - name: Diagnose hash mismatch in downloads
