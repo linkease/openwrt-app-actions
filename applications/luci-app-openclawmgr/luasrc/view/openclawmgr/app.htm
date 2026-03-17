@@ -1,0 +1,19 @@
+<%+header%>
+<script type="text/javascript">
+	(function() {
+		window.openclawmgrConfig = {
+			token: "<%=token or ''%>",
+			statusUrl: "<%=url('admin/services/openclawmgr/status')%>",
+			opUrl: "<%=url('admin/services/openclawmgr/op')%>",
+			configUrl: "<%=url('admin/services/openclawmgr/config_data')%>",
+			applyUrl: "<%=url('admin/services/openclawmgr/apply_config')%>",
+			logUrl: "<%=url('admin/services/openclawmgr/log')%>",
+			staticBase: "<%=resource%>/openclawmgr"
+		};
+	})();
+</script>
+<div class="openclawmgr-host">
+	<div id="openclawmgr-app" data-openclawmgr-shadow></div>
+</div>
+<script type="text/javascript" src="<%=resource%>/openclawmgr/app.js?v=<%=os.time()%>"></script>
+<%+footer%>

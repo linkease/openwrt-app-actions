@@ -1,0 +1,87 @@
+#!/bin/sh /etc/rc.common
+
+USE_PROCD=1
+START=99
+STOP=10
+
+SERVICE_NAME="openclawmgr"
+
+_find_entry() {
+	local global_dir="$1"
+	local d="${global_dir}/lib/node_modules/openclaw"
+	[ -f "${d}/openclaw.mjs" ] && { echo "${d}/openclaw.mjs"; return 0; }
+	[ -f "${d}/dist/cli.js" ] && { echo "${d}/dist/cli.js"; return 0; }
+	return 1
+}
+
+start_service() {
+	config_load openclawmgr
+	config_get_bool enabled main enabled 0
+	config_get port main port 18789
+	config_get bind main bind lan
+	config_get base_dir main base_dir /opt/openclawmgr
+	config_get token main token ""
+
+	[ "$enabled" -eq 1 ] || return 0
+
+	local node_bin="${base_dir}/node/bin/node"
+	local global_dir="${base_dir}/global"
+	local data_dir="${base_dir}/data"
+	local env_file="${data_dir}/.openclaw/openclaw.env"
+	local entry="$(_find_entry "$global_dir")"
+	local openai_api_key=""
+	local anthropic_api_key=""
+	local minimax_api_key=""
+	local moonshot_api_key=""
+
+	[ -x "$node_bin" ] || return 1
+	[ -n "$entry" ] || return 1
+	[ -n "$token" ] || return 1
+
+	mkdir -p "${data_dir}/.openclaw" 2>/dev/null
+	if [ -f "$env_file" ]; then
+		# shellcheck disable=SC1090
+		. "$env_file"
+		openai_api_key="${OPENAI_API_KEY:-}"
+		anthropic_api_key="${ANTHROPIC_API_KEY:-}"
+		minimax_api_key="${MINIMAX_API_KEY:-}"
+		moonshot_api_key="${MOONSHOT_API_KEY:-}"
+	fi
+
+	# OpenClaw uses --force to kill conflicting processes, but requires either `lsof`
+	# or `fuser`. iStoreOS images may not include them by default.
+	local force_opt=""
+	if command -v lsof >/dev/null 2>&1 || command -v fuser >/dev/null 2>&1; then
+		force_opt="--force"
+	fi
+
+	local user_opt=""
+	if id openclawmgr >/dev/null 2>&1; then
+		user_opt="openclawmgr"
+	fi
+
+	procd_open_instance "gateway"
+	procd_set_param command "$node_bin" "$entry" gateway run --port "$port" --bind "$bind" --auth token --token "$token" --allow-unconfigured $force_opt
+	procd_set_param env \
+		HOME="$data_dir" \
+		OPENCLAW_HOME="$data_dir" \
+		OPENCLAW_STATE_DIR="${data_dir}/.openclaw" \
+		OPENCLAW_CONFIG_PATH="${data_dir}/.openclaw/openclaw.json" \
+		OPENCLAW_GATEWAY_PORT="$port" \
+		OPENCLAW_GATEWAY_BIND="$bind" \
+		OPENCLAW_GATEWAY_TOKEN="$token" \
+		OPENAI_API_KEY="$openai_api_key" \
+		ANTHROPIC_API_KEY="$anthropic_api_key" \
+		MINIMAX_API_KEY="$minimax_api_key" \
+		MOONSHOT_API_KEY="$moonshot_api_key" \
+		PATH="${base_dir}/node/bin:${global_dir}/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+	[ -n "$user_opt" ] && procd_set_param user "$user_opt"
+	procd_set_param respawn 3600 10 5
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger "openclawmgr"
+}

@@ -1,0 +1,46 @@
+#!/bin/sh
+
+conf_dir="$(uci -q get quickstart.@main[0].conf_dir 2>/dev/null || true)"
+[ -n "$conf_dir" ] && suggested_base_dir="$conf_dir/OpenClawMgr" || suggested_base_dir=""
+
+# Ensure section exists
+if ! uci -q get openclawmgr.main >/dev/null 2>&1; then
+	uci -q set openclawmgr.main=openclawmgr >/dev/null 2>&1 || true
+fi
+
+# Fill defaults (only if missing)
+[ -n "$(uci -q get openclawmgr.main.enabled 2>/dev/null)" ] || uci -q set openclawmgr.main.enabled='0'
+[ -n "$(uci -q get openclawmgr.main.port 2>/dev/null)" ] || uci -q set openclawmgr.main.port='18789'
+[ -n "$(uci -q get openclawmgr.main.bind 2>/dev/null)" ] || uci -q set openclawmgr.main.bind='lan'
+[ -n "$(uci -q get openclawmgr.main.node_version 2>/dev/null)" ] || uci -q set openclawmgr.main.node_version='22.16.0'
+[ -n "$(uci -q get openclawmgr.main.install_accelerated 2>/dev/null)" ] || uci -q set openclawmgr.main.install_accelerated='1'
+[ -n "$(uci -q get openclawmgr.main.token 2>/dev/null)" ] || uci -q set openclawmgr.main.token=''
+[ -n "$(uci -q get openclawmgr.main.allow_insecure_auth 2>/dev/null)" ] || uci -q set openclawmgr.main.allow_insecure_auth='0'
+[ -n "$(uci -q get openclawmgr.main.disable_device_auth 2>/dev/null)" ] || uci -q set openclawmgr.main.disable_device_auth='0'
+[ -n "$(uci -q get openclawmgr.main.default_agent 2>/dev/null)" ] || uci -q set openclawmgr.main.default_agent='anthropic'
+[ -n "$(uci -q get openclawmgr.main.default_model 2>/dev/null)" ] || uci -q set openclawmgr.main.default_model=''
+[ -n "$(uci -q get openclawmgr.main.provider_api_key 2>/dev/null)" ] || uci -q set openclawmgr.main.provider_api_key=''
+[ -n "$(uci -q get openclawmgr.main.provider_base_url 2>/dev/null)" ] || uci -q set openclawmgr.main.provider_base_url=''
+
+# Improve default base_dir on iStoreOS: if still unset or using legacy /opt, prefer quickstart conf_dir.
+current_base_dir="$(uci -q get openclawmgr.main.base_dir 2>/dev/null || true)"
+if [ -z "$current_base_dir" ] || [ "$current_base_dir" = "/opt/openclawmgr" ]; then
+	if [ -n "$suggested_base_dir" ]; then
+		uci -q set openclawmgr.main.base_dir="$suggested_base_dir"
+	else
+		uci -q set openclawmgr.main.base_dir='/opt/openclawmgr'
+	fi
+fi
+
+uci -q commit openclawmgr >/dev/null 2>&1 || true
+
+# best-effort: create an unprivileged user for procd
+if ! id openclawmgr >/dev/null 2>&1; then
+	if command -v adduser >/dev/null 2>&1; then
+		adduser -D -H -s /bin/false openclawmgr >/dev/null 2>&1 || true
+	elif command -v useradd >/dev/null 2>&1; then
+		useradd -r -M -s /bin/false openclawmgr >/dev/null 2>&1 || true
+	fi
+fi
+
+exit 0

@@ -1,0 +1,798 @@
+(function() {
+  var config = window.openclawmgrConfig || {};
+  var container = document.getElementById("openclawmgr-app");
+  if (!container) {
+    return;
+  }
+
+  function parseRgb(value) {
+    var m = value && value.match(/\d+/g);
+    if (m && m.length >= 3) {
+      return { r: parseInt(m[0], 10), g: parseInt(m[1], 10), b: parseInt(m[2], 10) };
+    }
+    return null;
+  }
+
+  function detectDarkMode() {
+    try {
+      var bg = window.getComputedStyle(document.body).backgroundColor;
+      var rgb = parseRgb(bg);
+      if (rgb) {
+        var luminance = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
+        return luminance < 128;
+      }
+    } catch (e) {}
+    return false;
+  }
+
+  var root = container.attachShadow ? (container.shadowRoot || container.attachShadow({ mode: "open" })) : container;
+  var state = {
+    status: null,
+    form: null,
+    options: null,
+    newOrigin: "",
+    activeTab: "basic",
+    savingSection: "",
+    lastAppliedAt: "",
+    showLogModal: false,
+    logText: "",
+    logTimer: null,
+    statusTimer: null,
+    installWatchTimer: null
+  };
+  var styleText = "";
+
+  function request(url, options) {
+    options = options || {};
+    options.credentials = "same-origin";
+    options.headers = options.headers || {};
+    if (config.token) {
+      options.headers["X-LuCI-Token"] = config.token;
+    }
+    return fetch(url, options).then(function(r) { return r.json(); });
+  }
+
+  function postJson(url, payload) {
+    payload = payload || {};
+    if (config.token && payload.token == null) {
+      payload.token = config.token;
+    }
+    return request(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(payload)
+    });
+  }
+
+  function postForm(url, payload) {
+    var body = new URLSearchParams();
+    payload = payload || {};
+    if (config.token && payload.token == null) {
+      payload.token = config.token;
+    }
+    Object.keys(payload || {}).forEach(function(key) {
+      body.append(key, payload[key]);
+    });
+    return request(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8"
+      },
+      body: body.toString()
+    });
+  }
+
+  function escapeHtml(value) {
+    return String(value == null ? "" : value)
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;");
+  }
+
+  function modelForAgent(agent) {
+    return {
+      openai: "openai/gpt-5.2",
+      anthropic: "anthropic/claude-sonnet-4-6",
+      "minimax-cn": "minimax-cn/MiniMax-M2.5",
+      moonshot: "moonshot/kimi-k2.5"
+    }[agent] || "anthropic/claude-sonnet-4-6";
+  }
+
+  function modelMatchesAgent(agent, model) {
+    model = String(model || "");
+    return {
+      openai: /^openai\//,
+      anthropic: /^anthropic\//,
+      "minimax-cn": /^minimax-cn\//,
+      moonshot: /^moonshot\//
+    }[agent] ? ({
+      openai: /^openai\//,
+      anthropic: /^anthropic\//,
+      "minimax-cn": /^minimax-cn\//,
+      moonshot: /^moonshot\//
+    }[agent]).test(model) : false;
+  }
+
+  function resolveModelValue(form) {
+    var agent = form && form.default_agent ? form.default_agent : "anthropic";
+    var value = form && form.default_model ? String(form.default_model) : "";
+    if (!value || !modelMatchesAgent(agent, value)) {
+      return modelForAgent(agent);
+    }
+    return value;
+  }
+
+  function statusText(status) {
+    if (status.installing) return "安装中";
+    if (!status || !status.installed) return "未安装";
+    if (status.running) return "运行中";
+    return "已停止";
+  }
+
+  function statusDotClass(status) {
+    if (status && status.installing) return "";
+    if (status && status.running) return "is-success";
+    return "is-danger";
+  }
+
+  function statusSpinSeconds(status) {
+    return (backgroundStatusDelay(status) / 1000).toFixed(1);
+  }
+
+  function escapeAttr(value) {
+    return escapeHtml(value).replace(/'/g, "&#39;");
+  }
+
+  function maskedTokenUrl(url) {
+    var value = String(url || "");
+    if (!value) {
+      return "-";
+    }
+    return value.replace(/(#token=)([^&#]+)/, function(_, prefix, token) {
+      if (!token) {
+        return prefix;
+      }
+      var head = token.slice(0, 6);
+      var tail = token.length > 10 ? token.slice(-4) : "";
+      return prefix + head + "****" + tail;
+    });
+  }
+
+  function copyIcon(className) {
+    return '' +
+      '<svg class="' + escapeAttr(className || "") + '" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<rect x="9" y="9" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.8"></rect>' +
+      '<path d="M6 15H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v1" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+      '</svg>';
+  }
+
+  function copiedIcon(className) {
+    return '' +
+      '<svg class="' + escapeAttr(className || "") + '" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M5 12.5l4 4L19 7" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"></path>' +
+      '</svg>';
+  }
+
+  function fallbackCopyText(value) {
+    var el = document.createElement("textarea");
+    el.value = String(value || "");
+    el.setAttribute("readonly", "readonly");
+    el.style.position = "fixed";
+    el.style.top = "-9999px";
+    el.style.left = "-9999px";
+    document.body.appendChild(el);
+    el.focus();
+    el.select();
+    var ok = false;
+    try {
+      ok = document.execCommand("copy");
+    } catch (e) {}
+    document.body.removeChild(el);
+    return ok;
+  }
+
+  function copyText(value) {
+    value = String(value || "");
+    if (!value) {
+      return Promise.resolve(false);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(value).then(function() {
+        return true;
+      }).catch(function() {
+        return fallbackCopyText(value);
+      });
+    }
+    return Promise.resolve(fallbackCopyText(value));
+  }
+
+  function flashCopied(el) {
+    if (!el) {
+      return;
+    }
+    if (el._oclmCopyTimer) {
+      window.clearTimeout(el._oclmCopyTimer);
+      el._oclmCopyTimer = null;
+    }
+    el.classList.add("is-copied");
+    el.innerHTML = copiedIcon("oclm-copy-icon");
+    el._oclmCopyTimer = window.setTimeout(function() {
+      el.classList.remove("is-copied");
+      el.innerHTML = copyIcon("oclm-copy-icon");
+      el._oclmCopyTimer = null;
+    }, 1100);
+  }
+
+  function openclawIcon(className) {
+    return '' +
+      '<svg class="' + escapeAttr(className || "") + '" viewBox="0 0 120 120" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<defs>' +
+      '<linearGradient id="oclm-lobster-gradient" x1="0%" y1="0%" x2="100%" y2="100%">' +
+      '<stop offset="0%" stop-color="#ff4d4d"/>' +
+      '<stop offset="100%" stop-color="#991b1b"/>' +
+      '</linearGradient>' +
+      '</defs>' +
+      '<path d="M60 10 C30 10 15 35 15 55 C15 75 30 95 45 100 L45 110 L55 110 L55 100 C55 100 60 102 65 100 L65 110 L75 110 L75 100 C90 95 105 75 105 55 C105 35 90 10 60 10Z" fill="url(#oclm-lobster-gradient)"/>' +
+      '<path d="M20 45 C5 40 0 50 5 60 C10 70 20 65 25 55 C28 48 25 45 20 45Z" fill="url(#oclm-lobster-gradient)"/>' +
+      '<path d="M100 45 C115 40 120 50 115 60 C110 70 100 65 95 55 C92 48 95 45 100 45Z" fill="url(#oclm-lobster-gradient)"/>' +
+      '<path d="M45 15 Q35 5 30 8" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>' +
+      '<path d="M75 15 Q85 5 90 8" stroke="#ff4d4d" stroke-width="3" stroke-linecap="round"/>' +
+      '<circle cx="45" cy="35" r="6" fill="#050810"/>' +
+      '<circle cx="75" cy="35" r="6" fill="#050810"/>' +
+      '<circle cx="46" cy="34" r="2.5" fill="#00e5cc"/>' +
+      '<circle cx="76" cy="34" r="2.5" fill="#00e5cc"/>' +
+      '</svg>';
+  }
+
+  function openLogModal() {
+    state.showLogModal = true;
+    if (state.logTimer) {
+      window.clearTimeout(state.logTimer);
+      state.logTimer = null;
+    }
+    pollLogs();
+    render();
+  }
+
+  function closeLogModal() {
+    state.showLogModal = false;
+    if (state.logTimer) {
+      window.clearTimeout(state.logTimer);
+      state.logTimer = null;
+    }
+    refreshStatus();
+  }
+
+  function pollLogs() {
+    if (!state.showLogModal) {
+      return;
+    }
+    if (state.logTimer) {
+      window.clearTimeout(state.logTimer);
+      state.logTimer = null;
+    }
+    request(config.logUrl + "?n=200").then(function(data) {
+      state.logText = (data && data.log) || "";
+      refreshStatus(function() {
+        if (state.showLogModal) {
+          state.logTimer = window.setTimeout(pollLogs, 3000);
+        }
+      });
+    }).catch(function() {
+      if (state.showLogModal) {
+        state.logTimer = window.setTimeout(pollLogs, 5000);
+      }
+    });
+  }
+
+  function stopStatusPolling() {
+    if (state.statusTimer) {
+      window.clearTimeout(state.statusTimer);
+      state.statusTimer = null;
+    }
+  }
+
+  function stopInstallWatch() {
+    if (state.installWatchTimer) {
+      window.clearTimeout(state.installWatchTimer);
+      state.installWatchTimer = null;
+    }
+  }
+
+  function backgroundStatusDelay(status) {
+    if (status && status.installing) {
+      return 3000;
+    }
+    if (!status || !status.installed) {
+      return 30000;
+    }
+    if (status.running) {
+      return 15000;
+    }
+    return 20000;
+  }
+
+  function ensureInstallWatch() {
+    stopInstallWatch();
+    if (state.status && state.status.installing && state.showLogModal) {
+      return;
+    }
+    state.installWatchTimer = window.setTimeout(function() {
+      refreshStatus(function() {
+        ensureInstallWatch();
+      });
+    }, backgroundStatusDelay(state.status));
+  }
+
+  function scheduleStatusRefresh(rounds, delay) {
+    rounds = typeof rounds === "number" ? rounds : 6;
+    delay = typeof delay === "number" ? delay : 1000;
+    stopStatusPolling();
+
+    function tick(remaining) {
+      refreshStatus(function() {
+        if (remaining > 1) {
+          state.statusTimer = window.setTimeout(function() {
+            tick(remaining - 1);
+          }, delay);
+        } else {
+          state.statusTimer = null;
+        }
+      });
+    }
+
+    tick(rounds);
+  }
+
+  function scrollLogToBottom() {
+    if (!state.showLogModal) {
+      return;
+    }
+    var body = root.querySelector(".oclm-log-body");
+    if (body) {
+      body.scrollTop = body.scrollHeight;
+    }
+  }
+
+  function render() {
+    var status = state.status || {};
+    var form = state.form || {};
+    var options = state.options || { base_dir_choices: [] };
+    var allowedOrigins = Array.isArray(form.allowed_origins) ? form.allowed_origins : [];
+    var baseDirOptions = (options.base_dir_choices || []).map(function(path) {
+      return '<option value="' + escapeHtml(path) + '"></option>';
+    }).join("");
+    var origins = allowedOrigins.map(function(item, index) {
+      return '' +
+        '<div class="oclm-origin-item">' +
+        '<input class="oclm-control" type="text" value="' + escapeHtml(item) + '" data-origin-index="' + index + '" />' +
+        '<button class="oclm-button oclm-button-danger" type="button" data-remove-origin="' + index + '">删除</button>' +
+        '</div>';
+    }).join("");
+
+    var installLabel = status.installing ? "安装中" : "立即安装";
+    var installAcceleratedChecked = form.install_accelerated == null ? true : form.install_accelerated === true;
+    var showInstallAction = !status.installed || status.installing;
+    var showServiceActions = status.installed && !status.installing;
+    var activeTab = state.activeTab || "basic";
+    var savingBasic = state.savingSection === "basic";
+    var savingAccess = state.savingSection === "access";
+
+    root.innerHTML =
+      '<style>' + styleText + '</style>' +
+      '<div class="oclm-app"' + (detectDarkMode() ? ' data-darkmode="true"' : '') + '>' +
+      '<div class="oclm-root">' +
+      '<div class="oclm-shell">' +
+      '<div class="oclm-header">' +
+      '<h1>' + openclawIcon("oclm-title-icon") + 'OpenClaw 启动器</h1>' +
+      '<p>在 OpenWrt 上原生安装、启动并管理官方 OpenClaw</p>' +
+      '</div>' +
+
+      '<section class="oclm-card">' +
+      '<h2>服务状态</h2>' +
+      '<div class="oclm-status-grid">' +
+      '<div class="oclm-status-row"><span class="oclm-status-label">状态</span><span class="oclm-status-pill" style="--oclm-spin-duration:' + escapeAttr(statusSpinSeconds(status)) + 's"><span class="oclm-dot ' + statusDotClass(status) + '"></span><span class="oclm-status-spinner" aria-hidden="true"></span>' + escapeHtml(statusText(status)) + '</span>' + (status.running && status.uptime_human ? ('<span class="oclm-tag">运行时间 <strong>' + escapeHtml(status.uptime_human) + '</strong></span>') : '') + '</div>' +
+      '<div>' + ((status.running && status.pid) ? ('<div class="oclm-inline-row"><span class="oclm-tag">PID <strong>' + escapeHtml(status.pid) + '</strong></span></div>') : '') + '</div>' +
+      '<div><div class="oclm-meta-label">地址</div><div class="oclm-address-row"><span class="oclm-address-text">' + escapeHtml(maskedTokenUrl(status.token_url || status.base_url || "")) + '</span>' + ((status.token_url || status.base_url) ? ('<button class="oclm-icon-button" type="button" data-copy-token-url="1" aria-label="复制地址">' + copyIcon("oclm-copy-icon") + '</button>') : '') + '</div></div>' +
+      '<div><div class="oclm-meta-label">目录</div><div>' + escapeHtml(status.base_dir || "-") + '</div></div>' +
+      '<div><div class="oclm-meta-label">版本</div><div class="oclm-version-tags"><a class="oclm-tag oclm-tag-link" href="https://github.com/openclaw/openclaw/releases" target="_blank" rel="noreferrer">OpenClaw <strong>' + escapeHtml(status.openclaw_version || "-") + '</strong></a><span class="oclm-tag">Node <strong>' + escapeHtml(status.node_version || "-") + '</strong></span></div></div>' +
+      '<div></div>' +
+      '</div>' +
+      '<div class="oclm-status-actions">' +
+      (showInstallAction ? '<div class="oclm-install-inline"><button class="oclm-button oclm-button-primary" type="button" data-install-action="1">' + installLabel + '</button><label class="oclm-check"><input type="checkbox" id="oclm-install-accelerated"' + (installAcceleratedChecked ? ' checked' : '') + ' />Kspeeder 加速安装</label></div>' : '') +
+      (status.running ? '<a class="oclm-button oclm-button-primary" href="' + escapeAttr(status.token_url || "#") + '" target="_blank" rel="noreferrer">' + openclawIcon("oclm-button-icon") + '打开控制台</a>' : '') +
+      (!status.running && showServiceActions ? '<button class="oclm-button" type="button" data-op="start">启动服务</button>' : '') +
+      (status.running && showServiceActions ? '<button class="oclm-button" type="button" data-op="stop">停止服务</button>' : '') +
+      (showServiceActions ? '<button class="oclm-button" type="button" data-op="restart">重启服务</button>' : '') +
+      (status.installing ? '<button class="oclm-button oclm-button-danger" type="button" data-op="cancel_install">停止安装</button>' : '') +
+      '</div>' +
+      (status.installing ? '<div class="oclm-status-note">安装任务正在后台运行，点击“安装中”可继续查看日志。</div>' : '') +
+      '</section>' +
+
+      '<section class="oclm-card">' +
+      '<div class="oclm-tabs">' +
+      '<button class="oclm-tab' + (activeTab === "basic" ? ' is-active' : '') + '" type="button" data-tab="basic">基础配置</button>' +
+      '<button class="oclm-tab' + (activeTab === "access" ? ' is-active' : '') + '" type="button" data-tab="access">访问控制</button>' +
+      '<button class="oclm-tab' + (activeTab === "cleanup" ? ' is-active' : '') + '" type="button" data-tab="cleanup">卸载清理</button>' +
+      '</div>' +
+      '<div class="' + (activeTab === "basic" ? '' : 'oclm-hidden') + '">' +
+      '<h2>基础配置</h2>' +
+      '<div class="oclm-form-grid">' +
+      fieldToggle("启用服务", "enabled", form.enabled) +
+      fieldInput("监听端口", '<input class="oclm-control" type="number" min="1" max="65535" id="oclm-port" value="' + escapeHtml(form.port || "18789") + '" />') +
+      fieldInput("监听范围", selectHtml("oclm-bind", form.bind, [
+        ["lan", "所有地址"],
+        ["loopback", "仅本机"],
+        ["auto", "自动"]
+      ])) +
+      fieldInput("数据目录", '<input class="oclm-control" type="text" id="oclm-base-dir" list="oclm-base-dir-options" value="' + escapeAttr(form.base_dir || "") + '" /><datalist id="oclm-base-dir-options">' + baseDirOptions + '</datalist>') +
+      fieldInput("默认服务提供商", selectHtml("oclm-agent", form.default_agent, [
+        ["openai", "OpenAI"],
+        ["anthropic", "Anthropic"],
+        ["minimax-cn", "MiniMax CN"],
+        ["moonshot", "Moonshot CN"]
+      ])) +
+      fieldInput("API 密钥", passwordHtml("oclm-api-key", form.provider_api_key || "", "sk-...")) +
+      fieldInput("中转地址（可选）", '<input class="oclm-control" type="text" id="oclm-base-url" value="' + escapeHtml(form.provider_base_url || "") + '" placeholder="https://api.example.com" />') +
+      fieldInput("默认模型", '<input class="oclm-control" type="text" id="oclm-model" value="' + escapeAttr(resolveModelValue(form)) + '" placeholder="请按照&lt;provider&gt;/&lt;model-id&gt;格式填写" />') +
+      '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
+      '</div></div>' +
+
+      '<div class="' + (activeTab === "access" ? '' : 'oclm-hidden') + '">' +
+      '<h2>访问控制</h2>' +
+      '<div class="oclm-form-grid">' +
+      fieldInput("访问令牌", passwordHtml("oclm-token", form.token || "", "")) +
+      fieldInput("允许访问来源", '<div class="oclm-origin-list">' + origins +
+        '<div class="oclm-origin-new"><input class="oclm-control" type="text" id="oclm-new-origin" value="' + escapeHtml(state.newOrigin || "") + '" placeholder="' + escapeHtml((options.default_origin || "http://192.168.1.1:18789")) + '" /><button class="oclm-button" type="button" id="oclm-add-origin">添加</button></div>' +
+        '<div class="oclm-hint">展示：仅允许来源于该地址访问控制台的控制功能</div></div>') +
+      fieldToggle("允许通过 HTTP 访问时认证", "allow_insecure_auth", form.allow_insecure_auth, "仅控制 HTTP 下的控制台认证，不影响端口监听") +
+      fieldToggle("关闭设备身份校验", "disable_device_auth", form.disable_device_auth, "警告：仅建议在可信环境中开启，在内网生效") +
+      '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-access"' + (savingAccess ? ' disabled' : '') + '>' + (savingAccess ? '应用中…' : '保存访问控制设置') + '</button>' + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
+      '</div></div>' +
+
+      '<div class="' + (activeTab === "cleanup" ? '' : 'oclm-hidden') + '">' +
+      '<h2>卸载清理</h2>' +
+      '<div class="oclm-banner">以下操作会影响当前安装环境，请在确认后执行。</div>' +
+      '<div class="oclm-danger-actions">' +
+      '<button class="oclm-button" type="button" data-op="uninstall_openclaw">卸载 OpenClaw（保留 Node）</button>' +
+      '<button class="oclm-button oclm-button-danger" type="button" data-op="uninstall">卸载</button>' +
+      '<button class="oclm-button oclm-button-danger" type="button" data-op="purge">彻底清理</button>' +
+      '</div>' +
+      '</div>' +
+      '</section>' +
+
+      (state.showLogModal ? (
+        '<div class="oclm-log-modal" data-close-log="1">' +
+        '<div class="oclm-log-dialog" onclick="event.stopPropagation()">' +
+        '<div class="oclm-log-head">' +
+        '<h3>安装日志</h3>' +
+        '<div class="oclm-log-actions">' +
+        '<button class="oclm-button" type="button" data-refresh-log="1">刷新</button>' +
+        '<button class="oclm-button" type="button" data-copy-log="1">复制日志</button>' +
+        '<button class="oclm-button" type="button" data-close-log-btn="1">关闭</button>' +
+        '</div>' +
+        '</div>' +
+        '<div class="oclm-log-body"><pre>' + escapeHtml(state.logText || "日志为空") + '</pre></div>' +
+        '</div>' +
+        '</div>'
+      ) : '') +
+
+      '</div></div></div>';
+
+    bindEvents();
+    scrollLogToBottom();
+  }
+
+  function fieldInput(label, control) {
+    return '<div class="oclm-field"><div class="oclm-label">' + label + '</div><div>' + control + '</div></div>';
+  }
+
+  function fieldToggle(label, key, checked, hint) {
+    return '' +
+      '<div class="oclm-field">' +
+      '<div class="oclm-label">' + label + '</div>' +
+      '<div><label class="oclm-toggle"><input type="checkbox" id="oclm-' + key + '"' + (checked ? ' checked' : '') + ' /><span class="oclm-toggle-track"></span></label>' +
+      (hint ? '<div class="oclm-hint">' + hint + '</div>' : '') +
+      '</div></div>';
+  }
+
+  function selectHtml(id, value, items) {
+    return '<select class="oclm-select" id="' + id + '">' + items.map(function(item) {
+      return '<option value="' + escapeHtml(item[0]) + '"' + (value === item[0] ? ' selected' : '') + '>' + escapeHtml(item[1]) + '</option>';
+    }).join("") + '</select>';
+  }
+
+  function passwordHtml(id, value, placeholder) {
+    return '' +
+      '<div class="oclm-password-wrap">' +
+      '<input class="oclm-control" type="password" id="' + id + '" value="' + escapeAttr(value || "") + '" placeholder="' + escapeAttr(placeholder || "") + '" />' +
+      '<button class="oclm-button oclm-eye-button" type="button" data-toggle-password="' + id + '" aria-label="显示密钥">' + eyeIcon(false) + '</button>' +
+      '</div>';
+  }
+
+  function eyeIcon(off) {
+    if (off) {
+      return '' +
+        '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+        '<path d="M3 3l18 18"></path>' +
+        '<path d="M10.6 10.7a3 3 0 0 0 4.2 4.2"></path>' +
+        '<path d="M9.9 5.1A10.9 10.9 0 0 1 12 5c5.2 0 9.3 4.1 10 7-0.3 1.1-1.1 2.6-2.4 3.9"></path>' +
+        '<path d="M6.2 6.2C4.3 7.6 3.2 9.6 2 12c0.7 2.9 4.8 7 10 7 1 0 2-.2 2.9-.5"></path>' +
+      '</svg>';
+    }
+    return '' +
+      '<svg viewBox="0 0 24 24" aria-hidden="true">' +
+      '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7-10-7-10-7z"></path>' +
+      '<circle cx="12" cy="12" r="3"></circle>' +
+      '</svg>';
+  }
+
+  function bindEvents() {
+    Array.prototype.forEach.call(root.querySelectorAll("[data-tab]"), function(el) {
+      el.onclick = function() {
+        state.activeTab = el.getAttribute("data-tab") || "basic";
+        render();
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-op]"), function(el) {
+      el.onclick = function() {
+        var op = el.getAttribute("data-op");
+        if (!op) return;
+        if (op === "uninstall_openclaw" && !window.confirm("卸载 OpenClaw 运行时但保留 Node.js，确认继续？")) return;
+        if (op === "uninstall" && !window.confirm("卸载将删除运行时，但保留数据目录。确认继续？")) return;
+        if (op === "purge" && !window.confirm("彻底清理会删除运行时和数据目录。确认继续？")) return;
+        postForm(config.opUrl, { op: op }).then(function(rv) {
+          if (!rv || !rv.ok) {
+            window.alert((rv && rv.error) || "操作失败");
+            return;
+          }
+          scheduleStatusRefresh(op === "restart" ? 8 : 6, 1000);
+        });
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-install-action]"), function(el) {
+      el.onclick = function() {
+        openLogModal();
+        var accelerated = !!(root.getElementById("oclm-install-accelerated") && root.getElementById("oclm-install-accelerated").checked);
+        if (!state.status || state.status.installing) {
+          return;
+        }
+        state.status.installing = true;
+        state.status.task_running = true;
+        state.status.task_op = "install";
+        render();
+        postJson(config.configUrl, { install_accelerated: accelerated }).then(function(cfgRv) {
+          if (!cfgRv || !cfgRv.ok) {
+            state.status.installing = false;
+            render();
+            window.alert((cfgRv && cfgRv.error) || "保存安装选项失败");
+            return;
+          }
+          state.form.install_accelerated = accelerated;
+          return postForm(config.opUrl, { op: "install" });
+        }).then(function(rv) {
+          if (!rv) return;
+          if (!rv || !rv.ok) {
+            state.status.installing = false;
+            render();
+            window.alert((rv && rv.error) || "启动安装失败");
+            return;
+          }
+          scheduleStatusRefresh(10, 1000);
+        }).catch(function() {
+          state.status.installing = false;
+          render();
+          window.alert("启动安装失败");
+        });
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-close-log], [data-close-log-btn]"), function(el) {
+      el.onclick = function() {
+        closeLogModal();
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-toggle-password]"), function(el) {
+      el.onclick = function() {
+        var id = el.getAttribute("data-toggle-password");
+        var input = id ? root.getElementById(id) : null;
+        if (!input) return;
+        input.type = input.type === "password" ? "text" : "password";
+        el.innerHTML = eyeIcon(input.type !== "password");
+        el.setAttribute("aria-label", input.type === "password" ? "显示密钥" : "隐藏密钥");
+      };
+    });
+
+    var installAccelerated = root.getElementById("oclm-install-accelerated");
+    if (installAccelerated) {
+      installAccelerated.onchange = function() {
+        state.form.install_accelerated = !!installAccelerated.checked;
+      };
+    }
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-refresh-log]"), function(el) {
+      el.onclick = function() {
+        pollLogs();
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-copy-log]"), function(el) {
+      el.onclick = function() {
+        copyText(state.logText || "");
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-copy-token-url]"), function(el) {
+      el.onclick = function() {
+        var value = (state.status && (state.status.token_url || state.status.base_url)) || "";
+        copyText(value).then(function(ok) {
+          if (ok) {
+            flashCopied(el);
+          }
+        });
+      };
+    });
+
+    var agent = root.getElementById("oclm-agent");
+    if (agent) {
+      agent.onchange = function() {
+        state.form.default_agent = agent.value;
+        var model = root.getElementById("oclm-model");
+        if (model) {
+          var nextModel = modelForAgent(agent.value);
+          model.value = nextModel;
+          state.form.default_model = nextModel;
+        }
+      };
+    }
+
+    var addOrigin = root.getElementById("oclm-add-origin");
+    if (addOrigin) {
+      addOrigin.onclick = function() {
+        var input = root.getElementById("oclm-new-origin");
+        var value = input && input.value ? input.value.trim() : "";
+        if (!value) return;
+        state.form.allowed_origins = Array.isArray(state.form.allowed_origins) ? state.form.allowed_origins : [];
+        state.form.allowed_origins.push(value);
+        state.newOrigin = "";
+        render();
+      };
+    }
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-remove-origin]"), function(el) {
+      el.onclick = function() {
+        var index = parseInt(el.getAttribute("data-remove-origin"), 10);
+        if (isNaN(index)) return;
+        state.form.allowed_origins.splice(index, 1);
+        render();
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-origin-index]"), function(el) {
+      el.oninput = function() {
+        var index = parseInt(el.getAttribute("data-origin-index"), 10);
+        if (!isNaN(index)) {
+          state.form.allowed_origins[index] = el.value;
+        }
+      };
+    });
+
+    var saveBasic = root.getElementById("oclm-save-basic");
+    if (saveBasic) {
+      saveBasic.onclick = function() {
+        var payload = {
+          enabled: !!root.getElementById("oclm-enabled").checked,
+          port: root.getElementById("oclm-port").value,
+          bind: root.getElementById("oclm-bind").value,
+          base_dir: root.getElementById("oclm-base-dir").value,
+          default_agent: root.getElementById("oclm-agent").value,
+          default_model: root.getElementById("oclm-model").value,
+          install_accelerated: !!(root.getElementById("oclm-install-accelerated") && root.getElementById("oclm-install-accelerated").checked),
+          provider_api_key: root.getElementById("oclm-api-key").value,
+          provider_base_url: root.getElementById("oclm-base-url").value
+        };
+        state.savingSection = "basic";
+        render();
+        postJson(config.configUrl, payload).then(function(rv) { handleSaveResult(rv, "basic"); }).catch(function() {
+          state.savingSection = "";
+          render();
+          window.alert("保存失败");
+        });
+      };
+    }
+
+    var saveAccess = root.getElementById("oclm-save-access");
+    if (saveAccess) {
+      saveAccess.onclick = function() {
+        var payload = {
+          token: root.getElementById("oclm-token").value,
+          allowed_origins: (Array.isArray(state.form.allowed_origins) ? state.form.allowed_origins : []).map(function(item) { return item.trim(); }).filter(Boolean),
+          allow_insecure_auth: !!root.getElementById("oclm-allow_insecure_auth").checked,
+          disable_device_auth: !!root.getElementById("oclm-disable_device_auth").checked
+        };
+        state.savingSection = "access";
+        render();
+        postJson(config.configUrl, payload).then(function(rv) { handleSaveResult(rv, "access"); }).catch(function() {
+          state.savingSection = "";
+          render();
+          window.alert("保存失败");
+        });
+      };
+    }
+  }
+
+  function handleSaveResult(rv, section) {
+    if (!rv || !rv.ok) {
+      state.savingSection = "";
+      render();
+      window.alert((rv && rv.error) || "保存失败");
+      return;
+    }
+    postForm(config.applyUrl, {}).then(function(applyRv) {
+      state.savingSection = "";
+      if (!applyRv || !applyRv.ok) {
+        render();
+        window.alert((applyRv && applyRv.error) || "应用配置失败");
+        loadConfig();
+        scheduleStatusRefresh(3, 600);
+        return;
+      }
+      state.lastAppliedAt = applyRv.applied_at || "";
+      render();
+      loadConfig();
+      scheduleStatusRefresh(6, 800);
+    }).catch(function() {
+      state.savingSection = "";
+      render();
+      window.alert("应用配置失败");
+      loadConfig();
+      scheduleStatusRefresh(3, 600);
+    });
+  }
+
+  function refreshStatus(done) {
+    request(config.statusUrl).then(function(data) {
+      state.status = data || {};
+      render();
+      ensureInstallWatch();
+      if (typeof done === "function") {
+        done();
+      }
+    }).catch(function() {
+      state.status = state.status || {};
+      render();
+      ensureInstallWatch();
+      if (typeof done === "function") {
+        done();
+      }
+    });
+  }
+
+  function loadConfig() {
+    request(config.configUrl).then(function(data) {
+      if (!data || !data.ok) {
+        return;
+      }
+      state.form = data.config || {};
+      state.form.default_model = resolveModelValue(state.form);
+      state.options = data.options || {};
+      render();
+      refreshStatus();
+    }).catch(function() {
+      state.form = state.form || {};
+      state.options = state.options || { base_dir_choices: [] };
+      render();
+    });
+  }
+
+  fetch(config.staticBase + "/app.css").then(function(r) { return r.text(); }).then(function(css) {
+    styleText = css || "";
+    loadConfig();
+  });
+})();
