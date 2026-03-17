@@ -12,7 +12,6 @@ fi
 [ -n "$(uci -q get openclawmgr.main.enabled 2>/dev/null)" ] || uci -q set openclawmgr.main.enabled='0'
 [ -n "$(uci -q get openclawmgr.main.port 2>/dev/null)" ] || uci -q set openclawmgr.main.port='18789'
 [ -n "$(uci -q get openclawmgr.main.bind 2>/dev/null)" ] || uci -q set openclawmgr.main.bind='lan'
-[ -n "$(uci -q get openclawmgr.main.node_version 2>/dev/null)" ] || uci -q set openclawmgr.main.node_version='24.14.0'
 [ -n "$(uci -q get openclawmgr.main.install_accelerated 2>/dev/null)" ] || uci -q set openclawmgr.main.install_accelerated='1'
 [ -n "$(uci -q get openclawmgr.main.token 2>/dev/null)" ] || uci -q set openclawmgr.main.token=''
 [ -n "$(uci -q get openclawmgr.main.allow_insecure_auth 2>/dev/null)" ] || uci -q set openclawmgr.main.allow_insecure_auth='0'

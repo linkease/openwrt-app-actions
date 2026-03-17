@@ -809,15 +809,18 @@ install_openclaw() {
 	return 0
 }
 
-do_install() {
-	acquire_lock
-	write_installer_log "== install begin =="
-	ensure_dirs
-	if have_openclaw_runtime; then
-		write_installer_log "OpenClaw is already installed: $(openclaw_version || echo unknown)"
-		write_installer_log "Skip install. Use restart/apply config if you only need to refresh configuration."
-		return 0
-	fi
+	do_install() {
+		acquire_lock
+		write_installer_log "== install begin =="
+		ensure_dirs
+		# Node version is bundled/managed by installer code; do not allow UCI override.
+		uci -q delete "${UCI_NS}.main.node_version" >/dev/null 2>&1 || true
+		uci -q commit "$UCI_NS" >/dev/null 2>&1 || true
+		if have_openclaw_runtime; then
+			write_installer_log "OpenClaw is already installed: $(openclaw_version || echo unknown)"
+			write_installer_log "Skip install. Use restart/apply config if you only need to refresh configuration."
+			return 0
+		fi
 	if ! has_default_route; then
 		write_installer_log "Install requires internet access, but no default gateway is configured."
 		write_installer_log "Fix: configure WAN or add a default route, then retry Install."
@@ -1049,13 +1052,12 @@ diag_poll() {
 ACTION="${1:-help}"
 shift 1 || true
 
-BASE_DIR="$(uci_get base_dir)"
-PORT="$(uci_get port)"
-BIND="$(uci_get bind)"
-NODE_VERSION="$(uci_get node_version)"
-TOKEN="$(uci_get token)"
-ALLOW_INSECURE_AUTH="$(uci_get allow_insecure_auth)"
-DISABLE_DEVICE_AUTH="$(uci_get disable_device_auth)"
+	BASE_DIR="$(uci_get base_dir)"
+	PORT="$(uci_get port)"
+	BIND="$(uci_get bind)"
+	TOKEN="$(uci_get token)"
+	ALLOW_INSECURE_AUTH="$(uci_get allow_insecure_auth)"
+	DISABLE_DEVICE_AUTH="$(uci_get disable_device_auth)"
 ALLOWED_ORIGINS="$(uci_get_list allowed_origins)"
 DEFAULT_AGENT="$(uci_get default_agent)"
 DEFAULT_MODEL="$(uci_get default_model)"
@@ -1063,10 +1065,10 @@ INSTALL_ACCELERATED="$(uci_get install_accelerated)"
 PROVIDER_API_KEY="$(uci_get provider_api_key)"
 PROVIDER_BASE_URL="$(uci_get provider_base_url)"
 
-[ -n "$BASE_DIR" ] || BASE_DIR="/opt/openclawmgr"
-[ -n "$PORT" ] || PORT="18789"
-[ -n "$BIND" ] || BIND="lan"
-[ -n "$NODE_VERSION" ] || NODE_VERSION="24.14.0"
+	[ -n "$BASE_DIR" ] || BASE_DIR="/opt/openclawmgr"
+	[ -n "$PORT" ] || PORT="18789"
+	[ -n "$BIND" ] || BIND="lan"
+	NODE_VERSION="24.14.0"
 [ -n "$ALLOW_INSECURE_AUTH" ] || ALLOW_INSECURE_AUTH="0"
 [ -n "$DISABLE_DEVICE_AUTH" ] || DISABLE_DEVICE_AUTH="0"
 [ -n "$DEFAULT_AGENT" ] || DEFAULT_AGENT="anthropic"
