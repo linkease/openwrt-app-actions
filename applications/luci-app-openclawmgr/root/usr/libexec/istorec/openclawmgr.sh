@@ -244,11 +244,12 @@ ks_admin_port() {
 
 download() {
 	local url="$1" out="$2"
-	local ap admin_path resp err tmp rc ks_enabled
+	local ap admin_path resp err tmp rc ks_enabled resp_file http_code
 
 	tmp="/tmp/${APP}-curl.err"
 	err="/tmp/${APP}-curl.err2"
-	rm -f "$tmp" "$err" 2>/dev/null || true
+	resp_file="/tmp/${APP}-ks-remap.json"
+	rm -f "$tmp" "$err" "$resp_file" 2>/dev/null || true
 
 	if [ "${INSTALL_ACCELERATED:-1}" != "1" ]; then
 		write_installer_log "KSpeeder not used: accelerated install is disabled"
@@ -260,9 +261,11 @@ download() {
 		write_installer_log "KSpeeder not used: iStoreEnhance process is not running"
 		else
 			ap="$(uci -q get istoreenhance.@istoreenhance[0].adminport 2>/dev/null || echo 5003)"
-			resp="$(curl -fsS --connect-timeout 2 --max-time 5 -G \
+			http_code="$(curl -sS --connect-timeout 2 --max-time 5 -G \
 				--data-urlencode "url=${url}" \
-				"http://127.0.0.1:${ap}/api/domainfold/remap" 2>"$tmp" || true)"
+				-o "$resp_file" -w "%{http_code}" \
+				"http://127.0.0.1:${ap}/api/domainfold/remap" 2>"$tmp" || echo 000)"
+			resp="$(cat "$resp_file" 2>/dev/null || true)"
 			admin_path="$(printf "%s" "$resp" | jsonfilter -e '@.admin_path' 2>/dev/null || true)"
 			if [ -n "$admin_path" ] && echo "$admin_path" | grep -q '^/'; then
 				if download_with_progress "http://127.0.0.1:${ap}${admin_path}" "$out" "$err" "Downloading via KSpeeder"; then
@@ -272,10 +275,14 @@ download() {
 				write_installer_log "Download via KSpeeder failed (rc=$rc): ${url}"
 				tail -n 5 "$err" 2>/dev/null | while IFS= read -r ln; do write_installer_log "$ln"; done
 			else
-				local e
+				local e brief
 				e="$(printf "%s" "$resp" | jsonfilter -e '@.error' 2>/dev/null || true)"
 				if [ -n "$e" ]; then
-					write_installer_log "KSpeeder remap failed: $e"
+					write_installer_log "KSpeeder remap failed (http=${http_code}): $e"
+				elif [ -n "$http_code" ] && [ "$http_code" != "000" ] && [ "$http_code" != "200" ]; then
+					brief="$(printf "%s" "$resp" | tr '\n' ' ' | sed 's/[[:space:]]\\+/ /g' | cut -c1-200)"
+					[ -n "$brief" ] || brief="(empty response)"
+					write_installer_log "KSpeeder not used: remap http=${http_code}: ${brief}"
 				elif [ -s "$tmp" ]; then
 					write_installer_log "KSpeeder not used: remap request failed on 127.0.0.1:${ap}"
 					tail -n 3 "$tmp" 2>/dev/null | while IFS= read -r ln; do write_installer_log "$ln"; done
@@ -612,29 +619,24 @@ cached_node_archive_ok() {
 	tar -tJf "$archive" >/dev/null 2>&1
 }
 
-install_node() {
-	local arch libc url tmp
-	arch="$(detect_arch)"
-	[ "$arch" != "unsupported" ] || { write_installer_log "Unsupported arch"; return 1; }
+	install_node() {
+		local arch libc url tmp
+		arch="$(detect_arch)"
+		[ "$arch" != "unsupported" ] || { write_installer_log "Unsupported arch"; return 1; }
 
-	if is_musl; then
-		libc="musl"
-	else
-		libc="glibc"
-	fi
+		if is_musl; then
+			libc="musl"
+		else
+			libc="glibc"
+		fi
 
-	if [ "$libc" = "musl" ] && [ "$arch" = "linux-x64" ]; then
+		# OpenWrt/iStoreOS runs on musl; use musl builds by default.
 		url="https://unofficial-builds.nodejs.org/download/release/v${NODE_VERSION}/node-v${NODE_VERSION}-${arch}-musl.tar.xz"
-	elif [ "$libc" = "musl" ] && [ "$arch" = "linux-arm64" ]; then
-		url="https://unofficial-builds.nodejs.org/download/release/v${NODE_VERSION}/node-v${NODE_VERSION}-${arch}-musl.tar.xz"
-	else
-		url="https://nodejs.org/dist/v${NODE_VERSION}/node-v${NODE_VERSION}-${arch}.tar.xz"
-	fi
 
-	if have_local_node_runtime; then
-		write_installer_log "Using existing Node.js runtime: $($NODE_BIN --version 2>/dev/null || echo unknown)"
-		return 0
-	fi
+		if have_local_node_runtime; then
+			write_installer_log "Using existing Node.js runtime: $($NODE_BIN --version 2>/dev/null || echo unknown)"
+			return 0
+		fi
 
 	if [ -x "$NODE_BIN" ] || [ -x "$NPM_BIN" ]; then
 		write_installer_log "Node.js runtime under $NODE_DIR is incomplete; reinstalling bundled Node.js"
@@ -1064,7 +1066,7 @@ PROVIDER_BASE_URL="$(uci_get provider_base_url)"
 [ -n "$BASE_DIR" ] || BASE_DIR="/opt/openclawmgr"
 [ -n "$PORT" ] || PORT="18789"
 [ -n "$BIND" ] || BIND="lan"
-[ -n "$NODE_VERSION" ] || NODE_VERSION="22.16.0"
+[ -n "$NODE_VERSION" ] || NODE_VERSION="24.14.0"
 [ -n "$ALLOW_INSECURE_AUTH" ] || ALLOW_INSECURE_AUTH="0"
 [ -n "$DISABLE_DEVICE_AUTH" ] || DISABLE_DEVICE_AUTH="0"
 [ -n "$DEFAULT_AGENT" ] || DEFAULT_AGENT="anthropic"
