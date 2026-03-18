@@ -11,10 +11,10 @@ function index()
 	page.leaf = true
 
 	entry({"admin", "services", "openclawmgr", "status"}, call("action_status")).leaf = true
+	entry({"admin", "services", "openclawmgr", "ready"}, call("action_ready")).leaf = true
 	entry({"admin", "services", "openclawmgr", "op"}, call("action_op")).leaf = true
 	entry({"admin", "services", "openclawmgr", "config_data"}, call("action_config_data")).leaf = true
 	entry({"admin", "services", "openclawmgr", "apply_config"}, call("action_apply_config")).leaf = true
-	entry({"admin", "services", "openclawmgr", "log"}, call("action_log")).leaf = true
 
 	entry({"admin", "services", "openclawmgr", "diag_info"}, call("action_diag_info")).leaf = true
 	entry({"admin", "services", "openclawmgr", "diag_run"}, call("action_diag_run")).leaf = true
@@ -181,7 +181,10 @@ end
 
 local function configured_base_path(base_dir)
 	local jsonc = require "luci.jsonc"
-	local path = (base_dir or "/opt/openclawmgr") .. "/data/.openclaw/openclaw.json"
+	if type(base_dir) ~= "string" or base_dir == "" then
+		return "/"
+	end
+	local path = base_dir .. "/data/.openclaw/openclaw.json"
 	local f = io.open(path, "r")
 	if not f then
 		return "/"
@@ -307,29 +310,40 @@ function action_status()
 	local enabled = uci:get("openclawmgr", "main", "enabled") or "0"
 	local port = uci:get("openclawmgr", "main", "port") or "18789"
 	local bind = uci:get("openclawmgr", "main", "bind") or "lan"
-	local base_dir = uci:get("openclawmgr", "main", "base_dir") or "/opt/openclawmgr"
+	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
 	local token = uci:get("openclawmgr", "main", "token") or ""
 
 	if not port:match("^%d+$") then port = "18789" end
 
-	local st = sys.exec("/usr/libexec/istorec/openclawmgr.sh status 2>/dev/null"):gsub("%s+$", "")
-	local running = (st == "running")
-	local installed = (st == "running" or st == "stopped")
+	local running = false
+	local installed = false
+	if base_dir ~= "" then
+		local st = sys.exec("/usr/libexec/istorec/openclawmgr.sh status 2>/dev/null"):gsub("%s+$", "")
+		running = (st == "running")
+		installed = (st == "running" or st == "stopped")
+	end
 	local lock_running, lock_pid = installer_lock_running()
 	local installing = (task.running and (task.op == "install" or task.op == "upgrade")) or lock_running
 	if not installing and task.running and not installed and not running then
 		installing = true
 	end
 
-	local node_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh node_version 2>/dev/null"):gsub("%s+$", "")
-	local oc_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh openclaw_version 2>/dev/null"):gsub("%s+$", "")
+	local node_ver = ""
+	local oc_ver = ""
+	if base_dir ~= "" then
+		node_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh node_version 2>/dev/null"):gsub("%s+$", "")
+		oc_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh openclaw_version 2>/dev/null"):gsub("%s+$", "")
+	end
 	local pid = running and get_running_pid() or ""
 	if pid == "" and installing and lock_pid ~= "" then
 		pid = lock_pid
 	end
 	local uptime_human = running and get_pid_uptime_human(pid) or ""
 
-	local base_url = "http://" .. get_host() .. ":" .. port .. configured_base_path(base_dir)
+	local base_url = ""
+	if base_dir ~= "" then
+		base_url = "http://" .. get_host() .. ":" .. port .. configured_base_path(base_dir)
+	end
 	local token_url = base_url
 	if token ~= "" then
 		token_url = token_url .. "#token=" .. token
@@ -357,19 +371,36 @@ function action_status()
 	})
 end
 
-function action_log()
+function action_ready()
 	local sys = require "luci.sys"
 	local util = require "luci.util"
 	local uci = require "luci.model.uci".cursor()
-	local base_dir = uci:get("openclawmgr", "main", "base_dir") or "/opt/openclawmgr"
-	local log_file = base_dir .. "/log/installer.log"
 
-	local n = tonumber((require "luci.http").formvalue("n") or "") or 200
-	if n < 10 then n = 10 end
-	if n > 2000 then n = 2000 end
+	local port = uci:get("openclawmgr", "main", "port") or "18789"
+	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
 
-	local content = sys.exec("tail -n " .. n .. " " .. util.shellquote(log_file) .. " 2>/dev/null") or ""
-	write_json({ ok = true, log = content })
+	if not port:match("^%d+$") then port = "18789" end
+
+	if base_dir == "" then
+		write_json({ ok = true, ready = false, reason = "base_dir missing" })
+		return
+	end
+
+	local base_url = "http://127.0.0.1:" .. port .. configured_base_path(base_dir)
+	local cmd = string.format(
+		"curl -fsS -o /dev/null --connect-timeout 1 --max-time 2 -w '%%{http_code}' %s 2>/dev/null",
+		util.shellquote(base_url)
+	)
+	local code = sys.exec(cmd):gsub("%s+$", "")
+	local n = tonumber(code) or 0
+	local ready = (n >= 200 and n < 400)
+
+	write_json({
+		ok = true,
+		ready = ready,
+		http_code = code,
+		url = base_url,
+	})
 end
 
 function action_apply_config()
@@ -402,8 +433,8 @@ function action_config_data()
 			return
 		end
 
-		local body = read_json_body() or {}
-		local section = "main"
+	local body = read_json_body() or {}
+	local section = "main"
 
 		local function bool_to_uci(value)
 			return value and "1" or "0"
@@ -513,7 +544,7 @@ function action_config_data()
 		return
 	end
 
-	local base_dir = uci:get("openclawmgr", "main", "base_dir") or "/opt/openclawmgr"
+	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
 	local port = uci:get("openclawmgr", "main", "port") or "18789"
 	local blocks = model.blocks()
 	local home = model.home()
@@ -528,11 +559,13 @@ function action_config_data()
 		end
 	end
 
-	add_choice(base_dir)
+	if base_dir ~= "" then
+		add_choice(base_dir)
+	end
 	for _, path in ipairs(paths or {}) do
 		add_choice(path)
 	end
-	add_choice(default_path or "/opt/openclawmgr")
+	add_choice(default_path or "/root/Configs/OpenClawMgr")
 
 	local allowed_origins = {}
 	for _, item in ipairs(uci:get_list("openclawmgr", "main", "allowed_origins") or {}) do
@@ -558,6 +591,7 @@ function action_config_data()
 		},
 		options = {
 			base_dir_choices = choices,
+			suggested_base_dir = default_path or "",
 			default_origin = default_allowed_origin(port),
 		}
 	})
@@ -665,22 +699,34 @@ function action_diag_info()
 	local util = require "luci.util"
 	local uci = require "luci.model.uci".cursor()
 
-	local base_dir = uci:get("openclawmgr", "main", "base_dir") or "/opt/openclawmgr"
+	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
 	local port = uci:get("openclawmgr", "main", "port") or "18789"
 	local bind = uci:get("openclawmgr", "main", "bind") or "lan"
 	local enabled = uci:get("openclawmgr", "main", "enabled") or "0"
 
 	if not port:match("^%d+$") then port = "18789" end
 
-	local df_kb = sys.exec("df -kP " .. util.shellquote(base_dir) .. " 2>/dev/null | awk 'NR==2{print $4}'"):gsub("%s+", "")
-	local avail_mb = math.floor((tonumber(df_kb) or 0) / 1024)
+	local avail_mb = 0
+	if base_dir ~= "" then
+		local df_kb = sys.exec("df -kP " .. util.shellquote(base_dir) .. " 2>/dev/null | awk 'NR==2{print $4}'"):gsub("%s+", "")
+		avail_mb = math.floor((tonumber(df_kb) or 0) / 1024)
+	end
 
-	local node_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh node_version 2>/dev/null"):gsub("%s+$", "")
-	local oc_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh openclaw_version 2>/dev/null"):gsub("%s+$", "")
+	local node_ver = ""
+	local oc_ver = ""
+	if base_dir ~= "" then
+		node_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh node_version 2>/dev/null"):gsub("%s+$", "")
+		oc_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh openclaw_version 2>/dev/null"):gsub("%s+$", "")
+	end
 
-	local has_node = sys.call("[ -x " .. util.shellquote(base_dir .. "/node/bin/node") .. " ] >/dev/null 2>&1") == 0
-	local has_openclaw = sys.call("[ -x " .. util.shellquote(base_dir .. "/global/bin/openclaw") .. " ] >/dev/null 2>&1") == 0
-	local has_config = sys.call("[ -f " .. util.shellquote(base_dir .. "/data/.openclaw/openclaw.json") .. " ] >/dev/null 2>&1") == 0
+	local has_node = false
+	local has_openclaw = false
+	local has_config = false
+	if base_dir ~= "" then
+		has_node = sys.call("[ -x " .. util.shellquote(base_dir .. "/node/bin/node") .. " ] >/dev/null 2>&1") == 0
+		has_openclaw = sys.call("[ -x " .. util.shellquote(base_dir .. "/global/bin/openclaw") .. " ] >/dev/null 2>&1") == 0
+		has_config = sys.call("[ -f " .. util.shellquote(base_dir .. "/data/.openclaw/openclaw.json") .. " ] >/dev/null 2>&1") == 0
+	end
 
 	local default_gw = sys.exec("ip route 2>/dev/null | awk '/^default/{print $3; exit}' 2>/dev/null"):gsub("%s+", "")
 
@@ -709,9 +755,9 @@ function action_diag_info()
 		has_config = has_config,
 		procd_pid = pid,
 		running = running,
-		url = "http://" .. get_host() .. ":" .. port .. configured_base_path(base_dir),
-	})
-end
+			url = (base_dir ~= "" and ("http://" .. get_host() .. ":" .. port .. configured_base_path(base_dir)) or ""),
+		})
+	end
 
 function action_diag_run()
 	local http = require "luci.http"

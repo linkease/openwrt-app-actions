@@ -34,11 +34,12 @@
     activeTab: "basic",
     savingSection: "",
     lastAppliedAt: "",
-    showLogModal: false,
-    logText: "",
-    logTimer: null,
     statusTimer: null,
-    installWatchTimer: null
+    installWatchTimer: null,
+    lastTaskRunning: false,
+    taskLogOpenTs: 0,
+    consoleReady: false,
+    consoleCheckTimer: null
   };
   var styleText = "";
 
@@ -247,45 +248,22 @@
       '</svg>';
   }
 
-  function openLogModal() {
-    state.showLogModal = true;
-    if (state.logTimer) {
-      window.clearTimeout(state.logTimer);
-      state.logTimer = null;
-    }
-    pollLogs();
-    render();
+  function taskWindowAvailable() {
+    return !!(window.taskd && window.taskd.show_log);
   }
 
-  function closeLogModal() {
-    state.showLogModal = false;
-    if (state.logTimer) {
-      window.clearTimeout(state.logTimer);
-      state.logTimer = null;
-    }
-    refreshStatus();
-  }
-
-  function pollLogs() {
-    if (!state.showLogModal) {
+  function showTaskLog(taskId) {
+    taskId = taskId || "openclawmgr";
+    if (!taskWindowAvailable()) {
+      window.alert("任务窗口不可用（未加载 taskd/xterm）。请安装 luci-lib-taskd 和 luci-lib-xterm，然后强制刷新页面。");
       return;
     }
-    if (state.logTimer) {
-      window.clearTimeout(state.logTimer);
-      state.logTimer = null;
+    var now = Date.now ? Date.now() : (+new Date());
+    if (state.taskLogOpenTs && now - state.taskLogOpenTs < 1500) {
+      return;
     }
-    request(config.logUrl + "?n=200").then(function(data) {
-      state.logText = (data && data.log) || "";
-      refreshStatus(function() {
-        if (state.showLogModal) {
-          state.logTimer = window.setTimeout(pollLogs, 3000);
-        }
-      });
-    }).catch(function() {
-      if (state.showLogModal) {
-        state.logTimer = window.setTimeout(pollLogs, 5000);
-      }
-    });
+    state.taskLogOpenTs = now;
+    window.taskd.show_log(taskId);
   }
 
   function stopStatusPolling() {
@@ -300,6 +278,41 @@
       window.clearTimeout(state.installWatchTimer);
       state.installWatchTimer = null;
     }
+  }
+
+  function stopConsoleCheck() {
+    if (state.consoleCheckTimer) {
+      window.clearTimeout(state.consoleCheckTimer);
+      state.consoleCheckTimer = null;
+    }
+  }
+
+  function pollConsoleReady(rounds) {
+    rounds = typeof rounds === "number" ? rounds : 20;
+    stopConsoleCheck();
+    state.consoleReady = false;
+
+    function tick(remaining) {
+      request(config.readyUrl).then(function(rv) {
+        state.consoleReady = !!(rv && rv.ok && rv.ready);
+        render();
+        if (!state.consoleReady && remaining > 1) {
+          state.consoleCheckTimer = window.setTimeout(function() { tick(remaining - 1); }, 1000);
+        } else {
+          state.consoleCheckTimer = null;
+        }
+      }).catch(function() {
+        state.consoleReady = false;
+        render();
+        if (remaining > 1) {
+          state.consoleCheckTimer = window.setTimeout(function() { tick(remaining - 1); }, 1500);
+        } else {
+          state.consoleCheckTimer = null;
+        }
+      });
+    }
+
+    tick(rounds);
   }
 
   function backgroundStatusDelay(status) {
@@ -317,9 +330,6 @@
 
   function ensureInstallWatch() {
     stopInstallWatch();
-    if (state.status && state.status.installing && state.showLogModal) {
-      return;
-    }
     state.installWatchTimer = window.setTimeout(function() {
       refreshStatus(function() {
         ensureInstallWatch();
@@ -347,16 +357,6 @@
     tick(rounds);
   }
 
-  function scrollLogToBottom() {
-    if (!state.showLogModal) {
-      return;
-    }
-    var body = root.querySelector(".oclm-log-body");
-    if (body) {
-      body.scrollTop = body.scrollHeight;
-    }
-  }
-
   function render() {
     var status = state.status || {};
     var form = state.form || {};
@@ -381,6 +381,12 @@
     var savingBasic = state.savingSection === "basic";
     var savingAccess = state.savingSection === "access";
 
+    var serviceButtons = showServiceActions ? (
+      (!status.running ? '<button class="oclm-button" type="button" data-op="start">启动服务</button>' : '') +
+      (status.running ? '<button class="oclm-button" type="button" data-op="stop">停止服务</button>' : '') +
+      '<button class="oclm-button" type="button" data-op="restart">重启服务</button>'
+    ) : '';
+
     root.innerHTML =
       '<style>' + styleText + '</style>' +
       '<div class="oclm-app"' + (detectDarkMode() ? ' data-darkmode="true"' : '') + '>' +
@@ -403,10 +409,7 @@
       '</div>' +
       '<div class="oclm-status-actions">' +
       (showInstallAction ? '<div class="oclm-install-inline"><button class="oclm-button oclm-button-primary" type="button" data-install-action="1">' + installLabel + '</button><label class="oclm-check"><input type="checkbox" id="oclm-install-accelerated"' + (installAcceleratedChecked ? ' checked' : '') + ' />Kspeeder 加速安装</label></div>' : '') +
-      (status.running ? '<a class="oclm-button oclm-button-primary" href="' + escapeAttr(status.token_url || "#") + '" target="_blank" rel="noreferrer">' + openclawIcon("oclm-button-icon") + '打开控制台</a>' : '') +
-      (!status.running && showServiceActions ? '<button class="oclm-button" type="button" data-op="start">启动服务</button>' : '') +
-      (status.running && showServiceActions ? '<button class="oclm-button" type="button" data-op="stop">停止服务</button>' : '') +
-      (showServiceActions ? '<button class="oclm-button" type="button" data-op="restart">重启服务</button>' : '') +
+      (status.running ? '<button class="oclm-button oclm-button-primary" type="button" data-open-console="1"' + (state.consoleReady ? '' : ' disabled') + '>' + openclawIcon("oclm-button-icon") + (state.consoleReady ? '打开控制台' : '控制台准备中…') + '</button>' : '') +
       (status.installing ? '<button class="oclm-button oclm-button-danger" type="button" data-op="cancel_install">停止安装</button>' : '') +
       '</div>' +
       (status.installing ? '<div class="oclm-status-note">安装任务正在后台运行，点击“安装中”可继续查看日志。</div>' : '') +
@@ -421,7 +424,6 @@
       '<div class="' + (activeTab === "basic" ? '' : 'oclm-hidden') + '">' +
       '<h2>基础配置</h2>' +
       '<div class="oclm-form-grid">' +
-      fieldToggle("启用服务", "enabled", form.enabled) +
       fieldInput("监听端口", '<input class="oclm-control" type="number" min="1" max="65535" id="oclm-port" value="' + escapeHtml(form.port || "18789") + '" />') +
       fieldInput("监听范围", selectHtml("oclm-bind", form.bind, [
         ["lan", "所有地址"],
@@ -438,7 +440,7 @@
       fieldInput("API 密钥", passwordHtml("oclm-api-key", form.provider_api_key || "", "sk-...")) +
       fieldInput("中转地址（可选）", '<input class="oclm-control" type="text" id="oclm-base-url" value="' + escapeHtml(form.provider_base_url || "") + '" placeholder="https://api.example.com" />') +
       fieldInput("默认模型", '<input class="oclm-control" type="text" id="oclm-model" value="' + escapeAttr(resolveModelValue(form)) + '" placeholder="请按照&lt;provider&gt;/&lt;model-id&gt;格式填写" />') +
-      '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
+      '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' + serviceButtons + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
       '</div></div>' +
 
       '<div class="' + (activeTab === "access" ? '' : 'oclm-hidden') + '">' +
@@ -463,27 +465,9 @@
       '</div>' +
       '</div>' +
       '</section>' +
-
-      (state.showLogModal ? (
-        '<div class="oclm-log-modal" data-close-log="1">' +
-        '<div class="oclm-log-dialog" onclick="event.stopPropagation()">' +
-        '<div class="oclm-log-head">' +
-        '<h3>安装日志</h3>' +
-        '<div class="oclm-log-actions">' +
-        '<button class="oclm-button" type="button" data-refresh-log="1">刷新</button>' +
-        '<button class="oclm-button" type="button" data-copy-log="1">复制日志</button>' +
-        '<button class="oclm-button" type="button" data-close-log-btn="1">关闭</button>' +
-        '</div>' +
-        '</div>' +
-        '<div class="oclm-log-body"><pre>' + escapeHtml(state.logText || "日志为空") + '</pre></div>' +
-        '</div>' +
-        '</div>'
-      ) : '') +
-
       '</div></div></div>';
 
     bindEvents();
-    scrollLogToBottom();
   }
 
   function fieldInput(label, control) {
@@ -547,18 +531,45 @@
         if (op === "purge" && !window.confirm("彻底清理会删除运行时和数据目录。确认继续？")) return;
         postForm(config.opUrl, { op: op }).then(function(rv) {
           if (!rv || !rv.ok) {
+            if (rv && rv.busy && rv.running_task_id) {
+              showTaskLog(rv.running_task_id);
+              return;
+            }
             window.alert((rv && rv.error) || "操作失败");
             return;
           }
+          state.lastTaskRunning = true;
+          showTaskLog((rv && (rv.running_task_id || rv.task_id)) || "openclawmgr");
           scheduleStatusRefresh(op === "restart" ? 8 : 6, 1000);
         });
       };
     });
 
+    Array.prototype.forEach.call(root.querySelectorAll("[data-open-console]"), function(el) {
+      el.onclick = function() {
+        if (!state.consoleReady) {
+          window.alert("控制台正在启动，请稍候再试。");
+          return;
+        }
+        var url = (state.status && state.status.token_url) || "";
+        if (!url) {
+          window.alert("控制台地址不可用");
+          return;
+        }
+        window.open(url, "_blank", "noreferrer");
+      };
+    });
+
     Array.prototype.forEach.call(root.querySelectorAll("[data-install-action]"), function(el) {
       el.onclick = function() {
-        openLogModal();
         var accelerated = !!(root.getElementById("oclm-install-accelerated") && root.getElementById("oclm-install-accelerated").checked);
+        var baseDirEl = root.getElementById("oclm-base-dir");
+        var baseDir = baseDirEl && baseDirEl.value ? baseDirEl.value.trim() : "";
+        if (!baseDir) {
+          window.alert("请先选择数据目录并保存应用，再执行安装。");
+          if (baseDirEl) baseDirEl.focus();
+          return;
+        }
         if (!state.status || state.status.installing) {
           return;
         }
@@ -566,7 +577,7 @@
         state.status.task_running = true;
         state.status.task_op = "install";
         render();
-        postJson(config.configUrl, { install_accelerated: accelerated }).then(function(cfgRv) {
+        postJson(config.configUrl, { base_dir: baseDir, install_accelerated: accelerated }).then(function(cfgRv) {
           if (!cfgRv || !cfgRv.ok) {
             state.status.installing = false;
             render();
@@ -574,27 +585,28 @@
             return;
           }
           state.form.install_accelerated = accelerated;
+          state.form.base_dir = baseDir;
           return postForm(config.opUrl, { op: "install" });
         }).then(function(rv) {
           if (!rv) return;
           if (!rv || !rv.ok) {
+            if (rv && rv.busy && rv.running_task_id) {
+              showTaskLog(rv.running_task_id);
+              return;
+            }
             state.status.installing = false;
             render();
             window.alert((rv && rv.error) || "启动安装失败");
             return;
           }
+          state.lastTaskRunning = true;
+          showTaskLog((rv && (rv.running_task_id || rv.task_id)) || "openclawmgr");
           scheduleStatusRefresh(10, 1000);
         }).catch(function() {
           state.status.installing = false;
           render();
           window.alert("启动安装失败");
         });
-      };
-    });
-
-    Array.prototype.forEach.call(root.querySelectorAll("[data-close-log], [data-close-log-btn]"), function(el) {
-      el.onclick = function() {
-        closeLogModal();
       };
     });
 
@@ -615,18 +627,6 @@
         state.form.install_accelerated = !!installAccelerated.checked;
       };
     }
-
-    Array.prototype.forEach.call(root.querySelectorAll("[data-refresh-log]"), function(el) {
-      el.onclick = function() {
-        pollLogs();
-      };
-    });
-
-    Array.prototype.forEach.call(root.querySelectorAll("[data-copy-log]"), function(el) {
-      el.onclick = function() {
-        copyText(state.logText || "");
-      };
-    });
 
     Array.prototype.forEach.call(root.querySelectorAll("[data-copy-token-url]"), function(el) {
       el.onclick = function() {
@@ -687,7 +687,6 @@
     if (saveBasic) {
       saveBasic.onclick = function() {
         var payload = {
-          enabled: !!root.getElementById("oclm-enabled").checked,
           port: root.getElementById("oclm-port").value,
           bind: root.getElementById("oclm-bind").value,
           base_dir: root.getElementById("oclm-base-dir").value,
@@ -759,6 +758,18 @@
   function refreshStatus(done) {
     request(config.statusUrl).then(function(data) {
       state.status = data || {};
+      if (state.status && state.status.running) {
+        if (!state.consoleReady) {
+          pollConsoleReady(20);
+        }
+      } else {
+        stopConsoleCheck();
+        state.consoleReady = false;
+      }
+      if (state.status && state.status.task_running && !state.lastTaskRunning) {
+        showTaskLog("openclawmgr");
+      }
+      state.lastTaskRunning = !!(state.status && state.status.task_running);
       render();
       ensureInstallWatch();
       if (typeof done === "function") {
@@ -782,6 +793,12 @@
       state.form = data.config || {};
       state.form.default_model = resolveModelValue(state.form);
       state.options = data.options || {};
+      if (!state.form.base_dir) {
+        var suggested = state.options && state.options.suggested_base_dir ? String(state.options.suggested_base_dir) : "";
+        if (suggested) {
+          state.form.base_dir = suggested;
+        }
+      }
       render();
       refreshStatus();
     }).catch(function() {

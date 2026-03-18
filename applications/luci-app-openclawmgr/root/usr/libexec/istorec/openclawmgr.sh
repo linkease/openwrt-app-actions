@@ -119,7 +119,17 @@ default_gateway() {
 }
 
 ensure_dirs() {
-	mkdir -p "$BASE_DIR" "$BASE_DIR/log" "$NODE_DIR" "$GLOBAL_DIR" "$DATA_DIR/.openclaw" 2>/dev/null || true
+	mkdir -p "$BASE_DIR" "$NODE_DIR" "$GLOBAL_DIR" "$DATA_DIR/.openclaw/workspace" "$BASE_DIR/npm-cache" 2>/dev/null || true
+	fix_data_permissions || true
+}
+
+fix_data_permissions() {
+	# When running under procd as user "openclawmgr", OpenClaw needs write access to data/.openclaw/*
+	if ! id openclawmgr >/dev/null 2>&1; then
+		return 0
+	fi
+	chown -R openclawmgr:openclawmgr "$DATA_DIR" 2>/dev/null || true
+	chmod -R u+rwX "$DATA_DIR" 2>/dev/null || true
 }
 
 check_space_mb() {
@@ -308,11 +318,9 @@ download() {
 
 write_installer_log() {
 	local msg="$1"
-	mkdir -p "$(dirname "$LOG_FILE")" 2>/dev/null || true
 	local line
 	line="$(printf "%s [%s] %s" "$(log_ts)" "$APP" "$msg")"
 	printf "%s\n" "$line"
-	printf "%s\n" "$line" >> "$LOG_FILE"
 }
 
 openclaw_bin() {
@@ -689,6 +697,73 @@ install_openclaw() {
 	local flags="" npm_registry="" effective_registry=""
 	[ -x "$NPM_BIN" ] || return 1
 
+	ensure_git() {
+		ensure_remote_https() {
+			command -v git >/dev/null 2>&1 || return 1
+			local execp
+			execp="$(git --exec-path 2>/dev/null || true)"
+			[ -n "$execp" ] || return 1
+			[ -x "$execp/git-remote-https" ] && return 0
+			# Some builds ship helpers under libexec paths; exec-path should cover it,
+			# but keep a fallback in case of unusual layouts.
+			[ -x /usr/lib/git-core/git-remote-https ] && return 0
+			[ -x /usr/libexec/git-core/git-remote-https ] && return 0
+			return 1
+		}
+
+		command -v git >/dev/null 2>&1 || {
+			write_installer_log "git not found; some npm dependencies require git. Trying to install git via opkg."
+			local pm=""
+			if command -v is-opkg >/dev/null 2>&1; then
+				pm="is-opkg"
+			elif command -v opkg >/dev/null 2>&1; then
+				pm="opkg"
+			fi
+			if [ -z "$pm" ]; then
+				write_installer_log "git is required but opkg/is-opkg is not available; please install git and retry."
+				return 1
+			fi
+
+			if "$pm" install git >/dev/null 2>&1; then
+				command -v git >/dev/null 2>&1 || true
+			fi
+		}
+
+		command -v git >/dev/null 2>&1 || {
+			write_installer_log "git is required but could not be installed automatically; please opkg install git and retry."
+			return 1
+		}
+
+		# Ensure HTTPS transport is available (git-remote-https), required for git URL rewrites.
+		if ensure_remote_https; then
+			return 0
+		fi
+
+		write_installer_log "git HTTPS transport helper not found (git-remote-https); trying to install git-http/git-https."
+		local pm=""
+		if command -v is-opkg >/dev/null 2>&1; then
+			pm="is-opkg"
+		elif command -v opkg >/dev/null 2>&1; then
+			pm="opkg"
+		fi
+		if [ -z "$pm" ]; then
+			write_installer_log "git-remote-https is required but opkg/is-opkg is not available; please install git-http (or equivalent) and retry."
+			return 1
+		fi
+
+		"$pm" install git-http >/dev/null 2>&1 || true
+		"$pm" install git-https >/dev/null 2>&1 || true
+
+		if ensure_remote_https; then
+			return 0
+		fi
+
+		write_installer_log "git-remote-https is required but could not be installed automatically; please opkg install git-http (or git-https) and retry."
+		return 1
+	}
+
+	ensure_git || return 1
+
 	if is_musl; then
 		flags="--ignore-scripts"
 	fi
@@ -698,7 +773,7 @@ install_openclaw() {
 	fi
 
 	write_installer_log "Installing OpenClaw from npm"
-	write_installer_log "Node.js: $($NODE_BIN --version 2>/dev/null || echo unknown), npm: $($NPM_BIN --version 2>/dev/null || echo unknown)"
+	write_installer_log "Node.js: $(PATH=\"${NODE_DIR}/bin:/usr/sbin:/usr/bin:/sbin:/bin\" \"$NODE_BIN\" --version 2>/dev/null || echo unknown), npm: $(PATH=\"${NODE_DIR}/bin:/usr/sbin:/usr/bin:/sbin:/bin\" \"$NPM_BIN\" --version 2>/dev/null || echo unknown)"
 	write_installer_log "npm prefix: $GLOBAL_DIR, cache: ${BASE_DIR}/npm-cache, musl: $(is_musl && echo yes || echo no) ${flags:+($flags)}"
 	write_installer_log "npm registry: ${npm_registry:-default}"
 	if [ -n "$npm_registry" ]; then
@@ -722,6 +797,7 @@ install_openclaw() {
 		mkdir -p "$DATA_DIR" 2>/dev/null || true
 		# Use --add because url.*.insteadOf is multi-valued (git config without --add overwrites).
 		git config --file "$DATA_DIR/.gitconfig" --add url."https://github.com/".insteadOf "ssh://git@github.com/" 2>/dev/null || true
+		git config --file "$DATA_DIR/.gitconfig" --add url."https://github.com/".insteadOf "ssh://git@github.com" 2>/dev/null || true
 		git config --file "$DATA_DIR/.gitconfig" --add url."https://github.com/".insteadOf "git@github.com:" 2>/dev/null || true
 	fi
 
@@ -786,28 +862,26 @@ install_openclaw() {
 
 	local npm_rc=0
 	wait "$npmpid" || npm_rc=$?
-	if [ "$npm_rc" -ne 0 ]; then
-		write_installer_log "npm install failed (rc=$npm_rc); dumping recent output"
-		kill "$tailpid" 2>/dev/null || true
-		wait "$tailpid" 2>/dev/null || true
-		tail -n 200 "$tmp" >> "$LOG_FILE" 2>/dev/null || true
-		rm -f "$tmp" 2>/dev/null || true
-		return 1
-	fi
+		if [ "$npm_rc" -ne 0 ]; then
+			write_installer_log "npm install failed (rc=$npm_rc); dumping recent output"
+			kill "$tailpid" 2>/dev/null || true
+			wait "$tailpid" 2>/dev/null || true
+			rm -f "$tmp" 2>/dev/null || true
+			return 1
+		fi
 
 	local end_ts elapsed_s elapsed_h
 	end_ts="$(date +%s 2>/dev/null || echo 0)"
 	elapsed_s=$((end_ts - start_ts))
 	elapsed_h="$(fmt_elapsed "$elapsed_s")"
-	write_installer_log "npm install finished (${elapsed_h} elapsed)"
-	kill "$tailpid" 2>/dev/null || true
-	wait "$tailpid" 2>/dev/null || true
-	tail -n 200 "$tmp" >> "$LOG_FILE" 2>/dev/null || true
-	rm -f "$tmp" 2>/dev/null || true
-	find_entry >/dev/null 2>&1 || return 1
-	write_installer_log "OpenClaw installed: $(openclaw_version || echo unknown)"
-	return 0
-}
+		write_installer_log "npm install finished (${elapsed_h} elapsed)"
+		kill "$tailpid" 2>/dev/null || true
+		wait "$tailpid" 2>/dev/null || true
+		rm -f "$tmp" 2>/dev/null || true
+		find_entry >/dev/null 2>&1 || return 1
+		write_installer_log "OpenClaw installed: $(openclaw_version || echo unknown)"
+		return 0
+	}
 
 	do_install() {
 		acquire_lock
@@ -834,16 +908,18 @@ install_openclaw() {
 		uci -q set "${UCI_NS}.main.token=$TOKEN" && uci -q commit "$UCI_NS" || true
 	fi
 
-	install_node
-	install_openclaw
-	ensure_gateway_config || true
+		install_node
+		install_openclaw
+		ensure_gateway_config || true
+		fix_data_permissions || true
+		# Do not auto-enable/start on first install; let user Save & Apply after choosing base_dir and settings.
+		if [ "${ENABLED:-0}" = "1" ]; then
+			/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
+			/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
+		fi
 
-	/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
-	uci -q set "${UCI_NS}.main.enabled=1" && uci -q commit "$UCI_NS" || true
-	/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
-
-	write_installer_log "== install done =="
-}
+		write_installer_log "== install done =="
+	}
 
 do_uninstall() {
 	acquire_lock
@@ -885,6 +961,7 @@ do_start() {
 	acquire_lock
 	write_installer_log "== start begin =="
 	ensure_dirs
+	fix_data_permissions || true
 	/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
 	uci -q set "${UCI_NS}.main.enabled=1" && uci -q commit "$UCI_NS" || true
 	ensure_gateway_config || true
@@ -905,28 +982,32 @@ do_restart() {
 	acquire_lock
 	write_installer_log "== restart begin =="
 	ensure_dirs
+	fix_data_permissions || true
 	ensure_gateway_config || true
 	/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
 	write_installer_log "== restart done =="
 }
 
-do_apply_config() {
-	acquire_lock
-	write_installer_log "== apply_config begin =="
-	ensure_dirs
-	ensure_gateway_config || true
+	do_apply_config() {
+		acquire_lock
+		write_installer_log "== apply_config begin =="
+		ensure_dirs
+		fix_data_permissions || true
+		ensure_gateway_config || true
 
-	local pid=""
-	pid="$(ubus call service list "{\"name\":\"openclawmgr\"}" 2>/dev/null | jsonfilter -e '$.openclawmgr.instances.gateway.pid' 2>/dev/null || true)"
-	if [ "${ENABLED:-0}" = "1" ]; then
-		/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
-		if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
-			/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
+		local pid=""
+		pid="$(ubus call service list "{\"name\":\"openclawmgr\"}" 2>/dev/null | jsonfilter -e '$.openclawmgr.instances.gateway.pid' 2>/dev/null || true)"
+		if [ "${ENABLED:-0}" = "1" ]; then
+			/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
+			if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
+				/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
+			else
+				/etc/init.d/openclawmgr start >/dev/null 2>&1 || true
+			fi
+		else
+			/etc/init.d/openclawmgr stop >/dev/null 2>&1 || true
+			/etc/init.d/openclawmgr disable >/dev/null 2>&1 || true
 		fi
-	else
-		/etc/init.d/openclawmgr stop >/dev/null 2>&1 || true
-		/etc/init.d/openclawmgr disable >/dev/null 2>&1 || true
-	fi
 
 	write_installer_log "== apply_config done =="
 }
@@ -1052,10 +1133,10 @@ diag_poll() {
 ACTION="${1:-help}"
 shift 1 || true
 
-	BASE_DIR="$(uci_get base_dir)"
-	PORT="$(uci_get port)"
-	BIND="$(uci_get bind)"
-	TOKEN="$(uci_get token)"
+BASE_DIR="$(uci_get base_dir)"
+PORT="$(uci_get port)"
+BIND="$(uci_get bind)"
+TOKEN="$(uci_get token)"
 	ALLOW_INSECURE_AUTH="$(uci_get allow_insecure_auth)"
 	DISABLE_DEVICE_AUTH="$(uci_get disable_device_auth)"
 ALLOWED_ORIGINS="$(uci_get_list allowed_origins)"
@@ -1065,12 +1146,11 @@ INSTALL_ACCELERATED="$(uci_get install_accelerated)"
 PROVIDER_API_KEY="$(uci_get provider_api_key)"
 PROVIDER_BASE_URL="$(uci_get provider_base_url)"
 
-	[ -n "$BASE_DIR" ] || BASE_DIR="/opt/openclawmgr"
-	[ -n "$PORT" ] || PORT="18789"
-	[ -n "$BIND" ] || BIND="lan"
-	NODE_VERSION="24.14.0"
-[ -n "$ALLOW_INSECURE_AUTH" ] || ALLOW_INSECURE_AUTH="0"
-[ -n "$DISABLE_DEVICE_AUTH" ] || DISABLE_DEVICE_AUTH="0"
+[ -n "$PORT" ] || PORT="18789"
+[ -n "$BIND" ] || BIND="lan"
+NODE_VERSION="24.14.0"
+	[ -n "$ALLOW_INSECURE_AUTH" ] || ALLOW_INSECURE_AUTH="1"
+	[ -n "$DISABLE_DEVICE_AUTH" ] || DISABLE_DEVICE_AUTH="1"
 [ -n "$DEFAULT_AGENT" ] || DEFAULT_AGENT="anthropic"
 [ -n "$DEFAULT_MODEL" ] || DEFAULT_MODEL=""
 [ -n "$INSTALL_ACCELERATED" ] || INSTALL_ACCELERATED="1"
@@ -1101,43 +1181,59 @@ case "$INSTALL_ACCELERATED" in
 	*) INSTALL_ACCELERATED="0" ;;
 esac
 
+require_base_dir() {
+	if [ -z "$BASE_DIR" ]; then
+		write_installer_log "base_dir is not configured; please choose a data directory in LuCI and Save & Apply, then retry."
+		exit 2
+	fi
+}
+
 NODE_DIR="${BASE_DIR}/node"
 GLOBAL_DIR="${BASE_DIR}/global"
 DATA_DIR="${BASE_DIR}/data"
-LOG_FILE="${BASE_DIR}/log/installer.log"
 
-NODE_BIN="${NODE_DIR}/bin/node"
-NPM_BIN="${NODE_DIR}/bin/npm"
+	NODE_BIN="${NODE_DIR}/bin/node"
+	NPM_BIN="${NODE_DIR}/bin/npm"
 
 case "$ACTION" in
 	install|upgrade)
+		require_base_dir
 		do_install
 		;;
 	uninstall)
+		require_base_dir
 		do_uninstall
 		;;
 	uninstall_openclaw)
+		require_base_dir
 		do_uninstall_openclaw
 		;;
 	purge)
+		require_base_dir
 		do_purge
 		;;
 	rm)
+		require_base_dir
 		do_uninstall
 		;;
 	start)
+		require_base_dir
 		do_start
 		;;
 	stop)
+		require_base_dir
 		do_stop
 		;;
 	restart)
+		require_base_dir
 		do_restart
 		;;
 	apply_config)
+		require_base_dir
 		do_apply_config
 		;;
 	status)
+		[ -n "$BASE_DIR" ] || exit 0
 		do_status
 		;;
 	port)

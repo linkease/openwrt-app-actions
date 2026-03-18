@@ -1,13 +1,15 @@
 <%+header%>
+
+<%+tasks/embed%>
 <script type="text/javascript">
 	(function() {
 		window.openclawmgrConfig = {
 			token: "<%=token or ''%>",
 			statusUrl: "<%=url('admin/services/openclawmgr/status')%>",
+			readyUrl: "<%=url('admin/services/openclawmgr/ready')%>",
 			opUrl: "<%=url('admin/services/openclawmgr/op')%>",
 			configUrl: "<%=url('admin/services/openclawmgr/config_data')%>",
 			applyUrl: "<%=url('admin/services/openclawmgr/apply_config')%>",
-			logUrl: "<%=url('admin/services/openclawmgr/log')%>",
 			staticBase: "<%=resource%>/openclawmgr"
 		};
 	})();

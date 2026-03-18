@@ -5,7 +5,6 @@ local info_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "
 local run_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "diag_run")
 local poll_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "diag_poll")
 local op_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "op")
-local log_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "log")
 local token = (luci.dispatcher.context and luci.dispatcher.context.token) or ""
 %>
 
@@ -60,7 +59,6 @@ local token = (luci.dispatcher.context and luci.dispatcher.context.token) or ""
 			<button class="btn" onclick="ocSvc('upgrade')"><%:Upgrade%></button>
 			<button class="btn" onclick="ocConfirmUninstallOpenclaw()"><%:Uninstall OpenClaw (Keep Node)%></button>
 			<button class="btn" onclick="ocConfirmUninstall()"><%:Uninstall%></button>
-			<button class="btn" onclick="ocShowInstallerLog()"><%:Installer Log%></button>
 			<button class="btn danger" onclick="ocConfirmPurge()"><%:Purge%></button>
 		</div>
 		<div style="margin-top:10px;color:#666;font-size:12px;line-height:1.6">
@@ -101,7 +99,6 @@ local token = (luci.dispatcher.context and luci.dispatcher.context.token) or ""
 	var runUrl = '<%=run_url%>';
 	var pollUrl = '<%=poll_url%>';
 	var opUrl = '<%=op_url%>';
-	var logUrl = '<%=log_url%>';
 	var csrfToken = '<%=token%>';
 
 	var currentOp = '';
@@ -236,17 +233,6 @@ local token = (luci.dispatcher.context and luci.dispatcher.context.token) or ""
 	window.ocConfirmPurge = function() {
 		if (!confirm('<%:Purge will remove runtime and data under Base Dir. Continue?%>')) return;
 		window.ocSvc('purge');
-	};
-
-	window.ocShowInstallerLog = function() {
-		(new XHR()).get(logUrl, { n: 400 }, function(x) {
-			try {
-				var d = JSON.parse(x.responseText || '{}');
-				if (window.taskd && window.taskd.show_log_txt) {
-					window.taskd.show_log_txt('installer.log', d.log || '-');
-				}
-			} catch (e) {}
-		});
 	};
 
 	refreshInfo();
