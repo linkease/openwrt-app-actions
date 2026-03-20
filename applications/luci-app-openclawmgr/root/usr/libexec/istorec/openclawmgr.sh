@@ -890,6 +890,15 @@ install_openclaw() {
 		# Node version is bundled/managed by installer code; do not allow UCI override.
 		uci -q delete "${UCI_NS}.main.node_version" >/dev/null 2>&1 || true
 		uci -q commit "$UCI_NS" >/dev/null 2>&1 || true
+
+		# Ensure token exists even if runtime is already installed (service start requires it).
+		TOKEN="$(uci_get token)"
+		if [ -z "$TOKEN" ]; then
+			TOKEN="$(gen_token)"
+			uci -q set "${UCI_NS}.main.token=$TOKEN" && uci -q commit "$UCI_NS" || true
+		fi
+		ensure_gateway_config || true
+
 		if have_openclaw_runtime; then
 			write_installer_log "OpenClaw is already installed: $(openclaw_version || echo unknown)"
 			write_installer_log "Skip install. Use restart/apply config if you only need to refresh configuration."
@@ -901,12 +910,6 @@ install_openclaw() {
 		return 1
 	fi
 	check_space_mb "$BASE_DIR" 2048 || return 1
-
-	TOKEN="$(uci_get token)"
-	if [ -z "$TOKEN" ]; then
-		TOKEN="$(gen_token)"
-		uci -q set "${UCI_NS}.main.token=$TOKEN" && uci -q commit "$UCI_NS" || true
-	fi
 
 		install_node
 		install_openclaw
@@ -1134,6 +1137,7 @@ ACTION="${1:-help}"
 shift 1 || true
 
 BASE_DIR="$(uci_get base_dir)"
+ENABLED="$(uci_get enabled)"
 PORT="$(uci_get port)"
 BIND="$(uci_get bind)"
 TOKEN="$(uci_get token)"
@@ -1148,6 +1152,7 @@ PROVIDER_BASE_URL="$(uci_get provider_base_url)"
 
 [ -n "$PORT" ] || PORT="18789"
 [ -n "$BIND" ] || BIND="lan"
+[ -n "$ENABLED" ] || ENABLED="0"
 NODE_VERSION="24.14.0"
 	[ -n "$ALLOW_INSECURE_AUTH" ] || ALLOW_INSECURE_AUTH="1"
 	[ -n "$DISABLE_DEVICE_AUTH" ] || DISABLE_DEVICE_AUTH="1"
@@ -1163,6 +1168,10 @@ esac
 case "$BIND" in
 	loopback|lan|auto|tailnet|custom) ;;
 	*) BIND="lan" ;;
+esac
+case "$ENABLED" in
+	1|true|yes|on) ENABLED="1" ;;
+	*) ENABLED="0" ;;
 esac
 case "$ALLOW_INSECURE_AUTH" in
 	1|true|yes|on) ALLOW_INSECURE_AUTH="1" ;;

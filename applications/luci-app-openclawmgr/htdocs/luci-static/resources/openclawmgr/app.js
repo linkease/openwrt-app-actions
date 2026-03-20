@@ -295,7 +295,7 @@
     function tick(remaining) {
       request(config.readyUrl).then(function(rv) {
         state.consoleReady = !!(rv && rv.ok && rv.ready);
-        render();
+        updateStatusDom(state.status);
         if (!state.consoleReady && remaining > 1) {
           state.consoleCheckTimer = window.setTimeout(function() { tick(remaining - 1); }, 1000);
         } else {
@@ -303,7 +303,7 @@
         }
       }).catch(function() {
         state.consoleReady = false;
-        render();
+        updateStatusDom(state.status);
         if (remaining > 1) {
           state.consoleCheckTimer = window.setTimeout(function() { tick(remaining - 1); }, 1500);
         } else {
@@ -379,6 +379,7 @@
     var showServiceActions = status.installed && !status.installing;
     var activeTab = state.activeTab || "basic";
     var savingBasic = state.savingSection === "basic";
+    var savingAi = state.savingSection === "ai";
     var savingAccess = state.savingSection === "access";
 
     var serviceButtons = showServiceActions ? (
@@ -400,30 +401,36 @@
       '<section class="oclm-card">' +
       '<h2>服务状态</h2>' +
       '<div class="oclm-status-grid">' +
-      '<div class="oclm-status-row"><span class="oclm-status-label">状态</span><span class="oclm-status-pill" style="--oclm-spin-duration:' + escapeAttr(statusSpinSeconds(status)) + 's"><span class="oclm-dot ' + statusDotClass(status) + '"></span><span class="oclm-status-spinner" aria-hidden="true"></span>' + escapeHtml(statusText(status)) + '</span>' + (status.running && status.uptime_human ? ('<span class="oclm-tag">运行时间 <strong>' + escapeHtml(status.uptime_human) + '</strong></span>') : '') + '</div>' +
-      '<div>' + ((status.running && status.pid) ? ('<div class="oclm-inline-row"><span class="oclm-tag">PID <strong>' + escapeHtml(status.pid) + '</strong></span></div>') : '') + '</div>' +
-      '<div><div class="oclm-meta-label">地址</div><div class="oclm-address-row"><span class="oclm-address-text">' + escapeHtml(maskedTokenUrl(status.token_url || status.base_url || "")) + '</span>' + ((status.token_url || status.base_url) ? ('<button class="oclm-icon-button" type="button" data-copy-token-url="1" aria-label="复制地址">' + copyIcon("oclm-copy-icon") + '</button>') : '') + '</div></div>' +
-      '<div><div class="oclm-meta-label">目录</div><div>' + escapeHtml(status.base_dir || "-") + '</div></div>' +
-      '<div><div class="oclm-meta-label">版本</div><div class="oclm-version-tags"><a class="oclm-tag oclm-tag-link" href="https://github.com/openclaw/openclaw/releases" target="_blank" rel="noreferrer">OpenClaw <strong>' + escapeHtml(status.openclaw_version || "-") + '</strong></a><span class="oclm-tag">Node <strong>' + escapeHtml(status.node_version || "-") + '</strong></span></div></div>' +
+      '<div class="oclm-status-row"><span class="oclm-status-label">状态</span><span id="oclm-status-pill" class="oclm-status-pill" style="--oclm-spin-duration:' + escapeAttr(statusSpinSeconds(status)) + 's"><span id="oclm-status-dot" class="oclm-dot ' + statusDotClass(status) + '"></span><span class="oclm-status-spinner" aria-hidden="true"></span><span id="oclm-status-text">' + escapeHtml(statusText(status)) + '</span></span>' +
+      '<span id="oclm-uptime" class="oclm-tag' + (status.running && status.uptime_human ? '' : ' oclm-hidden') + '">运行时间 <strong id="oclm-uptime-text">' + escapeHtml(status.uptime_human || "") + '</strong></span>' +
+      '</div>' +
+      '<div><div id="oclm-pid-row"' + ((status.running && status.pid) ? '' : ' class="oclm-hidden"') + '><div class="oclm-inline-row"><span class="oclm-tag">PID <strong id="oclm-pid">' + escapeHtml(status.pid || "") + '</strong></span></div></div></div>' +
+      '<div><div class="oclm-meta-label">地址</div><div class="oclm-address-row"><span id="oclm-address-text" class="oclm-address-text">' + escapeHtml(maskedTokenUrl(status.token_url || status.base_url || "")) + '</span><button id="oclm-copy-token-url" class="oclm-icon-button' + ((status.token_url || status.base_url) ? '' : ' oclm-hidden') + '" type="button" data-copy-token-url="1" aria-label="复制地址">' + copyIcon("oclm-copy-icon") + '</button></div></div>' +
+      '<div><div class="oclm-meta-label">目录</div><div id="oclm-status-base-dir">' + escapeHtml(status.base_dir || "-") + '</div></div>' +
+      '<div><div class="oclm-meta-label">版本</div><div class="oclm-version-tags"><a class="oclm-tag oclm-tag-link" href="https://github.com/openclaw/openclaw/releases" target="_blank" rel="noreferrer">OpenClaw <strong id="oclm-openclaw-version">' + escapeHtml(status.openclaw_version || "-") + '</strong></a><span class="oclm-tag">Node <strong id="oclm-node-version">' + escapeHtml(status.node_version || "-") + '</strong></span></div></div>' +
       '<div></div>' +
       '</div>' +
-      '<div class="oclm-status-actions">' +
-      (showInstallAction ? '<div class="oclm-install-inline"><button class="oclm-button oclm-button-primary" type="button" data-install-action="1">' + installLabel + '</button><label class="oclm-check"><input type="checkbox" id="oclm-install-accelerated"' + (installAcceleratedChecked ? ' checked' : '') + ' />Kspeeder 加速安装</label></div>' : '') +
-      (status.running ? '<button class="oclm-button oclm-button-primary" type="button" data-open-console="1"' + (state.consoleReady ? '' : ' disabled') + '>' + openclawIcon("oclm-button-icon") + (state.consoleReady ? '打开控制台' : '控制台准备中…') + '</button>' : '') +
-      (status.installing ? '<button class="oclm-button oclm-button-danger" type="button" data-op="cancel_install">停止安装</button>' : '') +
+      '<div id="oclm-status-actions" class="oclm-status-actions">' +
+      '<div id="oclm-install-inline" class="oclm-install-inline' + (showInstallAction ? '' : ' oclm-hidden') + '">' +
+      '<button id="oclm-install-btn" class="oclm-button oclm-button-primary" type="button" data-install-action="1"' + (status.installing ? ' disabled' : '') + '>' + installLabel + '</button>' +
+      '<label class="oclm-check"><input type="checkbox" id="oclm-install-accelerated"' + (installAcceleratedChecked ? ' checked' : '') + ' />Kspeeder 加速安装</label>' +
       '</div>' +
-      (status.installing ? '<div class="oclm-status-note">安装任务正在后台运行，点击“安装中”可继续查看日志。</div>' : '') +
+      '<button id="oclm-open-console" class="oclm-button oclm-button-primary' + (status.running ? '' : ' oclm-hidden') + '" type="button" data-open-console="1"' + (state.consoleReady ? '' : ' disabled') + '>' + openclawIcon("oclm-button-icon") + (state.consoleReady ? '打开控制台' : '控制台准备中…') + '</button>' +
+      '<button id="oclm-cancel-install" class="oclm-button oclm-button-danger' + (status.installing ? '' : ' oclm-hidden') + '" type="button" data-op="cancel_install">停止安装</button>' +
+      '</div>' +
+      '<div id="oclm-status-note" class="oclm-status-note' + (status.installing ? '' : ' oclm-hidden') + '">安装任务正在后台运行，点击“安装中”可继续查看日志。</div>' +
       '</section>' +
 
       '<section class="oclm-card">' +
       '<div class="oclm-tabs">' +
       '<button class="oclm-tab' + (activeTab === "basic" ? ' is-active' : '') + '" type="button" data-tab="basic">基础配置</button>' +
+      '<button class="oclm-tab' + (activeTab === "ai" ? ' is-active' : '') + '" type="button" data-tab="ai">AI配置</button>' +
       '<button class="oclm-tab' + (activeTab === "access" ? ' is-active' : '') + '" type="button" data-tab="access">访问控制</button>' +
       '<button class="oclm-tab' + (activeTab === "cleanup" ? ' is-active' : '') + '" type="button" data-tab="cleanup">卸载清理</button>' +
       '</div>' +
       '<div class="' + (activeTab === "basic" ? '' : 'oclm-hidden') + '">' +
       '<h2>基础配置</h2>' +
-      '<div class="oclm-form-grid">' +
+      '<div class="oclm-form-grid oclm-form-grid-ai" style="margin-top: 26px;">' +
       fieldInput("监听端口", '<input class="oclm-control" type="number" min="1" max="65535" id="oclm-port" value="' + escapeHtml(form.port || "18789") + '" />') +
       fieldInput("监听范围", selectHtml("oclm-bind", form.bind, [
         ["lan", "所有地址"],
@@ -431,16 +438,22 @@
         ["auto", "自动"]
       ])) +
       fieldInput("数据目录", '<input class="oclm-control" type="text" id="oclm-base-dir" list="oclm-base-dir-options" value="' + escapeAttr(form.base_dir || "") + '" /><datalist id="oclm-base-dir-options">' + baseDirOptions + '</datalist>') +
+      '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' + serviceButtons + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
+      '</div></div>' +
+
+      '<div class="' + (activeTab === "ai" ? '' : 'oclm-hidden') + '">' +
+      '<div class="oclm-section-heading"><h2>AI配置</h2><div class="oclm-hint">先配好一个能马上聊起来的默认 AI，再让openclaw协助你设置更多的AGENT、加角色等操作</div></div>' +
+      '<div class="oclm-form-grid oclm-form-grid-ai">' +
       fieldInput("默认服务提供商", selectHtml("oclm-agent", form.default_agent, [
         ["openai", "OpenAI"],
         ["anthropic", "Anthropic"],
         ["minimax-cn", "MiniMax CN"],
         ["moonshot", "Moonshot CN"]
-      ])) +
+      ]) + '<div class="oclm-hint">如果你的供应商是兼容 OpenAI 等协议，可在下方填写中转地址</div>') +
       fieldInput("API 密钥", passwordHtml("oclm-api-key", form.provider_api_key || "", "sk-...")) +
       fieldInput("中转地址（可选）", '<input class="oclm-control" type="text" id="oclm-base-url" value="' + escapeHtml(form.provider_base_url || "") + '" placeholder="https://api.example.com" />') +
       fieldInput("默认模型", '<input class="oclm-control" type="text" id="oclm-model" value="' + escapeAttr(resolveModelValue(form)) + '" placeholder="请按照&lt;provider&gt;/&lt;model-id&gt;格式填写" />') +
-      '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' + serviceButtons + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
+      '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-ai"' + (savingAi ? ' disabled' : '') + '>' + (savingAi ? '应用中…' : '保存 AI配置') + '</button>' + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
       '</div></div>' +
 
       '<div class="' + (activeTab === "access" ? '' : 'oclm-hidden') + '">' +
@@ -468,6 +481,99 @@
       '</div></div></div>';
 
     bindEvents();
+  }
+
+  function updateStatusDom(status) {
+    status = status || {};
+
+    function byId(id) {
+      if (root.getElementById) return root.getElementById(id);
+      return root.querySelector("#" + id);
+    }
+
+    var pill = byId("oclm-status-pill");
+    var dot = byId("oclm-status-dot");
+    var textEl = byId("oclm-status-text");
+    if (!pill || !dot || !textEl) {
+      render();
+      return;
+    }
+
+    pill.style.setProperty("--oclm-spin-duration", statusSpinSeconds(status) + "s");
+    dot.classList.remove("is-success");
+    dot.classList.remove("is-danger");
+    var cls = statusDotClass(status);
+    if (cls) dot.classList.add(cls);
+    textEl.textContent = statusText(status);
+
+    var uptimeWrap = byId("oclm-uptime");
+    var uptimeText = byId("oclm-uptime-text");
+    if (uptimeWrap && uptimeText) {
+      if (status.running && status.uptime_human) {
+        uptimeText.textContent = String(status.uptime_human);
+        uptimeWrap.classList.remove("oclm-hidden");
+      } else {
+        uptimeText.textContent = "";
+        uptimeWrap.classList.add("oclm-hidden");
+      }
+    }
+
+    var pidRow = byId("oclm-pid-row");
+    var pidText = byId("oclm-pid");
+    if (pidRow && pidText) {
+      if (status.running && status.pid) {
+        pidText.textContent = String(status.pid);
+        pidRow.classList.remove("oclm-hidden");
+      } else {
+        pidText.textContent = "";
+        pidRow.classList.add("oclm-hidden");
+      }
+    }
+
+    var addrText = byId("oclm-address-text");
+    if (addrText) addrText.textContent = maskedTokenUrl(status.token_url || status.base_url || "");
+    var copyBtn = byId("oclm-copy-token-url");
+    if (copyBtn) {
+      if (status.token_url || status.base_url) copyBtn.classList.remove("oclm-hidden");
+      else copyBtn.classList.add("oclm-hidden");
+    }
+
+    var baseDirEl = byId("oclm-status-base-dir");
+    if (baseDirEl) baseDirEl.textContent = String(status.base_dir || "-");
+    var openclawVerEl = byId("oclm-openclaw-version");
+    if (openclawVerEl) openclawVerEl.textContent = String(status.openclaw_version || "-");
+    var nodeVerEl = byId("oclm-node-version");
+    if (nodeVerEl) nodeVerEl.textContent = String(status.node_version || "-");
+
+    var installInline = byId("oclm-install-inline");
+    var installBtn = byId("oclm-install-btn");
+    var cancelInstallBtn = byId("oclm-cancel-install");
+    var openConsoleBtn = byId("oclm-open-console");
+    var noteEl = byId("oclm-status-note");
+
+    var showInstallAction = !status.installed || status.installing;
+    if (installInline) {
+      if (showInstallAction) installInline.classList.remove("oclm-hidden");
+      else installInline.classList.add("oclm-hidden");
+    }
+    if (installBtn) {
+      installBtn.textContent = status.installing ? "安装中" : "立即安装";
+      installBtn.disabled = !!status.installing;
+    }
+    if (cancelInstallBtn) {
+      if (status.installing) cancelInstallBtn.classList.remove("oclm-hidden");
+      else cancelInstallBtn.classList.add("oclm-hidden");
+    }
+    if (openConsoleBtn) {
+      if (status.running) openConsoleBtn.classList.remove("oclm-hidden");
+      else openConsoleBtn.classList.add("oclm-hidden");
+      openConsoleBtn.disabled = !(status.running && state.consoleReady);
+      openConsoleBtn.innerHTML = openclawIcon("oclm-button-icon") + (state.consoleReady ? "打开控制台" : "控制台准备中…");
+    }
+    if (noteEl) {
+      if (status.installing) noteEl.classList.remove("oclm-hidden");
+      else noteEl.classList.add("oclm-hidden");
+    }
   }
 
   function fieldInput(label, control) {
@@ -514,9 +620,56 @@
       '</svg>';
   }
 
+  function syncDraftFromDom() {
+    if (!state.form) {
+      state.form = {};
+    }
+
+    function getEl(id) {
+      return root.getElementById ? root.getElementById(id) : root.querySelector("#" + id);
+    }
+
+    var portEl = getEl("oclm-port");
+    if (portEl) state.form.port = portEl.value;
+
+    var bindEl = getEl("oclm-bind");
+    if (bindEl) state.form.bind = bindEl.value;
+
+    var baseDirEl = getEl("oclm-base-dir");
+    if (baseDirEl) state.form.base_dir = baseDirEl.value;
+
+    var installAccelEl = getEl("oclm-install-accelerated");
+    if (installAccelEl) state.form.install_accelerated = !!installAccelEl.checked;
+
+    var agentEl = getEl("oclm-agent");
+    if (agentEl) state.form.default_agent = agentEl.value;
+
+    var apiKeyEl = getEl("oclm-api-key");
+    if (apiKeyEl) state.form.provider_api_key = apiKeyEl.value;
+
+    var baseUrlEl = getEl("oclm-base-url");
+    if (baseUrlEl) state.form.provider_base_url = baseUrlEl.value;
+
+    var modelEl = getEl("oclm-model");
+    if (modelEl) state.form.default_model = modelEl.value;
+
+    var tokenEl = getEl("oclm-token");
+    if (tokenEl) state.form.token = tokenEl.value;
+
+    var allowInsecureEl = getEl("oclm-allow_insecure_auth");
+    if (allowInsecureEl) state.form.allow_insecure_auth = !!allowInsecureEl.checked;
+
+    var disableDeviceEl = getEl("oclm-disable_device_auth");
+    if (disableDeviceEl) state.form.disable_device_auth = !!disableDeviceEl.checked;
+
+    var newOriginEl = getEl("oclm-new-origin");
+    if (newOriginEl) state.newOrigin = newOriginEl.value;
+  }
+
   function bindEvents() {
     Array.prototype.forEach.call(root.querySelectorAll("[data-tab]"), function(el) {
       el.onclick = function() {
+        syncDraftFromDom();
         state.activeTab = el.getAttribute("data-tab") || "basic";
         render();
       };
@@ -652,6 +805,27 @@
       };
     }
 
+    var apiKey = root.getElementById("oclm-api-key");
+    if (apiKey) {
+      apiKey.oninput = function() {
+        state.form.provider_api_key = apiKey.value;
+      };
+    }
+
+    var baseUrl = root.getElementById("oclm-base-url");
+    if (baseUrl) {
+      baseUrl.oninput = function() {
+        state.form.provider_base_url = baseUrl.value;
+      };
+    }
+
+    var modelInput = root.getElementById("oclm-model");
+    if (modelInput) {
+      modelInput.oninput = function() {
+        state.form.default_model = modelInput.value;
+      };
+    }
+
     var addOrigin = root.getElementById("oclm-add-origin");
     if (addOrigin) {
       addOrigin.onclick = function() {
@@ -662,6 +836,13 @@
         state.form.allowed_origins.push(value);
         state.newOrigin = "";
         render();
+      };
+    }
+
+    var newOrigin = root.getElementById("oclm-new-origin");
+    if (newOrigin) {
+      newOrigin.oninput = function() {
+        state.newOrigin = newOrigin.value;
       };
     }
 
@@ -690,15 +871,30 @@
           port: root.getElementById("oclm-port").value,
           bind: root.getElementById("oclm-bind").value,
           base_dir: root.getElementById("oclm-base-dir").value,
-          default_agent: root.getElementById("oclm-agent").value,
-          default_model: root.getElementById("oclm-model").value,
           install_accelerated: !!(root.getElementById("oclm-install-accelerated") && root.getElementById("oclm-install-accelerated").checked),
-          provider_api_key: root.getElementById("oclm-api-key").value,
-          provider_base_url: root.getElementById("oclm-base-url").value
         };
         state.savingSection = "basic";
         render();
         postJson(config.configUrl, payload).then(function(rv) { handleSaveResult(rv, "basic"); }).catch(function() {
+          state.savingSection = "";
+          render();
+          window.alert("保存失败");
+        });
+      };
+    }
+
+    var saveAi = root.getElementById("oclm-save-ai");
+    if (saveAi) {
+      saveAi.onclick = function() {
+        var payload = {
+          default_agent: root.getElementById("oclm-agent").value,
+          default_model: root.getElementById("oclm-model").value,
+          provider_api_key: root.getElementById("oclm-api-key").value,
+          provider_base_url: root.getElementById("oclm-base-url").value
+        };
+        state.savingSection = "ai";
+        render();
+        postJson(config.configUrl, payload).then(function(rv) { handleSaveResult(rv, "ai"); }).catch(function() {
           state.savingSection = "";
           render();
           window.alert("保存失败");
@@ -770,14 +966,14 @@
         showTaskLog("openclawmgr");
       }
       state.lastTaskRunning = !!(state.status && state.status.task_running);
-      render();
+      updateStatusDom(state.status);
       ensureInstallWatch();
       if (typeof done === "function") {
         done();
       }
     }).catch(function() {
       state.status = state.status || {};
-      render();
+      updateStatusDom(state.status);
       ensureInstallWatch();
       if (typeof done === "function") {
         done();

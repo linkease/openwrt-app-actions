@@ -74,6 +74,18 @@
   font-weight: 700;
 }
 
+.oclm-section-heading {
+  margin-bottom: 0;
+}
+
+.oclm-section-heading h2 {
+  margin: 0 0 2px;
+}
+
+.oclm-section-heading .oclm-hint {
+  margin: 0 0 14px;
+}
+
 .oclm-tabs {
   display: flex;
   flex-wrap: wrap;
@@ -279,6 +291,14 @@
 .oclm-form-grid {
   display: grid;
   gap: 14px;
+}
+
+.oclm-form-grid-ai {
+  margin-top: 0;
+}
+
+.oclm-form-grid-ai > .oclm-field:first-child {
+  margin-top: 18px;
 }
 
 .oclm-field {
