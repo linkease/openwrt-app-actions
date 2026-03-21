@@ -506,8 +506,8 @@ function action_config_data()
 				return
 			end
 			local port_num = tonumber(port) or 0
-			if port_num < 1 or port_num > 65535 then
-				write_json({ ok = false, error = "invalid port" })
+			if port_num < 1025 or port_num > 65535 then
+				write_json({ ok = false, error = "invalid port (must be 1025-65535)" })
 				return
 			end
 			uci:set("openclawmgr", section, "port", port)

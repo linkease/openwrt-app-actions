@@ -29,42 +29,29 @@ local node_dir = base_dir .. "/node"
 local global_dir = base_dir .. "/global"
 local data_dir = base_dir .. "/data"
 
-local cmdline = "sh /usr/share/openclawmgr/oc-config.sh"
-
 s = m:section(SimpleSection)
 
 o = s:option(Value, "mode", translate("Mode"))
-o:value("menu", translate("Interactive menu"))
-o.default = "menu"
+o:value("configure", translate("官方配置向导 (openclaw configure)"))
+o:value("backup", translate("备份配置"))
+o:value("restore", translate("恢复配置"))
+o.default = "configure"
 o.forcewrite = true
-o.write = function(self, section, value)
-	if value == "menu" then
-		cmdline = "sh /usr/share/openclawmgr/oc-config.sh"
-	end
-end
 
 o = s:option(DummyValue, "_tip", translate("CLI Config"))
 o.rawhtml = true
 o.cfgvalue = function()
-	return translate("Starts an interactive OpenClaw configuration menu in a web terminal (LAN only).")
+	return translate("Starts a web terminal (LAN only) for common OpenClaw maintenance tasks.")
 end
 
-o = s:option(Button, "connect")
-o.render = function(self, section, scope)
-	self.inputstyle = "add"
-	self.title = " "
-	self.inputtitle = translate("Connect")
-	Button.render(self, section, scope)
-end
-
-o.write = function(self, section)
+local function start_ttyd(action)
 	local cmd_ttyd = luci.util.exec("command -v ttyd"):match("^.+ttyd") or nil
 	if not cmd_ttyd or cmd_ttyd:match("^%s*$") then
 		return
 	end
 
 	local pid = luci.util.trim(luci.util.exec("netstat -lnpt | grep :7682 | grep ttyd | tr -s ' ' | cut -d ' ' -f7 | cut -d'/' -f1"))
-	if pid and pid ~= "" then
+	if pid and pid:match("^%d+$") then
 		luci.util.exec("kill -9 " .. pid)
 	end
 
@@ -82,6 +69,7 @@ o.write = function(self, section)
 		"PATH=" .. luci.util.shellquote(env_path),
 	}, " ")
 
+	local cmdline = "sh /usr/share/openclawmgr/openclawmgr-cli.sh " .. luci.util.shellquote(action)
 	local start_cmd = string.format(
 		"%s %s -d 2 --once -p 7682 sh -lc %s &",
 		env_prefix,
@@ -94,6 +82,21 @@ o.write = function(self, section)
 	s = m:section(SimpleSection)
 	o = s:option(DummyValue, "console")
 	o.template = "openclawmgr/cli"
+end
+
+o = s:option(Button, "connect")
+o.render = function(self, section, scope)
+	self.inputstyle = "add"
+	self.title = " "
+	self.inputtitle = translate("Connect")
+	Button.render(self, section, scope)
+end
+o.write = function(self, section)
+	local mode = m:formvalue("mode") or m:formvalue("cbid.OpenClawCLI.1.mode") or "configure"
+	if mode ~= "configure" and mode ~= "backup" and mode ~= "restore" then
+		mode = "configure"
+	end
+	start_ttyd(mode)
 end
 
 return m

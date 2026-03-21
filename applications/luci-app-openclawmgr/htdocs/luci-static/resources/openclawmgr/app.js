@@ -431,7 +431,7 @@
       '<div class="' + (activeTab === "basic" ? '' : 'oclm-hidden') + '">' +
       '<h2>基础配置</h2>' +
       '<div class="oclm-form-grid oclm-form-grid-ai" style="margin-top: 26px;">' +
-      fieldInput("监听端口", '<input class="oclm-control" type="number" min="1" max="65535" id="oclm-port" value="' + escapeHtml(form.port || "18789") + '" />') +
+      fieldInput("监听端口", '<input class="oclm-control" type="number" min="1025" max="65535" id="oclm-port" value="' + escapeHtml(form.port || "18789") + '" />') +
       fieldInput("监听范围", selectHtml("oclm-bind", form.bind, [
         ["lan", "所有地址"],
         ["loopback", "仅本机"],

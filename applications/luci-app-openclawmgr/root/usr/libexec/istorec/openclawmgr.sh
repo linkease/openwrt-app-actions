@@ -11,6 +11,27 @@ log_ts() { date "+%Y-%m-%d %H:%M:%S"; }
 
 uci_get() { uci -q get "${UCI_NS}.main.$1" 2>/dev/null || true; }
 
+validate_base_dir() {
+	local dir="$1"
+	dir="$(printf "%s" "$dir" | sed 's/[[:space:]]*$//')"
+	dir="${dir%/}"
+	[ -n "$dir" ] || return 1
+	case "$dir" in
+		/*) ;;
+		*) return 1 ;;
+	esac
+	[ "$dir" != "/" ] || return 1
+	case "$dir" in
+		*"/../"*|*"/.."|*"/./"*|*"/.") return 1 ;;
+	esac
+	case "$dir" in
+		/bin|/bin/*|/sbin|/sbin/*|/lib|/lib/*|/usr|/usr/*|/etc|/etc/*|/proc|/proc/*|/sys|/sys/*|/dev|/dev/*|/run|/run/*|/tmp|/tmp/*|/var|/var/*|/overlay|/overlay/*|/rom|/rom/*)
+			return 1
+			;;
+	esac
+	return 0
+}
+
 uci_get_list() {
 	local key="$1"
 	uci -q show "${UCI_NS}.main.${key}" 2>/dev/null | \
@@ -120,6 +141,7 @@ default_gateway() {
 
 ensure_dirs() {
 	mkdir -p "$BASE_DIR" "$NODE_DIR" "$GLOBAL_DIR" "$DATA_DIR/.openclaw/workspace" "$BASE_DIR/npm-cache" 2>/dev/null || true
+	printf "%s\n" "managed-by=openclawmgr" >"${BASE_DIR}/.openclawmgr.managed" 2>/dev/null || true
 	fix_data_permissions || true
 }
 
@@ -917,6 +939,7 @@ install_openclaw() {
 		fix_data_permissions || true
 		# Do not auto-enable/start on first install; let user Save & Apply after choosing base_dir and settings.
 		if [ "${ENABLED:-0}" = "1" ]; then
+			ensure_safe_port_for_start || return 1
 			/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
 			/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
 		fi
@@ -955,8 +978,15 @@ do_purge() {
 	/etc/init.d/openclawmgr stop >/dev/null 2>&1 || true
 	/etc/init.d/openclawmgr disable >/dev/null 2>&1 || true
 	uci -q set "${UCI_NS}.main.enabled=0" && uci -q commit "$UCI_NS" || true
-	rm -rf "$BASE_DIR" 2>/dev/null || true
-	write_installer_log "Base dir removed: $BASE_DIR"
+	# Safety: only remove the whole base_dir when it looks like a dedicated OpenClawMgr directory.
+	# Otherwise, only remove managed subdirectories to avoid accidental system wipe.
+	if [ -f "${BASE_DIR}/.openclawmgr.managed" ] || [ "$(basename "$BASE_DIR" 2>/dev/null || echo "")" = "OpenClawMgr" ]; then
+		rm -rf "$BASE_DIR" 2>/dev/null || true
+		write_installer_log "Base dir removed: $BASE_DIR"
+	else
+		rm -rf "$NODE_DIR" "$GLOBAL_DIR" "$DATA_DIR" "$BASE_DIR/npm-cache" "${BASE_DIR}/.openclawmgr.managed" 2>/dev/null || true
+		write_installer_log "Base dir kept (safety). Removed: node/global/data/npm-cache under $BASE_DIR"
+	fi
 	write_installer_log "== purge done =="
 }
 
@@ -965,6 +995,7 @@ do_start() {
 	write_installer_log "== start begin =="
 	ensure_dirs
 	fix_data_permissions || true
+	ensure_safe_port_for_start || exit 1
 	/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
 	uci -q set "${UCI_NS}.main.enabled=1" && uci -q commit "$UCI_NS" || true
 	ensure_gateway_config || true
@@ -986,6 +1017,7 @@ do_restart() {
 	write_installer_log "== restart begin =="
 	ensure_dirs
 	fix_data_permissions || true
+	ensure_safe_port_for_start || exit 1
 	ensure_gateway_config || true
 	/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
 	write_installer_log "== restart done =="
@@ -1001,6 +1033,7 @@ do_restart() {
 		local pid=""
 		pid="$(ubus call service list "{\"name\":\"openclawmgr\"}" 2>/dev/null | jsonfilter -e '$.openclawmgr.instances.gateway.pid' 2>/dev/null || true)"
 		if [ "${ENABLED:-0}" = "1" ]; then
+			ensure_safe_port_for_start || exit 1
 			/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
 			if [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null; then
 				/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
@@ -1165,6 +1198,9 @@ NODE_VERSION="24.14.0"
 case "$PORT" in
 	''|*[!0-9]*) PORT="18789" ;;
 esac
+if [ "$PORT" -lt 1 ] 2>/dev/null || [ "$PORT" -gt 65535 ] 2>/dev/null; then
+	PORT="18789"
+fi
 case "$BIND" in
 	loopback|lan|auto|tailnet|custom) ;;
 	*) BIND="lan" ;;
@@ -1195,6 +1231,22 @@ require_base_dir() {
 		write_installer_log "base_dir is not configured; please choose a data directory in LuCI and Save & Apply, then retry."
 		exit 2
 	fi
+	if ! validate_base_dir "$BASE_DIR"; then
+		write_installer_log "Refusing to operate on unsafe base_dir: $BASE_DIR"
+		write_installer_log "Fix: choose a dedicated directory like /root/Configs/OpenClawMgr or /mnt/.../OpenClawMgr"
+		exit 2
+	fi
+}
+
+ensure_safe_port_for_start() {
+	case "$PORT" in
+		''|*[!0-9]*) return 1 ;;
+	esac
+	if [ "$PORT" -le 1024 ] 2>/dev/null; then
+		write_installer_log "Refusing to start with unsafe port $PORT (must be >1024)."
+		return 1
+	fi
+	return 0
 }
 
 NODE_DIR="${BASE_DIR}/node"

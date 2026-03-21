@@ -1,4 +1,5 @@
 <div class="cbi-map">
+	<div id="oclm-cli-tip" style="margin: 0 0 10px 0;"></div>
 	<iframe id="terminal" style="width: 100%; min-height: 600px; border: none; border-radius: 3px;"></iframe>
 </div>
 <script type="text/javascript">
@@ -6,6 +7,22 @@
 	for (let i = 0; i < el.length; i++) {
 		el[i].style.display = "none";
 	}
-	document.getElementById("terminal").src = "http://" + window.location.hostname + ":7682";
-</script>
 
+	function ttydHost() {
+		const h = window.location.hostname || "127.0.0.1";
+		return (h.indexOf(":") >= 0 && h[0] !== "[") ? ("[" + h + "]") : h;
+	}
+
+	const url = "http://" + ttydHost() + ":7682";
+	const proto = (window.location.protocol || "http:").toLowerCase();
+	const tip = document.getElementById("oclm-cli-tip");
+	const iframe = document.getElementById("terminal");
+
+	if (proto === "https:") {
+		tip.innerHTML = '当前 LuCI 使用 HTTPS，浏览器通常会拦截 iframe 加载 HTTP 终端（混合内容）。请点击打开：<a target="_blank" rel="noopener noreferrer" href="' + url + '">' + url + '</a>';
+		iframe.style.display = "none";
+	} else {
+		tip.innerHTML = '终端地址：<a target="_blank" rel="noopener noreferrer" href="' + url + '">' + url + '</a>';
+		iframe.src = url;
+	}
+</script>
