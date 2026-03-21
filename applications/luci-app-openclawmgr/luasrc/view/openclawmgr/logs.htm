@@ -1,0 +1,228 @@
+<%+header%>
+
+<%
+local logs_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "logs_api")
+%>
+
+<style type="text/css">
+.oclm-logbar { display:flex; gap:10px; align-items:center; flex-wrap:wrap; margin: 8px 0 10px 0; }
+.oclm-logbar label { color:#555; font-size:12px; }
+.oclm-logbar input[type="text"] { padding: 6px 10px; border: 1px solid #d0d7de; border-radius: 6px; background:#fff; min-width: 220px; }
+.oclm-logbar select { padding: 6px 10px; border: 1px solid #d0d7de; border-radius: 6px; background:#fff; }
+.oclm-logbar .chk { display:flex; align-items:center; gap:6px; font-size:12px; color:#555; }
+.oclm-logbar button { cursor:pointer; }
+.oclm-logbar .meta { margin-left:auto; font-size:12px; color:#666; }
+.oclm-logwrap { border:1px solid #d0d7de; border-radius:8px; background:#0b1020; color:#dbe2ff; padding:10px; }
+.oclm-logpre { white-space: pre-wrap; word-break: break-word; font-family: monospace; font-size: 12px; line-height: 1.5; margin:0; max-height: 70vh; overflow:auto; }
+.oclm-hint { color:#666; font-size:12px; line-height:1.6; margin-top:8px; }
+</style>
+
+<h2><%:日志%></h2>
+
+<div class="oclm-logbar">
+	<label for="oclm-log-kind"><%:来源%></label>
+	<select id="oclm-log-kind">
+		<option value="openclaw"><%:OpenClaw%></option>
+		<option value="openclawmgr"><%:OpenClawMgr%></option>
+		<option value="tasks"><%:任务日志%></option>
+		<option value="all"><%:全部%></option>
+	</select>
+	<label for="oclm-log-limit"><%:行数%></label>
+	<select id="oclm-log-limit">
+		<option value="200">200</option>
+		<option value="500">500</option>
+		<option value="1000">1000</option>
+		<option value="2000">2000</option>
+	</select>
+	<label for="oclm-log-range"><%:时间范围%></label>
+	<select id="oclm-log-range">
+		<option value="all"><%:全部%></option>
+		<option value="300"><%:最近 5 分钟%></option>
+		<option value="900"><%:最近 15 分钟%></option>
+		<option value="3600"><%:最近 1 小时%></option>
+		<option value="21600"><%:最近 6 小时%></option>
+		<option value="86400"><%:最近 24 小时%></option>
+	</select>
+	<label for="oclm-log-keyword"><%:关键字%></label>
+	<input id="oclm-log-keyword" type="text" placeholder="<%:输入关键字过滤...%>">
+	<span class="chk"><input id="oclm-log-autoscroll" type="checkbox" checked> <%:自动滚动%></span>
+	<button type="button" class="cbi-button cbi-button-action" id="oclm-log-apply"><%:确定%></button>
+	<span id="oclm-meta" class="meta">-</span>
+</div>
+
+<div class="oclm-logwrap">
+	<pre class="oclm-logpre" id="oclm-logpre">-</pre>
+</div>
+
+<div class="oclm-hint">
+	<div><%:OpenClaw / OpenClawMgr 日志来自系统 logd，可在 SSH 运行%> <code>logread</code> <%:查看。%></div>
+	<div><%:任务日志为操作安装/升级/重启等时 taskd 输出，路径通常为%> <code>/var/log/tasks/openclawmgr.log</code>。</div>
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+(function() {
+	var url = '<%=logs_url%>';
+	var pre = document.getElementById('oclm-logpre');
+	var kindSel = document.getElementById('oclm-log-kind');
+	var limitSel = document.getElementById('oclm-log-limit');
+	var rangeSel = document.getElementById('oclm-log-range');
+	var kwInput = document.getElementById('oclm-log-keyword');
+	var autoScroll = document.getElementById('oclm-log-autoscroll');
+	var btn = document.getElementById('oclm-log-apply');
+	var meta = document.getElementById('oclm-meta');
+
+	var rawLog = '';
+	var serverNowSec = null;
+	var pollTimer = null;
+	var reqSeq = 0;
+	var filtersActive = false;
+	var activeKeyword = '';
+	var activeRange = 'all';
+
+	function monthToNum(mon) {
+		var m = {Jan:0,Feb:1,Mar:2,Apr:3,May:4,Jun:5,Jul:6,Aug:7,Sep:8,Oct:9,Nov:10,Dec:11};
+		return (m[mon] !== undefined) ? m[mon] : null;
+	}
+
+	function parseLogTimeSec(line) {
+		// Common logread formats:
+		//  - "Mar 21 12:34:56 ..." (ubox)
+		//  - "Sat Mar 21 12:34:56 2026 ..." / "Sat Mar 21 12:34:56 ..." (busybox variants)
+		var now = serverNowSec ? new Date(serverNowSec * 1000) : new Date();
+		var year = now.getFullYear();
+		var m = line.match(/^([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\b/);
+		if (!m) {
+			m = line.match(/^[A-Z][a-z]{2}\s+([A-Z][a-z]{2})\s+(\d{1,2})\s+(\d{2}):(\d{2}):(\d{2})\b/);
+			if (m) m.splice(1, 0, m[1]); // keep shape
+		}
+		if (!m) return null;
+		var monStr = m[1];
+		var mon = monthToNum(monStr);
+		if (mon === null) return null;
+		var day = parseInt(m[2], 10);
+		var hh = parseInt(m[3], 10);
+		var mm = parseInt(m[4], 10);
+		var ss = parseInt(m[5], 10);
+		var dt = new Date(year, mon, day, hh, mm, ss);
+		// If parsed time is > 36h in the future, assume it belongs to last year (year rollover).
+		var delta = dt.getTime() - now.getTime();
+		if (delta > 36 * 3600 * 1000) dt = new Date(year - 1, mon, day, hh, mm, ss);
+		return Math.floor(dt.getTime() / 1000);
+	}
+
+	function applyFilters(raw) {
+		if (!filtersActive) {
+			var total0 = (raw || '').split(/\r?\n/).filter(Boolean).length;
+			meta.textContent = total0 + ' lines';
+			return raw || '';
+		}
+
+		var kw = (activeKeyword || '').trim();
+		var range = activeRange || 'all';
+		var since = null;
+		if (range !== 'all') {
+			var sec = parseInt(range, 10);
+			if (!isNaN(sec) && sec > 0) {
+				var base = serverNowSec || Math.floor(Date.now() / 1000);
+				since = base - sec;
+			}
+		}
+
+		var lines = (raw || '').split(/\r?\n/);
+		var out = [];
+		var matched = 0;
+		for (var i = 0; i < lines.length; i++) {
+			var line = lines[i];
+			if (!line) continue;
+
+			if (since !== null) {
+				var ts = parseLogTimeSec(line);
+				if (ts !== null && ts < since) continue;
+			}
+
+			if (kw) {
+				if (line.toLowerCase().indexOf(kw.toLowerCase()) === -1) continue;
+			}
+
+			out.push(line);
+			matched++;
+		}
+
+		var total = (raw || '').split(/\r?\n/).filter(Boolean).length;
+		meta.textContent = matched + '/' + total + ' lines';
+		return out.join('\n');
+	}
+
+	function render() {
+		var text = applyFilters(rawLog);
+		pre.textContent = text || '';
+		if (autoScroll.checked) {
+			pre.scrollTop = pre.scrollHeight;
+		}
+	}
+
+	function fetchOnce() {
+		var kind = kindSel.value || 'openclaw';
+		var limit = limitSel.value || '200';
+		var cur = ++reqSeq;
+		(new XHR()).get(url, { kind: kind, limit: limit }, function(x) {
+			if (cur !== reqSeq) return;
+			try {
+				var d = JSON.parse(x.responseText || '{}');
+				rawLog = d.log || '';
+				serverNowSec = d.server_time || null;
+				render();
+			} catch(e) {
+				rawLog = x.responseText || '';
+				serverNowSec = null;
+				render();
+			}
+		});
+	}
+
+	btn.addEventListener('click', function() {
+		filtersActive = true;
+		activeKeyword = (kwInput.value || '').trim();
+		activeRange = rangeSel.value || 'all';
+		render();
+		fetchOnce();
+	});
+	kindSel.addEventListener('change', fetchOnce);
+	limitSel.addEventListener('change', fetchOnce);
+	rangeSel.addEventListener('change', function() {
+		if (filtersActive) {
+			activeRange = rangeSel.value || 'all';
+			render();
+		}
+	});
+	kwInput.addEventListener('keydown', function(ev) {
+		if (ev.key === 'Enter') {
+			ev.preventDefault();
+			btn.click();
+		}
+	});
+	kwInput.addEventListener('compositionend', function() {
+		// No-op: filter applies on "确定"
+	});
+	autoScroll.addEventListener('change', function() { render(); });
+
+	function startPoll() {
+		if (pollTimer) window.clearInterval(pollTimer);
+		pollTimer = window.setInterval(fetchOnce, 2000);
+	}
+
+	function stopPoll() {
+		if (pollTimer) window.clearInterval(pollTimer);
+		pollTimer = null;
+	}
+
+	window.addEventListener('beforeunload', stopPoll);
+
+	fetchOnce();
+	startPoll();
+})();
+//]]>
+</script>
+
+<%+footer%>

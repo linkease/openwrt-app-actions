@@ -10,11 +10,16 @@ function index()
 	local page = entry({"admin", "services", "openclawmgr", "config"}, call("action_app"), _("Config"), 10)
 	page.leaf = true
 
+	entry({"admin", "services", "openclawmgr", "cli"}, form("openclawmgr/cli"), _("命令行"), 20).leaf = true
+	entry({"admin", "services", "openclawmgr", "logs"}, template("openclawmgr/logs"), _("日志"), 30).leaf = true
+
 	entry({"admin", "services", "openclawmgr", "status"}, call("action_status")).leaf = true
 	entry({"admin", "services", "openclawmgr", "ready"}, call("action_ready")).leaf = true
 	entry({"admin", "services", "openclawmgr", "op"}, call("action_op")).leaf = true
 	entry({"admin", "services", "openclawmgr", "config_data"}, call("action_config_data")).leaf = true
 	entry({"admin", "services", "openclawmgr", "apply_config"}, call("action_apply_config")).leaf = true
+
+	entry({"admin", "services", "openclawmgr", "logs_api"}, call("action_logs")).leaf = true
 
 	entry({"admin", "services", "openclawmgr", "diag_info"}, call("action_diag_info")).leaf = true
 	entry({"admin", "services", "openclawmgr", "diag_run"}, call("action_diag_run")).leaf = true
@@ -136,6 +141,22 @@ local function get_task_state(task_id)
 	}
 end
 
+local function safe_int(v, def, minv, maxv)
+	v = tostring(v or "")
+	local n = tonumber(v)
+	if not n then
+		return def
+	end
+	n = math.floor(n)
+	if minv and n < minv then
+		return minv
+	end
+	if maxv and n > maxv then
+		return maxv
+	end
+	return n
+end
+
 local function require_csrf()
 	local http = require "luci.http"
 	local disp = require "luci.dispatcher"
@@ -177,6 +198,36 @@ local function get_host()
 		host = http.getenv("SERVER_ADDR") or "localhost"
 	end
 	return host
+end
+
+function action_logs()
+	local http = require "luci.http"
+	local sys = require "luci.sys"
+	local fs = require "nixio.fs"
+	local util = require "luci.util"
+
+	local limit = safe_int(http.formvalue("limit"), 200, 50, 2000)
+	local kind = (http.formvalue("kind") or "openclaw"):lower()
+
+	local cmd = ""
+	if kind == "tasks" then
+		local f = "/var/log/tasks/openclawmgr.log"
+		if fs.access(f) then
+			cmd = "tail -n " .. limit .. " " .. util.shellquote(f) .. " 2>/dev/null"
+		else
+			cmd = "echo '(task log not found: " .. f .. ")'"
+		end
+	elseif kind == "openclawmgr" then
+		cmd = "logread 2>/dev/null | grep -i openclawmgr | tail -n " .. limit
+	elseif kind == "all" then
+		cmd = "logread 2>/dev/null | tail -n " .. limit
+	else
+		-- default: openclaw gateway logs
+		cmd = "logread 2>/dev/null | grep -i openclaw | tail -n " .. limit
+	end
+
+	local log = sys.exec(cmd) or ""
+	write_json({ ok = true, kind = kind, limit = limit, server_time = os.time(), log = log })
 end
 
 local function configured_base_path(base_dir)

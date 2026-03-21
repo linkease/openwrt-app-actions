@@ -1,12 +1,12 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_VERSION:=0.1.2
+PKG_VERSION:=0.1.3
 PKG_RELEASE:=
 
 LUCI_TITLE:=LuCI support for OpenClaw Launcher
 LUCI_PKGARCH:=all
-LUCI_DEPENDS:=+luci-base +luci-compat +luci-lib-taskd +curl +ca-bundle +tar +xz-utils +jsonfilter +git +git-http
+LUCI_DEPENDS:=+luci-base +luci-compat +luci-lib-taskd +curl +ca-bundle +tar +xz-utils +jsonfilter +git +git-http +ttyd
 
 define Package/luci-app-openclawmgr/conffiles
 /etc/config/openclawmgr
