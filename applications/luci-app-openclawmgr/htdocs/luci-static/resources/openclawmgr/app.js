@@ -130,12 +130,14 @@
     if (status.installing) return "安装中";
     if (!status || !status.installed) return "未安装";
     if (status.running) return "运行中";
+    if (status.reachable) return "运行中（未托管）";
     return "已停止";
   }
 
   function statusDotClass(status) {
     if (status && status.installing) return "";
     if (status && status.running) return "is-success";
+    if (status && status.reachable) return "";
     return "is-danger";
   }
 
@@ -382,11 +384,8 @@
     var savingAi = state.savingSection === "ai";
     var savingAccess = state.savingSection === "access";
 
-    var serviceButtons = showServiceActions ? (
-      (!status.running ? '<button class="oclm-button" type="button" data-op="start">启动服务</button>' : '') +
-      (status.running ? '<button class="oclm-button" type="button" data-op="stop">停止服务</button>' : '') +
-      '<button class="oclm-button" type="button" data-op="restart">重启服务</button>'
-    ) : '';
+    var canStartService = !status.running && !status.reachable;
+    var canStopService = !!status.running;
 
     root.innerHTML =
       '<style>' + styleText + '</style>' +
@@ -415,7 +414,7 @@
       '<button id="oclm-install-btn" class="oclm-button oclm-button-primary" type="button" data-install-action="1"' + (status.installing ? ' disabled' : '') + '>' + installLabel + '</button>' +
       '<label class="oclm-check"><input type="checkbox" id="oclm-install-accelerated"' + (installAcceleratedChecked ? ' checked' : '') + ' />Kspeeder 加速安装</label>' +
       '</div>' +
-      '<button id="oclm-open-console" class="oclm-button oclm-button-primary' + (status.running ? '' : ' oclm-hidden') + '" type="button" data-open-console="1"' + (state.consoleReady ? '' : ' disabled') + '>' + openclawIcon("oclm-button-icon") + (state.consoleReady ? '打开控制台' : '控制台准备中…') + '</button>' +
+      '<button id="oclm-open-console" class="oclm-button oclm-button-primary' + ((status.running || status.reachable) ? '' : ' oclm-hidden') + '" type="button" data-open-console="1"' + (state.consoleReady ? '' : ' disabled') + '>' + openclawIcon("oclm-button-icon") + (state.consoleReady ? '打开控制台' : '控制台准备中…') + '</button>' +
       '<button id="oclm-cancel-install" class="oclm-button oclm-button-danger' + (status.installing ? '' : ' oclm-hidden') + '" type="button" data-op="cancel_install">停止安装</button>' +
       '</div>' +
       '<div id="oclm-status-note" class="oclm-status-note' + (status.installing ? '' : ' oclm-hidden') + '">安装任务正在后台运行，点击“安装中”可继续查看日志。</div>' +
@@ -438,7 +437,15 @@
         ["auto", "自动"]
       ])) +
       fieldInput("数据目录", '<input class="oclm-control" type="text" id="oclm-base-dir" list="oclm-base-dir-options" value="' + escapeAttr(form.base_dir || "") + '" /><datalist id="oclm-base-dir-options">' + baseDirOptions + '</datalist>') +
-      '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' + serviceButtons + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
+      '<div class="oclm-section-submit">' +
+      '<button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' +
+      '<span id="oclm-service-actions" class="oclm-inline-buttons' + (showServiceActions ? '' : ' oclm-hidden') + '">' +
+      '<button id="oclm-btn-start" class="oclm-button' + (canStartService ? '' : ' oclm-hidden') + '" type="button" data-op="start">启动服务</button>' +
+      '<button id="oclm-btn-stop" class="oclm-button' + (canStopService ? '' : ' oclm-hidden') + '" type="button" data-op="stop">停止服务</button>' +
+      '<button id="oclm-btn-restart" class="oclm-button" type="button" data-op="restart">重启服务</button>' +
+      '</span>' +
+      (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') +
+      '</div>' +
       '</div></div>' +
 
       '<div class="' + (activeTab === "ai" ? '' : 'oclm-hidden') + '">' +
@@ -485,6 +492,7 @@
 
   function updateStatusDom(status) {
     status = status || {};
+    var gatewayActive = !!(status.running || status.reachable);
 
     function byId(id) {
       if (root.getElementById) return root.getElementById(id);
@@ -565,14 +573,39 @@
       else cancelInstallBtn.classList.add("oclm-hidden");
     }
     if (openConsoleBtn) {
-      if (status.running) openConsoleBtn.classList.remove("oclm-hidden");
+      if (gatewayActive) openConsoleBtn.classList.remove("oclm-hidden");
       else openConsoleBtn.classList.add("oclm-hidden");
-      openConsoleBtn.disabled = !(status.running && state.consoleReady);
+      openConsoleBtn.disabled = !state.consoleReady;
       openConsoleBtn.innerHTML = openclawIcon("oclm-button-icon") + (state.consoleReady ? "打开控制台" : "控制台准备中…");
     }
     if (noteEl) {
       if (status.installing) noteEl.classList.remove("oclm-hidden");
       else noteEl.classList.add("oclm-hidden");
+    }
+
+    var svcWrap = byId("oclm-service-actions");
+    var btnStart = byId("oclm-btn-start");
+    var btnStop = byId("oclm-btn-stop");
+    var btnRestart = byId("oclm-btn-restart");
+    var showServiceActions = !!(status.installed && !status.installing);
+    var canStartService = !!(!status.running && !status.reachable);
+    var canStopService = !!status.running;
+
+    if (svcWrap) {
+      if (showServiceActions) svcWrap.classList.remove("oclm-hidden");
+      else svcWrap.classList.add("oclm-hidden");
+    }
+    if (btnStart) {
+      if (showServiceActions && canStartService) btnStart.classList.remove("oclm-hidden");
+      else btnStart.classList.add("oclm-hidden");
+    }
+    if (btnStop) {
+      if (showServiceActions && canStopService) btnStop.classList.remove("oclm-hidden");
+      else btnStop.classList.add("oclm-hidden");
+    }
+    if (btnRestart) {
+      if (showServiceActions) btnRestart.classList.remove("oclm-hidden");
+      else btnRestart.classList.add("oclm-hidden");
     }
   }
 
@@ -954,7 +987,7 @@
   function refreshStatus(done) {
     request(config.statusUrl).then(function(data) {
       state.status = data || {};
-      if (state.status && state.status.running) {
+      if (state.status && (state.status.running || state.status.reachable)) {
         if (!state.consoleReady) {
           pollConsoleReady(20);
         }

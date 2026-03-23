@@ -353,6 +353,46 @@ local function get_pid_uptime_human(pid)
 	return fmt_elapsed(elapsed)
 end
 
+local function probe_gateway_ready(port, base_dir, bind)
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+
+	if not port or not tostring(port):match("^%d+$") then
+		return false, "", ""
+	end
+	if not base_dir or base_dir == "" then
+		return false, "", ""
+	end
+
+	local base_path = configured_base_path(base_dir)
+	local candidates = {}
+
+	if bind == "lan" or bind == "auto" then
+		local ip = lan_ipv4()
+		if ip ~= "" then
+			candidates[#candidates + 1] = ip
+		end
+	end
+	candidates[#candidates + 1] = "127.0.0.1"
+
+	local last_code, last_url = "", ""
+	for _, host in ipairs(candidates) do
+		local url = "http://" .. host .. ":" .. port .. base_path
+		last_url = url
+		local cmd = string.format(
+			"curl -fsS -o /dev/null --connect-timeout 1 --max-time 2 -w '%%{http_code}' %s 2>/dev/null",
+			util.shellquote(url)
+		)
+		local code = sys.exec(cmd):gsub("%s+$", "")
+		last_code = code
+		local n = tonumber(code) or 0
+		if n >= 200 and n < 400 then
+			return true, code, url
+		end
+	end
+	return false, last_code, last_url
+end
+
 function action_status()
 	local sys = require "luci.sys"
 	local uci = require "luci.model.uci".cursor()
@@ -372,6 +412,11 @@ function action_status()
 		local st = sys.exec("/usr/libexec/istorec/openclawmgr.sh status 2>/dev/null"):gsub("%s+$", "")
 		running = (st == "running")
 		installed = (st == "running" or st == "stopped")
+	end
+
+	local reachable, reachable_code, reachable_url = false, "", ""
+	if installed and not running then
+		reachable, reachable_code, reachable_url = probe_gateway_ready(port, base_dir, bind)
 	end
 	local lock_running, lock_pid = installer_lock_running()
 	local installing = (task.running and (task.op == "install" or task.op == "upgrade")) or lock_running
@@ -405,6 +450,9 @@ function action_status()
 		enabled = enabled,
 		installed = installed,
 		running = running,
+		reachable = reachable,
+		reachable_http_code = reachable_code,
+		reachable_url = reachable_url,
 		task_running = task.running,
 		task_op = task.op,
 		installing = installing,
@@ -423,11 +471,10 @@ function action_status()
 end
 
 function action_ready()
-	local sys = require "luci.sys"
-	local util = require "luci.util"
 	local uci = require "luci.model.uci".cursor()
 
 	local port = uci:get("openclawmgr", "main", "port") or "18789"
+	local bind = uci:get("openclawmgr", "main", "bind") or "lan"
 	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
 
 	if not port:match("^%d+$") then port = "18789" end
@@ -437,20 +484,13 @@ function action_ready()
 		return
 	end
 
-	local base_url = "http://127.0.0.1:" .. port .. configured_base_path(base_dir)
-	local cmd = string.format(
-		"curl -fsS -o /dev/null --connect-timeout 1 --max-time 2 -w '%%{http_code}' %s 2>/dev/null",
-		util.shellquote(base_url)
-	)
-	local code = sys.exec(cmd):gsub("%s+$", "")
-	local n = tonumber(code) or 0
-	local ready = (n >= 200 and n < 400)
+	local ready, code, url = probe_gateway_ready(port, base_dir, bind)
 
 	write_json({
 		ok = true,
 		ready = ready,
 		http_code = code,
-		url = base_url,
+		url = url,
 	})
 end
 

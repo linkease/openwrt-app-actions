@@ -559,15 +559,14 @@ if selected_env_key and selected_api_key ~= "" then
 end
 cfg.env = next(env) and env or nil
 
-local models = {}
-models.mode = "merge"
-local providers = {}
-models.providers = providers
-cfg.models = models
+	local models = ensure_table(cfg, "models")
+	if type(models.mode) ~= "string" or models.mode == "" then
+		models.mode = "merge"
+	end
+	local providers = ensure_table(models, "providers")
 
-local current_provider_id = os.getenv("DEFAULT_AGENT_NAME") or "anthropic"
-local current_provider = {}
-providers[current_provider_id] = current_provider
+	local current_provider_id = os.getenv("DEFAULT_AGENT_NAME") or "anthropic"
+	local current_provider = ensure_table(providers, current_provider_id)
 
 if current_provider_id == "openai" then
 	current_provider.api = "openai-completions"
@@ -600,13 +599,30 @@ elseif current_provider_id == "moonshot" then
 	}
 end
 
-local override_base = os.getenv("DEFAULT_AGENT_OVERRIDE_BASE_URL") or ""
-local base_url_mode = os.getenv("DEFAULT_AGENT_BASE_URL_MODE") or "default"
-if base_url_mode == "override" and override_base ~= "" then
-	current_provider.baseUrl = override_base
-elseif base_url_mode == "default" then
-	current_provider.baseUrl = os.getenv("DEFAULT_AGENT_BASE_URL") or current_provider.baseUrl
-end
+	local override_base = os.getenv("DEFAULT_AGENT_OVERRIDE_BASE_URL") or ""
+	local base_url_mode = os.getenv("DEFAULT_AGENT_BASE_URL_MODE") or "default"
+	if base_url_mode == "override" and override_base ~= "" then
+		current_provider.baseUrl = override_base
+	elseif base_url_mode == "default" then
+		current_provider.baseUrl = os.getenv("DEFAULT_AGENT_BASE_URL") or current_provider.baseUrl
+	end
+
+	-- luci.jsonc encodes empty Lua tables as JSON arrays ([]). To avoid producing
+	-- invalid provider entries like {"deepseek/deepseek-chat":[]}, drop provider
+	-- records that are empty or look like a provider/model string.
+	do
+		local to_del = {}
+		for k, v in pairs(providers) do
+			if type(k) == "string" and k:find("/", 1, true) then
+				table.insert(to_del, k)
+			elseif type(v) == "table" and next(v) == nil then
+				table.insert(to_del, k)
+			end
+		end
+		for _, k in ipairs(to_del) do
+			providers[k] = nil
+		end
+	end
 
 local agents = ensure_table(cfg, "agents")
 local defaults = ensure_table(agents, "defaults")
