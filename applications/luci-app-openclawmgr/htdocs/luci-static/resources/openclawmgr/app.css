@@ -282,6 +282,19 @@
   filter: brightness(1.03);
 }
 
+.oclm-button-community {
+  background: linear-gradient(180deg, #8b5cf6, #7c3aed);
+  color: #fff;
+  border-color: transparent;
+  box-shadow: 0 8px 18px rgba(124, 58, 237, 0.24);
+}
+
+.oclm-button-community:hover {
+  color: #fff;
+  filter: brightness(1.05);
+  box-shadow: 0 10px 22px rgba(124, 58, 237, 0.3);
+}
+
 .oclm-button-danger {
   color: #fff;
   background: linear-gradient(180deg, #ff5d6d, #ef4444);

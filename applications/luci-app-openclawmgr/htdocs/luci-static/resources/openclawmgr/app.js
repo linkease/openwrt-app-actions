@@ -39,7 +39,16 @@
     lastTaskRunning: false,
     taskLogOpenTs: 0,
     consoleReady: false,
-    consoleCheckTimer: null
+    consoleCheckTimer: null,
+    updateCheck: {
+      checking: false,
+      checked: false,
+      hasUpdate: false,
+      upgrading: false,
+      localVersion: "",
+      remoteVersion: "",
+      error: ""
+    }
   };
   var styleText = "";
 
@@ -127,7 +136,7 @@
   }
 
   function statusText(status) {
-    if (status.installing) return "安装中";
+    if (status.installing) return status.task_op === "upgrade" ? "更新中" : "安装中";
     if (!status || !status.installed) return "未安装";
     if (status.running) return "运行中";
     if (status.reachable) return "运行中（未托管）";
@@ -162,6 +171,52 @@
       var tail = token.length > 10 ? token.slice(-4) : "";
       return prefix + head + "****" + tail;
     });
+  }
+
+  function getUpdateCheck() {
+    state.updateCheck = state.updateCheck || {
+      checking: false,
+      checked: false,
+      hasUpdate: false,
+      upgrading: false,
+      localVersion: "",
+      remoteVersion: "",
+      error: ""
+    };
+    return state.updateCheck;
+  }
+
+  function updateActionLabel(status) {
+    var updateCheck = getUpdateCheck();
+    if (updateCheck.upgrading || (status && status.installing && status.task_op === "upgrade")) return "更新中";
+    if (updateCheck.checking) return "检测中…";
+    if (updateCheck.hasUpdate) return "更新 OpenClaw";
+    return "检测更新";
+  }
+
+  function statusNoteText(status) {
+    var updateCheck = getUpdateCheck();
+    if (status && status.installing) {
+      return status.task_op === "upgrade"
+        ? "更新任务正在后台运行，可打开任务日志查看进度。"
+        : "安装任务正在后台运行，可打开任务日志查看进度。";
+    }
+    if (updateCheck.checking) {
+      return "正在检测远程版本，请稍候…";
+    }
+    if (updateCheck.upgrading) {
+      return "更新任务已提交，请稍候查看版本变化。";
+    }
+    if (updateCheck.error) {
+      return updateCheck.error;
+    }
+    if (updateCheck.checked && updateCheck.localVersion && updateCheck.remoteVersion) {
+      if (updateCheck.hasUpdate) {
+        return "发现新版本：本地 " + updateCheck.localVersion + "，远程 " + updateCheck.remoteVersion;
+      }
+      return "当前已是最新版：本地 " + updateCheck.localVersion + "，远程 " + updateCheck.remoteVersion;
+    }
+    return "";
   }
 
   function copyIcon(className) {
@@ -247,6 +302,14 @@
       '<circle cx="75" cy="35" r="6" fill="#050810"/>' +
       '<circle cx="46" cy="34" r="2.5" fill="#00e5cc"/>' +
       '<circle cx="76" cy="34" r="2.5" fill="#00e5cc"/>' +
+      '</svg>';
+  }
+
+  function communityIcon(className) {
+    return '' +
+      '<svg class="' + escapeAttr(className || "") + '" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M8 10h8M8 14h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+      '<path d="M7 19l-3 2V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3v8a3 3 0 0 1-3 3H7Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>' +
       '</svg>';
   }
 
@@ -375,14 +438,17 @@
         '</div>';
     }).join("");
 
-    var installLabel = status.installing ? "安装中" : "立即安装";
+    var updateCheck = getUpdateCheck();
+    var installLabel = status.installing ? (status.task_op === "upgrade" ? "更新中" : "安装中") : "立即安装";
     var installAcceleratedChecked = form.install_accelerated == null ? true : form.install_accelerated === true;
-    var showInstallAction = !status.installed || status.installing;
+    var showInstallAction = !status.installed;
+    var showUpdateAction = status.installed && !status.installing;
     var showServiceActions = status.installed && !status.installing;
     var activeTab = state.activeTab || "basic";
     var savingBasic = state.savingSection === "basic";
     var savingAi = state.savingSection === "ai";
     var savingAccess = state.savingSection === "access";
+    var noteText = statusNoteText(status);
 
     var canStartService = !status.running && !status.reachable;
     var canStopService = !!status.running;
@@ -415,9 +481,11 @@
       '<label class="oclm-check"><input type="checkbox" id="oclm-install-accelerated"' + (installAcceleratedChecked ? ' checked' : '') + ' />Kspeeder 加速安装</label>' +
       '</div>' +
       '<button id="oclm-open-console" class="oclm-button oclm-button-primary' + ((status.running || status.reachable) ? '' : ' oclm-hidden') + '" type="button" data-open-console="1"' + (state.consoleReady ? '' : ' disabled') + '>' + openclawIcon("oclm-button-icon") + (state.consoleReady ? '打开控制台' : '控制台准备中…') + '</button>' +
+      '<button id="oclm-update-btn" class="oclm-button oclm-button-primary' + (showUpdateAction ? '' : ' oclm-hidden') + '" type="button" data-update-action="1"' + ((updateCheck.checking || updateCheck.upgrading) ? ' disabled' : '') + '>' + updateActionLabel(status) + '</button>' +
+      '<a id="oclm-open-community" class="oclm-button oclm-button-community" href="https://www.koolcenter.com/t/topic/19042" target="_blank" rel="noreferrer noopener">' + communityIcon("oclm-button-icon") + '玩家交流</a>' +
       '<button id="oclm-cancel-install" class="oclm-button oclm-button-danger' + (status.installing ? '' : ' oclm-hidden') + '" type="button" data-op="cancel_install">停止安装</button>' +
       '</div>' +
-      '<div id="oclm-status-note" class="oclm-status-note' + (status.installing ? '' : ' oclm-hidden') + '">安装任务正在后台运行，点击“安装中”可继续查看日志。</div>' +
+      '<div id="oclm-status-note" class="oclm-status-note' + (noteText ? '' : ' oclm-hidden') + '">' + escapeHtml(noteText) + '</div>' +
       '</section>' +
 
       '<section class="oclm-card">' +
@@ -555,18 +623,27 @@
 
     var installInline = byId("oclm-install-inline");
     var installBtn = byId("oclm-install-btn");
+    var updateBtn = byId("oclm-update-btn");
     var cancelInstallBtn = byId("oclm-cancel-install");
     var openConsoleBtn = byId("oclm-open-console");
     var noteEl = byId("oclm-status-note");
+    var updateCheck = getUpdateCheck();
 
-    var showInstallAction = !status.installed || status.installing;
+    var showInstallAction = !status.installed;
+    var showUpdateAction = !!(status.installed && !status.installing);
     if (installInline) {
       if (showInstallAction) installInline.classList.remove("oclm-hidden");
       else installInline.classList.add("oclm-hidden");
     }
     if (installBtn) {
-      installBtn.textContent = status.installing ? "安装中" : "立即安装";
+      installBtn.textContent = status.installing ? (status.task_op === "upgrade" ? "更新中" : "安装中") : "立即安装";
       installBtn.disabled = !!status.installing;
+    }
+    if (updateBtn) {
+      updateBtn.textContent = updateActionLabel(status);
+      updateBtn.disabled = !!(updateCheck.checking || updateCheck.upgrading);
+      if (showUpdateAction) updateBtn.classList.remove("oclm-hidden");
+      else updateBtn.classList.add("oclm-hidden");
     }
     if (cancelInstallBtn) {
       if (status.installing) cancelInstallBtn.classList.remove("oclm-hidden");
@@ -579,7 +656,9 @@
       openConsoleBtn.innerHTML = openclawIcon("oclm-button-icon") + (state.consoleReady ? "打开控制台" : "控制台准备中…");
     }
     if (noteEl) {
-      if (status.installing) noteEl.classList.remove("oclm-hidden");
+      var noteText = statusNoteText(status);
+      noteEl.textContent = noteText;
+      if (noteText) noteEl.classList.remove("oclm-hidden");
       else noteEl.classList.add("oclm-hidden");
     }
 
@@ -796,6 +875,81 @@
       };
     });
 
+    Array.prototype.forEach.call(root.querySelectorAll("[data-update-action]"), function(el) {
+      el.onclick = function() {
+        var updateCheck = getUpdateCheck();
+        if (!state.status || !state.status.installed || state.status.installing) {
+          return;
+        }
+
+        if (updateCheck.hasUpdate) {
+          updateCheck.upgrading = true;
+          updateCheck.error = "";
+          state.status.installing = true;
+          state.status.task_running = true;
+          state.status.task_op = "upgrade";
+          render();
+          postForm(config.opUrl, { op: "upgrade" }).then(function(rv) {
+            if (!rv || !rv.ok) {
+              updateCheck.upgrading = false;
+              state.status.installing = false;
+              state.status.task_running = false;
+              state.status.task_op = "";
+              render();
+              if (rv && rv.busy && rv.running_task_id) {
+                showTaskLog(rv.running_task_id);
+                return;
+              }
+              window.alert((rv && rv.error) || "启动更新失败");
+              return;
+            }
+            state.lastTaskRunning = true;
+            showTaskLog((rv && (rv.running_task_id || rv.task_id)) || "openclawmgr");
+            scheduleStatusRefresh(10, 1000);
+          }).catch(function() {
+            updateCheck.upgrading = false;
+            state.status.installing = false;
+            state.status.task_running = false;
+            state.status.task_op = "";
+            render();
+            window.alert("启动更新失败");
+          });
+          return;
+        }
+
+        updateCheck.checking = true;
+        updateCheck.error = "";
+        render();
+        postForm(config.checkUpdateUrl, {}).then(function(rv) {
+          updateCheck.checking = false;
+          if (!rv || !rv.ok) {
+            updateCheck.checked = false;
+            updateCheck.hasUpdate = false;
+            updateCheck.error = (rv && rv.error) || "检测更新失败";
+            updateCheck.localVersion = String((rv && rv.local_version) || (state.status && state.status.openclaw_version) || "");
+            updateCheck.remoteVersion = String((rv && rv.remote_version) || "");
+            render();
+            window.alert(updateCheck.error);
+            return;
+          }
+          updateCheck.checked = true;
+          updateCheck.hasUpdate = !!rv.has_update;
+          updateCheck.upgrading = false;
+          updateCheck.error = "";
+          updateCheck.localVersion = String(rv.local_version || (state.status && state.status.openclaw_version) || "");
+          updateCheck.remoteVersion = String(rv.remote_version || "");
+          render();
+        }).catch(function() {
+          updateCheck.checking = false;
+          updateCheck.checked = false;
+          updateCheck.hasUpdate = false;
+          updateCheck.error = "检测更新失败";
+          render();
+          window.alert("检测更新失败");
+        });
+      };
+    });
+
     Array.prototype.forEach.call(root.querySelectorAll("[data-toggle-password]"), function(el) {
       el.onclick = function() {
         var id = el.getAttribute("data-toggle-password");
@@ -987,6 +1141,24 @@
   function refreshStatus(done) {
     request(config.statusUrl).then(function(data) {
       state.status = data || {};
+      var updateCheck = getUpdateCheck();
+      if (state.status && state.status.openclaw_version) {
+        updateCheck.localVersion = String(state.status.openclaw_version || "");
+      }
+      if (!state.status || !state.status.installed) {
+        updateCheck.upgrading = false;
+        updateCheck.hasUpdate = false;
+        updateCheck.checked = false;
+      } else if (state.status.installing && state.status.task_op === "upgrade") {
+        updateCheck.upgrading = true;
+      } else if (!state.status.installing) {
+        updateCheck.upgrading = false;
+        if (updateCheck.remoteVersion && updateCheck.localVersion && updateCheck.remoteVersion === updateCheck.localVersion) {
+          updateCheck.hasUpdate = false;
+          updateCheck.checked = true;
+          updateCheck.error = "";
+        }
+      }
       if (state.status && (state.status.running || state.status.reachable)) {
         if (!state.consoleReady) {
           pollConsoleReady(20);
