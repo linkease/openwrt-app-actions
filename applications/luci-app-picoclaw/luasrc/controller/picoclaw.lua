@@ -564,6 +564,38 @@ function action_do()
         else
             msg = "错误：请填写技能名称和内容"; ok = false
         end
+    elseif action == "install_preset_skills" then
+        -- Install built-in preset skills
+        local preset_skills_dir = "/usr/lib/lua/luci/picoclaw-skills/"
+        local target_dir = "/root/.picoclaw/workspace/skills/"
+        local installed = {}
+        local found = io.popen("ls '" .. preset_skills_dir .. "' 2>/dev/null")
+        if found then
+            for name in found:lines() do
+                name = name:match("^%s*(.-)%s*$")
+                if name and name ~= "" and name:match("^[%w_%-]+$") then
+                    local src = preset_skills_dir .. name .. "/SKILL.md"
+                    local src_f = io.open(src, "r")
+                    if src_f then
+                        local content = src_f:read("*a")
+                        src_f:close()
+                        sys.exec("mkdir -p '" .. target_dir .. name .. "'")
+                        local dst_f = io.open(target_dir .. name .. "/SKILL.md", "w")
+                        if dst_f then
+                            dst_f:write(content)
+                            dst_f:close()
+                            table.insert(installed, name)
+                        end
+                    end
+                end
+            end
+            found:close()
+        end
+        if #installed > 0 then
+            msg = "已安装预设技能: " .. table.concat(installed, ", ")
+        else
+            msg = "未找到预设技能（可能未安装 luci-app-picoclaw 的完整包）"; ok = false
+        end
     end
 
     local url = dispatcher.build_url("admin", "services", "picoclaw")

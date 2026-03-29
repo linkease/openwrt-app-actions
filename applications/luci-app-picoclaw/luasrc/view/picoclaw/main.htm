@@ -372,6 +372,11 @@ if flash_msg ~= "" then
     <div class="hw-card">
       <h4>🦞 <span data-i18n="hw_skills">已安装技能</span> (<%=#hw_tools.skills%>)
         <button type="button" class="pc-btn blue" style="margin-left:auto;padding:3px 10px;font-size:12px" onclick="toggleSkillImport()" data-i18n="hw_import_skill">+ 导入技能</button>
+        <form method="post" action="<%=action_url%>" style="display:inline;margin-left:6px">
+          <input type="hidden" name="token" value="<%=csrf_token%>">
+          <input type="hidden" name="action" value="install_preset_skills">
+          <button type="submit" class="pc-btn purple" style="padding:3px 10px;font-size:12px" onclick="return confirm(I('confirm_preset_skills'))" data-i18n="hw_install_presets">📦 预设技能</button>
+        </form>
       </h4>
       <!-- Import skill form (hidden by default) -->
       <div id="skill-import-form" style="display:none;margin-bottom:12px;padding:12px;background:#fff;border:1px solid #e0e0e0;border-radius:8px">
@@ -516,6 +521,7 @@ zh: {
   hw_led:"LED 控制", hw_on:"开", hw_off:"关", hw_no_leds:"未检测到 LED",
   hw_usb:"USB 设备", hw_no_usb:"未检测到 USB 设备",
   hw_skills:"已安装技能", hw_import_skill:"+ 导入技能", hw_no_skills:"暂无已安装技能",
+  hw_install_presets:"📦 预设技能", confirm_preset_skills:"确定安装预设技能？（系统诊断、配置备份、智能安装）",
   hw_skill_name:"技能名称", hw_skill_content:"技能内容 (SKILL.md)", hw_do_import:"确认导入", hw_cancel:"取消",
   hw_cron:"定时任务", hw_no_cron:"暂无定时任务",
   hw_gpio:"GPIO 引脚", hw_dir:"方向", hw_val:"值", hw_action:"操作", hw_no_gpio:"未检测到 GPIO",
@@ -567,6 +573,7 @@ en: {
   hw_led:"LED Control", hw_on:"ON", hw_off:"OFF", hw_no_leds:"No LEDs detected",
   hw_usb:"USB Devices", hw_no_usb:"No USB devices detected",
   hw_skills:"Installed Skills", hw_import_skill:"+ Import Skill", hw_no_skills:"No skills installed",
+  hw_install_presets:"📦 Presets", confirm_preset_skills:"Install preset skills? (Diagnostics, Backup, App Installer)",
   hw_skill_name:"Skill Name", hw_skill_content:"Skill Content (SKILL.md)", hw_do_import:"Import", hw_cancel:"Cancel",
   hw_cron:"Cron Jobs", hw_no_cron:"No scheduled jobs",
   hw_gpio:"GPIO Pins", hw_dir:"Dir", hw_val:"Val", hw_action:"Action", hw_no_gpio:"No GPIO detected",
@@ -618,6 +625,7 @@ ja: {
   hw_led:"LED制御", hw_on:"ON", hw_off:"OFF", hw_no_leds:"LEDが検出されません",
   hw_usb:"USBデバイス", hw_no_usb:"USBデバイスが検出されません",
   hw_skills:"インストール済みスキル", hw_import_skill:"+ スキルインポート", hw_no_skills:"スキルなし",
+  hw_install_presets:"📦 プリセット", confirm_preset_skills:"プリセットスキルをインストールしますか？（診断、バックアップ、アプリインストーラー）",
   hw_skill_name:"スキル名", hw_skill_content:"スキル内容 (SKILL.md)", hw_do_import:"インポート", hw_cancel:"キャンセル",
   hw_cron:"定期タスク", hw_no_cron:"定期タスクなし",
   hw_gpio:"GPIOピン", hw_dir:"方向", hw_val:"値", hw_action:"操作", hw_no_gpio:"GPIOが検出されません",
@@ -669,6 +677,7 @@ pt: {
   hw_led:"Controle LED", hw_on:"ON", hw_off:"OFF", hw_no_leds:"Nenhum LED detectado",
   hw_usb:"Dispositivos USB", hw_no_usb:"Nenhum dispositivo USB detectado",
   hw_skills:"Skills Instaladas", hw_import_skill:"+ Importar Skill", hw_no_skills:"Nenhuma skill instalada",
+  hw_install_presets:"📦 Presets", confirm_preset_skills:"Instalar skills predefinidas? (Diagnóstico, Backup, Instalador)",
   hw_skill_name:"Nome da Skill", hw_skill_content:"Conteúdo (SKILL.md)", hw_do_import:"Importar", hw_cancel:"Cancelar",
   hw_cron:"Tarefas Agendadas", hw_no_cron:"Sem tarefas agendadas",
   hw_gpio:"Pinos GPIO", hw_dir:"Dir", hw_val:"Val", hw_action:"Ação", hw_no_gpio:"Nenhum GPIO detectado",
@@ -720,6 +729,7 @@ de: {
   hw_led:"LED-Steuerung", hw_on:"AN", hw_off:"AUS", hw_no_leds:"Keine LEDs erkannt",
   hw_usb:"USB-Geräte", hw_no_usb:"Keine USB-Geräte erkannt",
   hw_skills:"Installierte Skills", hw_import_skill:"+ Skill Importieren", hw_no_skills:"Keine Skills installiert",
+  hw_install_presets:"📦 Presets", confirm_preset_skills:"Preset-Skills installieren? (Diagnose, Backup, Installer)",
   hw_skill_name:"Skill-Name", hw_skill_content:"Skill-Inhalt (SKILL.md)", hw_do_import:"Importieren", hw_cancel:"Abbrechen",
   hw_cron:"Geplante Aufgaben", hw_no_cron:"Keine geplanten Aufgaben",
   hw_gpio:"GPIO-Pins", hw_dir:"Richtung", hw_val:"Wert", hw_action:"Aktion", hw_no_gpio:"Kein GPIO erkannt",
