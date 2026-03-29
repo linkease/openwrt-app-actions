@@ -162,6 +162,18 @@ function html_escape(s)
     return s
 end
 
+-- Escape string for embedding in a JS single-quoted string
+-- Only escapes: backslash, single quote, newlines, carriage returns
+function js_escape(s)
+    if not s then return "{}" end
+    s = tostring(s)
+    s = s:gsub("\\", "\\\\")
+    s = s:gsub("'", "\\'")
+    s = s:gsub("\n", "\\n")
+    s = s:gsub("\r", "\\r")
+    return s
+end
+
 function do_update()
     local arch = "linux_arm64"
     local m = sys.exec("uname -m")
@@ -648,7 +660,7 @@ function action_main()
         has_update = has_update,
         check_err = check_err,
         config_content = html_escape(config_content or ""),
-        config_json_safe = html_escape(config_content or "{}"),
+        config_json_safe = js_escape(config_content or "{}"),
         weixin_status = weixin_status,
         weixin_configured = weixin_configured,
         channels_html = "",
