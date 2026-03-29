@@ -11,4 +11,13 @@ LUCI_DEPENDS:=+luci-lib-jsonc +curl
 
 include $(TOPDIR)/feeds/luci/luci.mk
 
+define Package/luci-app-picoclaw/install
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/picoclaw-skills/openwrt-diagnostics
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/picoclaw-skills/openwrt-backup
+	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/picoclaw-skills/openwrt-app-installer
+	$(INSTALL_DATA) ./skills/openwrt-diagnostics/SKILL.md $(1)/usr/lib/lua/luci/picoclaw-skills/openwrt-diagnostics/
+	$(INSTALL_DATA) ./skills/openwrt-backup/SKILL.md $(1)/usr/lib/lua/luci/picoclaw-skills/openwrt-backup/
+	$(INSTALL_DATA) ./skills/openwrt-app-installer/SKILL.md $(1)/usr/lib/lua/luci/picoclaw-skills/openwrt-app-installer/
+endef
+
 # call BuildPackage - OpenWrt buildroot signature
