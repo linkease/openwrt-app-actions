@@ -465,7 +465,7 @@ if flash_msg ~= "" then
 </div>
 
 <script>
-var _origConfig = <%=config_raw or "{}"%>;
+var _origConfig = JSON.parse('<%=config_json_safe%>' || '{}');
 var _curLang = localStorage.getItem('pc_lang') || 'zh';
 
 // ========== i18n ==========

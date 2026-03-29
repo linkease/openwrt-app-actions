@@ -1,7 +1,16 @@
 #!/bin/sh /etc/rc.common
+### BEGIN INIT INFO
+# Provides:          picoclaw
+# Required-Start:    $network
+# Required-Stop:     $network
+# Default-Start:     99
+# Default-Stop:      10
+# Short-Description: PicoClaw AI Gateway
+# Description:       Start PicoClaw as a procd managed service
+### END INIT INFO
 
 START=99
-STOP=90
+STOP=10
 USE_PROCD=1
 
 start_service() {

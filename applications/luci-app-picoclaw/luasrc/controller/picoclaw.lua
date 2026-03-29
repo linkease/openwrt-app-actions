@@ -102,6 +102,11 @@ function check_latest_version()
             return v, u or "", ""
         end
     end
+    -- Detect current architecture for correct download URL
+    local arch = "linux_arm64"
+    local m = sys.exec("uname -m")
+    if m:find("x86") then arch = "linux_amd64"
+    elseif m:find("armv7") then arch = "linux_armv7" end
     local f = io.popen("curl -sL --max-time 5 'https://api.github.com/repos/sipeed/picoclaw/releases/latest' 2>/dev/null")
     if f then
         local body = f:read("*a")
@@ -113,7 +118,7 @@ function check_latest_version()
             end
             if data.assets then
                 for _, asset in ipairs(data.assets) do
-                    if asset.browser_download_url and asset.browser_download_url:find("linux_arm64") then
+                    if asset.browser_download_url and asset.browser_download_url:find(arch) then
                         latest_url = asset.browser_download_url
                         break
                     end
@@ -643,7 +648,7 @@ function action_main()
         has_update = has_update,
         check_err = check_err,
         config_content = html_escape(config_content or ""),
-        config_raw = (config_content or ""),
+        config_json_safe = html_escape(config_content or "{}"),
         weixin_status = weixin_status,
         weixin_configured = weixin_configured,
         channels_html = "",
