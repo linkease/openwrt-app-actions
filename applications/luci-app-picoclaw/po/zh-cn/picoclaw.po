@@ -1,0 +1,15 @@
+msgid ""
+msgstr ""
+"Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "PicoClaw"
+msgstr "PicoClaw AI 网关"
+
+msgid "LuCI support for PicoClaw AI Assistant"
+msgstr "PicoClaw AI 助手 LuCI 管理界面"
+
+msgid "PicoClaw is a lightweight AI gateway for OpenWrt routers."
+msgstr "PicoClaw 是一个轻量级的 OpenWrt 路由器 AI 网关。"
+
+msgid "Manage PicoClaw service, channels, config, hardware, skills and cron jobs."
+msgstr "管理 PicoClaw 服务、通道、配置、硬件、技能和定时任务。"

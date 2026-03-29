@@ -1,0 +1,205 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 240" width="240" height="240">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="40%" r="60%">
+      <stop offset="0%" stop-color="#151a35"/>
+      <stop offset="50%" stop-color="#0b0e22"/>
+      <stop offset="100%" stop-color="#030510"/>
+    </radialGradient>
+    <linearGradient id="claw" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#6c5ce7"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <linearGradient id="clawH" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="100%" stop-color="#7c4dff"/>
+    </linearGradient>
+    <linearGradient id="glow" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.5"/>
+      <stop offset="100%" stop-color="#a855f7" stop-opacity="0.2"/>
+    </linearGradient>
+    <linearGradient id="clawFill" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#00e5ff" stop-opacity="0.15"/>
+      <stop offset="100%" stop-color="#7c4dff" stop-opacity="0.08"/>
+    </linearGradient>
+    <linearGradient id="eyeGlow" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#00ffcc"/>
+      <stop offset="100%" stop-color="#00b8ff"/>
+    </linearGradient>
+    <linearGradient id="accentGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#00e5ff"/>
+      <stop offset="50%" stop-color="#7c4dff"/>
+      <stop offset="100%" stop-color="#a855f7"/>
+    </linearGradient>
+    <filter id="neon" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="2.5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="strongGlow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="5" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <filter id="textGlow" x="-30%" y="-50%" width="160%" height="200%">
+      <feGaussianBlur stdDeviation="3" result="blur"/>
+      <feMerge>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="blur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+    <clipPath id="roundClip">
+      <rect x="8" y="8" width="224" height="224" rx="48"/>
+    </clipPath>
+  </defs>
+
+  <!-- Background -->
+  <rect x="8" y="8" width="224" height="224" rx="48" fill="url(#bg)"/>
+
+  <!-- Subtle border ring -->
+  <rect x="8" y="8" width="224" height="224" rx="48" fill="none" stroke="url(#claw)" stroke-width="1" opacity="0.2"/>
+
+  <!-- Circuit board pattern -->
+  <g clip-path="url(#roundClip)" opacity="0.1" stroke="#00e5ff" stroke-width="0.8" fill="none">
+    <line x1="8" y1="55" x2="70" y2="55"/>
+    <line x1="90" y1="55" x2="150" y2="55"/>
+    <line x1="170" y1="55" x2="232" y2="55"/>
+    <line x1="8" y1="105" x2="50" y2="105"/>
+    <line x1="190" y1="105" x2="232" y2="105"/>
+    <line x1="8" y1="155" x2="70" y2="155"/>
+    <line x1="90" y1="155" x2="150" y2="155"/>
+    <line x1="170" y1="155" x2="232" y2="155"/>
+    <line x1="8" y1="190" x2="45" y2="190"/>
+    <line x1="195" y1="190" x2="232" y2="190"/>
+    <line x1="70" y1="8" x2="70" y2="55"/>
+    <line x1="70" y1="85" x2="70" y2="125"/>
+    <line x1="70" y1="155" x2="70" y2="232"/>
+    <line x1="170" y1="8" x2="170" y2="55"/>
+    <line x1="170" y1="85" x2="170" y2="125"/>
+    <line x1="170" y1="155" x2="170" y2="232"/>
+    <line x1="120" y1="8" x2="120" y2="35"/>
+    <line x1="120" y1="195" x2="120" y2="232"/>
+    <polyline points="70,55 90,75 90,85"/>
+    <polyline points="170,55 150,75 150,85"/>
+    <polyline points="70,155 90,135 90,125"/>
+    <polyline points="170,155 150,135 150,125"/>
+    <!-- Extra tech traces -->
+    <line x1="40" y1="80" x2="40" y2="140"/>
+    <line x1="200" y1="80" x2="200" y2="140"/>
+    <line x1="8" y1="120" x2="40" y2="120"/>
+    <line x1="200" y1="120" x2="232" y2="120"/>
+  </g>
+
+  <!-- Circuit nodes -->
+  <g clip-path="url(#roundClip)" opacity="0.18" fill="#00e5ff">
+    <circle cx="70" cy="55" r="2.5"/>
+    <circle cx="170" cy="55" r="2.5"/>
+    <circle cx="70" cy="155" r="2.5"/>
+    <circle cx="170" cy="155" r="2.5"/>
+    <circle cx="120" cy="35" r="2"/>
+    <circle cx="120" cy="195" r="2"/>
+    <circle cx="40" cy="80" r="1.8"/>
+    <circle cx="40" cy="140" r="1.8"/>
+    <circle cx="200" cy="80" r="1.8"/>
+    <circle cx="200" cy="140" r="1.8"/>
+    <circle cx="90" cy="75" r="1.5"/>
+    <circle cx="150" cy="75" r="1.5"/>
+    <circle cx="90" cy="135" r="1.5"/>
+    <circle cx="150" cy="135" r="1.5"/>
+  </g>
+
+  <!-- ===== MAIN CRAB ICON ===== -->
+  <g transform="translate(120,108)">
+
+    <!-- Outer glow ring -->
+    <ellipse cx="0" cy="2" rx="52" ry="46" fill="none" stroke="url(#glow)" stroke-width="1.5" opacity="0.3"/>
+
+    <!-- Left CLAW - bold, filled, powerful -->
+    <g filter="url(#strongGlow)">
+      <!-- Left upper arm -->
+      <path d="M-28,8 Q-32,0 -38,-8 Q-44,-16 -42,-22 Q-40,-28 -34,-26 Q-30,-24 -32,-18 Q-34,-12 -28,-6"
+            fill="url(#clawFill)" stroke="url(#claw)" stroke-width="2.8" stroke-linejoin="round"/>
+      <!-- Left lower arm -->
+      <path d="M-26,14 Q-34,8 -42,2 Q-50,-4 -50,-12 Q-50,-20 -44,-18 Q-40,-16 -42,-10 Q-42,-4 -36,0 Q-30,4 -26,10"
+            fill="url(#clawFill)" stroke="url(#claw)" stroke-width="2.8" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Right CLAW - bold, filled, powerful -->
+    <g filter="url(#strongGlow)">
+      <!-- Right upper arm -->
+      <path d="M28,8 Q32,0 38,-8 Q44,-16 42,-22 Q40,-28 34,-26 Q30,-24 32,-18 Q34,-12 28,-6"
+            fill="url(#clawFill)" stroke="url(#claw)" stroke-width="2.8" stroke-linejoin="round"/>
+      <!-- Right lower arm -->
+      <path d="M26,14 Q34,8 42,2 Q50,-4 50,-12 Q50,-20 44,-18 Q40,-16 42,-10 Q42,-4 36,0 Q30,4 26,10"
+            fill="url(#clawFill)" stroke="url(#claw)" stroke-width="2.8" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Body - thicker stroke, filled with subtle gradient -->
+    <ellipse cx="0" cy="4" rx="34" ry="28" fill="#0a0e1e" stroke="url(#claw)" stroke-width="3"/>
+    <ellipse cx="0" cy="4" rx="30" ry="24" fill="url(#clawFill)"/>
+
+    <!-- Inner circuit pattern on body -->
+    <g stroke="url(#claw)" stroke-width="0.8" opacity="0.3" fill="none">
+      <line x1="-22" y1="4" x2="-10" y2="4"/>
+      <line x1="10" y1="4" x2="22" y2="4"/>
+      <line x1="0" y1="-10" x2="0" y2="-2"/>
+      <line x1="0" y1="10" x2="0" y2="18"/>
+      <line x1="-14" y1="-6" x2="-8" y2="-6"/>
+      <line x1="8" y1="-6" x2="14" y2="-6"/>
+      <line x1="-14" y1="14" x2="-8" y2="14"/>
+      <line x1="8" y1="14" x2="14" y2="14"/>
+      <!-- Cross pattern -->
+      <line x1="-8" y1="-2" x2="-4" y2="2"/>
+      <line x1="4" y1="-2" x2="8" y2="2"/>
+    </g>
+
+    <!-- Eye sockets - angular, aggressive -->
+    <g filter="url(#neon)">
+      <!-- Left eye - hexagonal shape -->
+      <polygon points="-16,-6 -8,-12 -2,-6 -8,0" fill="#060a16" stroke="url(#claw)" stroke-width="2" stroke-linejoin="round"/>
+      <!-- Right eye - hexagonal shape -->
+      <polygon points="16,-6 8,-12 2,-6 8,0" fill="#060a16" stroke="url(#claw)" stroke-width="2" stroke-linejoin="round"/>
+    </g>
+
+    <!-- Eye glow - intense -->
+    <g filter="url(#strongGlow)">
+      <ellipse cx="-9" cy="-6" rx="4" ry="3.5" fill="url(#eyeGlow)" opacity="0.9"/>
+      <ellipse cx="9" cy="-6" rx="4" ry="3.5" fill="url(#eyeGlow)" opacity="0.9"/>
+    </g>
+    <!-- Eye inner core -->
+    <circle cx="-9" cy="-6" r="2" fill="white" opacity="0.95"/>
+    <circle cx="9" cy="-6" r="2" fill="white" opacity="0.95"/>
+    <!-- Eye highlight -->
+    <circle cx="-10.5" cy="-7.5" r="0.8" fill="white" opacity="1"/>
+    <circle cx="7.5" cy="-7.5" r="0.8" fill="white" opacity="1"/>
+
+    <!-- Antenna - thicker, with tech tip -->
+    <line x1="0" y1="-24" x2="0" y2="-42" stroke="url(#claw)" stroke-width="2.5" stroke-linecap="round" filter="url(#neon)"/>
+    <circle cx="0" cy="-46" r="5.5" fill="#ff6d00" filter="url(#strongGlow)" opacity="0.95"/>
+    <circle cx="0" cy="-46" r="3" fill="#ffab40" opacity="0.8"/>
+    <circle cx="0" cy="-46" r="1.5" fill="#ffe0b2" opacity="0.9"/>
+
+    <!-- Legs - bolder -->
+    <g stroke="url(#claw)" stroke-width="2" fill="none" stroke-linecap="round" opacity="0.5" filter="url(#neon)">
+      <path d="M-18,26 L-26,40 L-30,46"/>
+      <path d="M-10,28 L-14,44 L-16,50"/>
+      <path d="M10,28 L14,44 L16,50"/>
+      <path d="M18,26 L26,40 L30,46"/>
+    </g>
+  </g>
+
+  <!-- ===== LUCI TEXT - bold, tech-style ===== -->
+  <!-- Text glow layer -->
+  <text x="120" y="208" text-anchor="middle" font-family="'Orbitron','Rajdhani','SF Pro Display','Segoe UI',monospace" font-size="17" font-weight="900" fill="url(#accentGrad)" opacity="0.3" letter-spacing="8" filter="url(#textGlow)">LUCI</text>
+  <!-- Text main layer -->
+  <text x="120" y="208" text-anchor="middle" font-family="'Orbitron','Rajdhani','SF Pro Display','Segoe UI',monospace" font-size="17" font-weight="900" fill="url(#accentGrad)" letter-spacing="8">LUCI</text>
+  <!-- Text highlight stroke -->
+  <text x="120" y="208" text-anchor="middle" font-family="'Orbitron','Rajdhani','SF Pro Display','Segoe UI',monospace" font-size="17" font-weight="900" fill="none" stroke="#00e5ff" stroke-width="0.3" opacity="0.5" letter-spacing="8">LUCI</text>
+
+</svg>
