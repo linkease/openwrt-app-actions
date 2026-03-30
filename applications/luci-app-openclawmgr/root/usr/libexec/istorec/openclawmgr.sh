@@ -418,20 +418,106 @@ agent_key_name() {
 		anthropic) echo "ANTHROPIC_API_KEY" ;;
 		minimax-cn) echo "MINIMAX_API_KEY" ;;
 		moonshot) echo "MOONSHOT_API_KEY" ;;
+		custom-provider) echo "" ;;
 		*) echo "ANTHROPIC_API_KEY" ;;
 	esac
 }
 
+existing_custom_provider_model() {
+	local cfg="${DATA_DIR}/.openclaw/openclaw.json"
+	[ -f "$cfg" ] || return 0
+	OPENCLAW_CONFIG_PATH="$cfg" lua - <<'EOF'
+local json = require "luci.jsonc"
+
+local path = os.getenv("OPENCLAW_CONFIG_PATH")
+local f = io.open(path, "r")
+if not f then
+	return
+end
+local raw = f:read("*a")
+f:close()
+local cfg = json.parse(raw or "") or {}
+
+local primary = cfg.agents and cfg.agents.defaults and cfg.agents.defaults.model and cfg.agents.defaults.model.primary
+if type(primary) == "string" and primary:match("^custom%-provider/.+") then
+	io.write(primary)
+	return
+end
+
+local providers = cfg.models and cfg.models.providers
+local custom = providers and providers["custom-provider"]
+local models = custom and custom.models
+local first = type(models) == "table" and models[1] or nil
+local id = first and first.id
+if type(id) == "string" and id ~= "" then
+	io.write("custom-provider/" .. id)
+end
+EOF
+}
+
 agent_default_model() {
-	if [ -n "${DEFAULT_MODEL:-}" ]; then
-		echo "$DEFAULT_MODEL"
-		return 0
-	fi
 	case "${DEFAULT_AGENT:-anthropic}" in
-		openai) echo "openai/gpt-5.2" ;;
-		anthropic) echo "anthropic/claude-sonnet-4-6" ;;
-		minimax-cn) echo "minimax-cn/MiniMax-M2.5" ;;
-		moonshot) echo "moonshot/kimi-k2.5" ;;
+		openai)
+			if [ -n "${DEFAULT_MODEL:-}" ]; then
+				case "$DEFAULT_MODEL" in
+					openai/*) echo "$DEFAULT_MODEL" ;;
+					*/*) echo "openai/${DEFAULT_MODEL#*/}" ;;
+					*) echo "openai/$DEFAULT_MODEL" ;;
+				esac
+			else
+				echo "openai/gpt-5.2"
+			fi
+			;;
+		anthropic)
+			if [ -n "${DEFAULT_MODEL:-}" ]; then
+				case "$DEFAULT_MODEL" in
+					anthropic/*) echo "$DEFAULT_MODEL" ;;
+					*/*) echo "anthropic/${DEFAULT_MODEL#*/}" ;;
+					*) echo "anthropic/$DEFAULT_MODEL" ;;
+				esac
+			else
+				echo "anthropic/claude-sonnet-4-6"
+			fi
+			;;
+		minimax-cn)
+			if [ -n "${DEFAULT_MODEL:-}" ]; then
+				case "$DEFAULT_MODEL" in
+					minimax-cn/*) echo "$DEFAULT_MODEL" ;;
+					*/*) echo "minimax-cn/${DEFAULT_MODEL#*/}" ;;
+					*) echo "minimax-cn/$DEFAULT_MODEL" ;;
+				esac
+			else
+				echo "minimax-cn/MiniMax-M2.5"
+			fi
+			;;
+		moonshot)
+			if [ -n "${DEFAULT_MODEL:-}" ]; then
+				case "$DEFAULT_MODEL" in
+					moonshot/*) echo "$DEFAULT_MODEL" ;;
+					*/*) echo "moonshot/${DEFAULT_MODEL#*/}" ;;
+					*) echo "moonshot/$DEFAULT_MODEL" ;;
+				esac
+			else
+				echo "moonshot/kimi-k2.5"
+			fi
+			;;
+		custom-provider)
+			if [ -n "${DEFAULT_MODEL:-}" ]; then
+				case "$DEFAULT_MODEL" in
+					custom-provider/*) echo "$DEFAULT_MODEL" ;;
+					*/*) echo "custom-provider/${DEFAULT_MODEL#*/}" ;;
+					*) echo "custom-provider/$DEFAULT_MODEL" ;;
+				esac
+			else
+				local current_model
+				current_model="$(existing_custom_provider_model)"
+				if [ -n "$current_model" ]; then
+					echo "$current_model"
+				else
+					echo "custom-provider/custom-model"
+				fi
+			fi
+			;;
 		*) echo "anthropic/claude-sonnet-4-6" ;;
 	esac
 }
@@ -442,6 +528,7 @@ agent_default_base_url() {
 		anthropic) echo "https://api.anthropic.com" ;;
 		minimax-cn) echo "https://api.minimaxi.com/anthropic" ;;
 		moonshot) echo "https://api.moonshot.cn/v1" ;;
+		custom-provider) echo "" ;;
 		*) echo "https://api.anthropic.com" ;;
 	esac
 }
@@ -579,7 +666,7 @@ control.dangerouslyAllowHostHeaderOriginFallback = bool_env("GATEWAY_HOST_HEADER
 local env = {}
 local selected_env_key = os.getenv("DEFAULT_AGENT_KEY")
 local selected_api_key = os.getenv("DEFAULT_AGENT_API_KEY") or ""
-if selected_env_key and selected_api_key ~= "" then
+if selected_env_key and selected_env_key ~= "" and selected_api_key ~= "" then
 	env[selected_env_key] = selected_api_key
 end
 cfg.env = next(env) and env or nil
@@ -622,11 +709,39 @@ elseif current_provider_id == "moonshot" then
 	current_provider.models = {
 		{ id = "kimi-k2.5", name = "Kimi K2.5" },
 	}
+elseif current_provider_id == "custom-provider" then
+	local primary_model = os.getenv("DEFAULT_AGENT_MODEL") or "custom-provider/custom-model"
+	local custom_model_id = primary_model:match("^[^/]+/(.+)$") or primary_model
+	if custom_model_id == "" then
+		custom_model_id = "custom-model"
+	end
+	current_provider.api = "openai-completions"
+	current_provider.baseUrl = os.getenv("DEFAULT_AGENT_OVERRIDE_BASE_URL") or current_provider.baseUrl
+	current_provider.apiKey = selected_api_key
+	current_provider.authHeader = nil
+	current_provider.models = {
+		{
+			reasoning = false,
+			name = custom_model_id .. " (Custom Provider)",
+			cost = {
+				input = 0,
+				cacheRead = 0,
+				cacheWrite = 0,
+				output = 0,
+			},
+			id = custom_model_id,
+			maxTokens = 4096,
+			contextWindow = 16000,
+			input = { "text" },
+		},
+	}
 end
 
 	local override_base = os.getenv("DEFAULT_AGENT_OVERRIDE_BASE_URL") or ""
 	local base_url_mode = os.getenv("DEFAULT_AGENT_BASE_URL_MODE") or "default"
-	if base_url_mode == "override" and override_base ~= "" then
+	if current_provider_id == "custom-provider" and override_base ~= "" then
+		current_provider.baseUrl = override_base
+	elseif base_url_mode == "override" and override_base ~= "" then
 		current_provider.baseUrl = override_base
 	elseif base_url_mode == "default" then
 		current_provider.baseUrl = os.getenv("DEFAULT_AGENT_BASE_URL") or current_provider.baseUrl
@@ -665,7 +780,7 @@ f:close()
 
 local env_path = cfg_path:gsub("openclaw%.json$", "openclaw.env")
 local envf = assert(io.open(env_path, "w"))
-if selected_env_key and selected_api_key ~= "" then
+if selected_env_key and selected_env_key ~= "" and selected_api_key ~= "" then
 	local val = tostring(selected_api_key)
 	val = val:gsub("\\", "\\\\"):gsub("\n", "\\n"):gsub('"', '\\"')
 	envf:write(selected_env_key .. '="' .. val .. '"\n')
@@ -1305,7 +1420,7 @@ case "$DISABLE_DEVICE_AUTH" in
 	*) DISABLE_DEVICE_AUTH="0" ;;
 esac
 case "$DEFAULT_AGENT" in
-	openai|anthropic|minimax-cn|moonshot) ;;
+	openai|anthropic|minimax-cn|moonshot|custom-provider) ;;
 	*) DEFAULT_AGENT="anthropic" ;;
 esac
 case "$INSTALL_ACCELERATED" in

@@ -645,6 +645,34 @@ function action_config_data()
 	local uci = require "luci.model.uci".cursor()
 	local model = require "luci.model.openclawmgr"
 
+	local function read_json_file(path)
+		local f = io.open(path, "r")
+		if not f then return nil end
+		local raw = f:read("*a")
+		f:close()
+		if not raw or raw == "" then return nil end
+		return jsonc.parse(raw)
+	end
+
+	local function infer_custom_provider_model(base_dir)
+		base_dir = tostring(base_dir or "")
+		if base_dir == "" then return "" end
+		local cfg = read_json_file(base_dir .. "/data/.openclaw/openclaw.json") or {}
+		local primary = cfg.agents and cfg.agents.defaults and cfg.agents.defaults.model and cfg.agents.defaults.model.primary
+		if type(primary) == "string" and primary:match("^custom%-provider/.+") then
+			return primary
+		end
+		local providers = cfg.models and cfg.models.providers
+		local custom = providers and providers["custom-provider"]
+		local models = custom and custom.models
+		local first = type(models) == "table" and models[1] or nil
+		local id = first and first.id
+		if type(id) == "string" and id ~= "" then
+			return "custom-provider/" .. id
+		end
+		return ""
+	end
+
 	if (http.getenv("REQUEST_METHOD") or "GET") == "POST" then
 		if not require_csrf() then
 			return
@@ -660,6 +688,8 @@ function action_config_data()
 		local function has(key)
 			return body[key] ~= nil
 		end
+
+		local requested_default_agent = tostring(has("default_agent") and body.default_agent or (uci:get("openclawmgr", section, "default_agent") or "anthropic"))
 
 		if has("enabled") then
 			uci:set("openclawmgr", section, "enabled", bool_to_uci(body.enabled == true or body.enabled == "1"))
@@ -699,7 +729,7 @@ function action_config_data()
 
 		if has("default_agent") then
 			local agent = tostring(body.default_agent or "")
-			if agent ~= "openai" and agent ~= "anthropic" and agent ~= "minimax-cn" and agent ~= "moonshot" then
+			if agent ~= "openai" and agent ~= "anthropic" and agent ~= "minimax-cn" and agent ~= "moonshot" and agent ~= "custom-provider" then
 				write_json({ ok = false, error = "invalid default_agent" })
 				return
 			end
@@ -720,6 +750,10 @@ function action_config_data()
 
 		if has("provider_base_url") then
 			local value = tostring(body.provider_base_url or "")
+			if requested_default_agent == "custom-provider" and value == "" then
+				write_json({ ok = false, error = "provider_base_url required for custom-provider" })
+				return
+			end
 			if value ~= "" and not value:match("^https?://") then
 				write_json({ ok = false, error = "invalid provider_base_url" })
 				return
@@ -789,6 +823,12 @@ function action_config_data()
 		allowed_origins[#allowed_origins + 1] = item
 	end
 
+	local current_default_agent = uci:get("openclawmgr", "main", "default_agent") or "anthropic"
+	local current_default_model = uci:get("openclawmgr", "main", "default_model") or ""
+	if current_default_agent == "custom-provider" and current_default_model == "" then
+		current_default_model = infer_custom_provider_model(base_dir)
+	end
+
 	write_json({
 		ok = true,
 		config = {
@@ -800,8 +840,8 @@ function action_config_data()
 			allowed_origins = allowed_origins,
 			allow_insecure_auth = (uci:get("openclawmgr", "main", "allow_insecure_auth") or "0") == "1",
 			disable_device_auth = (uci:get("openclawmgr", "main", "disable_device_auth") or "0") == "1",
-			default_agent = uci:get("openclawmgr", "main", "default_agent") or "anthropic",
-			default_model = uci:get("openclawmgr", "main", "default_model") or "",
+			default_agent = current_default_agent,
+			default_model = current_default_model,
 			install_accelerated = (uci:get("openclawmgr", "main", "install_accelerated") or "1") == "1",
 			provider_api_key = uci:get("openclawmgr", "main", "provider_api_key") or "",
 			provider_base_url = uci:get("openclawmgr", "main", "provider_base_url") or "",

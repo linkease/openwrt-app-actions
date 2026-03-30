@@ -107,32 +107,55 @@
       openai: "openai/gpt-5.2",
       anthropic: "anthropic/claude-sonnet-4-6",
       "minimax-cn": "minimax-cn/MiniMax-M2.5",
-      moonshot: "moonshot/kimi-k2.5"
+      moonshot: "moonshot/kimi-k2.5",
+      "custom-provider": "custom-provider/custom-model"
     }[agent] || "anthropic/claude-sonnet-4-6";
+  }
+
+  function modelPrefixForAgent(agent) {
+    return {
+      openai: "openai",
+      anthropic: "anthropic",
+      "minimax-cn": "minimax-cn",
+      moonshot: "moonshot",
+      "custom-provider": "custom-provider"
+    }[agent] || "anthropic";
+  }
+
+  function normalizeModelValue(agent, value) {
+    var prefix = modelPrefixForAgent(agent);
+    value = String(value || "").replace(/^\s+|\s+$/g, "");
+    if (!value) {
+      return modelForAgent(agent);
+    }
+    if (value.indexOf(prefix + "/") === 0) {
+      return value;
+    }
+    if (/^[^/]+\/.+/.test(value)) {
+      return prefix + "/" + value.replace(/^[^/]+\//, "");
+    }
+    return prefix + "/" + value;
   }
 
   function modelMatchesAgent(agent, model) {
     model = String(model || "");
-    return {
-      openai: /^openai\//,
-      anthropic: /^anthropic\//,
-      "minimax-cn": /^minimax-cn\//,
-      moonshot: /^moonshot\//
-    }[agent] ? ({
-      openai: /^openai\//,
-      anthropic: /^anthropic\//,
-      "minimax-cn": /^minimax-cn\//,
-      moonshot: /^moonshot\//
-    }[agent]).test(model) : false;
+    return model.indexOf(modelPrefixForAgent(agent) + "/") === 0;
   }
 
   function resolveModelValue(form) {
     var agent = form && form.default_agent ? form.default_agent : "anthropic";
     var value = form && form.default_model ? String(form.default_model) : "";
     if (!value || !modelMatchesAgent(agent, value)) {
-      return modelForAgent(agent);
+      return normalizeModelValue(agent, value);
     }
     return value;
+  }
+
+  function modelPlaceholder(agent) {
+    if (agent === "custom-provider") {
+      return "例如 gpt-5.1 或 custom-provider/gpt-5.1";
+    }
+    return "请按照<provider>/<model-id>格式填写";
   }
 
   function statusText(status) {
@@ -523,11 +546,14 @@
         ["openai", "OpenAI"],
         ["anthropic", "Anthropic"],
         ["minimax-cn", "MiniMax CN"],
-        ["moonshot", "Moonshot CN"]
-      ]) + '<div class="oclm-hint">如果你的供应商是兼容 OpenAI 等协议，可在下方填写中转地址</div>') +
+        ["moonshot", "Moonshot CN"],
+        ["custom-provider", "自定义供应商"]
+      ]) + '<div class="oclm-hint">' + escapeHtml(form.default_agent === "custom-provider"
+        ? "自定义供应商会写入独立的 custom-provider 配置，不会改动内置供应商。"
+        : "如果你的供应商兼容 OpenAI 协议，可选择“自定义供应商”并在下方填写地址与模型。") + '</div>') +
       fieldInput("API 密钥", passwordHtml("oclm-api-key", form.provider_api_key || "", "sk-...")) +
-      fieldInput("中转地址（可选）", '<input class="oclm-control" type="text" id="oclm-base-url" value="' + escapeHtml(form.provider_base_url || "") + '" placeholder="https://api.example.com" />') +
-      fieldInput("默认模型", '<input class="oclm-control" type="text" id="oclm-model" value="' + escapeAttr(resolveModelValue(form)) + '" placeholder="请按照&lt;provider&gt;/&lt;model-id&gt;格式填写" />') +
+      fieldInput(form.default_agent === "custom-provider" ? "服务地址" : "中转地址（可选）", '<input class="oclm-control" type="text" id="oclm-base-url" value="' + escapeHtml(form.provider_base_url || "") + '" placeholder="https://api.example.com" />') +
+      fieldInput("默认模型", '<input class="oclm-control" type="text" id="oclm-model" value="' + escapeAttr(resolveModelValue(form)) + '" placeholder="' + escapeAttr(modelPlaceholder(form.default_agent)) + '" /><div class="oclm-hint">将按照“供应商名称/模型名称”的格式保存</div>') +
       '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-ai"' + (savingAi ? ' disabled' : '') + '>' + (savingAi ? '应用中…' : '保存 AI配置') + '</button>' + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
       '</div></div>' +
 
@@ -982,13 +1008,10 @@
     var agent = root.getElementById("oclm-agent");
     if (agent) {
       agent.onchange = function() {
+        syncDraftFromDom();
         state.form.default_agent = agent.value;
-        var model = root.getElementById("oclm-model");
-        if (model) {
-          var nextModel = modelForAgent(agent.value);
-          model.value = nextModel;
-          state.form.default_model = nextModel;
-        }
+        state.form.default_model = modelForAgent(agent.value);
+        render();
       };
     }
 
@@ -1073,12 +1096,21 @@
     var saveAi = root.getElementById("oclm-save-ai");
     if (saveAi) {
       saveAi.onclick = function() {
+        var agentValue = root.getElementById("oclm-agent").value;
+        var modelValue = normalizeModelValue(agentValue, root.getElementById("oclm-model").value);
+        var baseUrlValue = root.getElementById("oclm-base-url").value;
+        if (agentValue === "custom-provider" && !String(baseUrlValue || "").replace(/^\s+|\s+$/g, "")) {
+          window.alert("自定义供应商必须填写服务地址");
+          return;
+        }
         var payload = {
-          default_agent: root.getElementById("oclm-agent").value,
-          default_model: root.getElementById("oclm-model").value,
+          default_agent: agentValue,
+          default_model: modelValue,
           provider_api_key: root.getElementById("oclm-api-key").value,
-          provider_base_url: root.getElementById("oclm-base-url").value
+          provider_base_url: baseUrlValue
         };
+        state.form.default_agent = agentValue;
+        state.form.default_model = modelValue;
         state.savingSection = "ai";
         render();
         postJson(config.configUrl, payload).then(function(rv) { handleSaveResult(rv, "ai"); }).catch(function() {
