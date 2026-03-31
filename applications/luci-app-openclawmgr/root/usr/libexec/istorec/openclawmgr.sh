@@ -639,6 +639,23 @@ local function ensure_table(parent, key)
 	return parent[key]
 end
 
+local function prune_empty_tables(node)
+	if type(node) ~= "table" then
+		return false
+	end
+
+	for k, v in pairs(node) do
+		if type(v) == "table" then
+			prune_empty_tables(v)
+			if next(v) == nil then
+				node[k] = nil
+			end
+		end
+	end
+
+	return next(node) == nil
+end
+
 local function read_config(path)
 	local raw = slurp(path)
 	if not raw or raw == "" then
@@ -768,6 +785,8 @@ local agents = ensure_table(cfg, "agents")
 local defaults = ensure_table(agents, "defaults")
 local model = ensure_table(defaults, "model")
 model.primary = os.getenv("DEFAULT_AGENT_MODEL") or "anthropic/claude-sonnet-4-6"
+
+prune_empty_tables(cfg)
 
 local encoded = json.stringify(cfg, true)
 if encoded then
