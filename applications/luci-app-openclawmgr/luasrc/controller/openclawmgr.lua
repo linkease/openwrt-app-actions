@@ -499,10 +499,12 @@ function action_status()
 
 	local node_ver = ""
 	local oc_ver = ""
+	local target_oc_ver = ""
 	if base_dir ~= "" then
 		node_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh node_version 2>/dev/null"):gsub("%s+$", "")
 		oc_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh openclaw_version 2>/dev/null"):gsub("%s+$", "")
 	end
+	target_oc_ver = sys.exec("/usr/libexec/istorec/openclawmgr.sh latest_openclaw_version 2>/dev/null"):gsub("%s+$", "")
 	local pid = running and get_running_pid() or ""
 	if pid == "" and installing and lock_pid ~= "" then
 		pid = lock_pid
@@ -535,6 +537,7 @@ function action_status()
 		token = token,
 		node_version = node_ver,
 		openclaw_version = oc_ver,
+		target_openclaw_version = target_oc_ver,
 		pid = pid,
 		uptime_human = uptime_human,
 		base_url = base_url,
@@ -569,7 +572,14 @@ end
 
 function action_check_update()
 	local sys = require "luci.sys"
+	local http = require "luci.http"
+	local util = require "luci.util"
 	local uci = require "luci.model.uci".cursor()
+	local install_channel = http.formvalue("install_channel") or ""
+	if install_channel ~= "" and install_channel ~= "stable" and install_channel ~= "latest" then
+		write_json({ ok = false, error = "invalid install_channel" })
+		return
+	end
 
 	if not require_csrf() then
 		return
@@ -597,7 +607,9 @@ function action_check_update()
 		return
 	end
 
-	local remote_ver = trim(sys.exec("/usr/libexec/istorec/openclawmgr.sh latest_openclaw_version 2>/dev/null"))
+	local remote_channel = install_channel ~= "" and install_channel or "latest"
+	local remote_cmd = "INSTALL_CHANNEL=" .. util.shellquote(remote_channel) .. " /usr/libexec/istorec/openclawmgr.sh latest_openclaw_version 2>/dev/null"
+	local remote_ver = trim(sys.exec(remote_cmd))
 	if remote_ver == "" then
 		write_json({ ok = false, error = "获取远程版本失败", installed = true, local_version = local_ver })
 		return
@@ -871,9 +883,14 @@ function action_op()
 	end
 
 	local op = http.formvalue("op") or ""
+	local install_channel = http.formvalue("install_channel") or ""
 	local ok_ops = { install = true, upgrade = true, start = true, stop = true, restart = true, apply_config = true, uninstall = true, uninstall_openclaw = true, purge = true, cancel_install = true }
 	if not ok_ops[op] then
 		write_json({ ok = false, error = "unknown op" })
+		return
+	end
+	if install_channel ~= "" and install_channel ~= "stable" and install_channel ~= "latest" then
+		write_json({ ok = false, error = "invalid install_channel" })
 		return
 	end
 
@@ -916,12 +933,18 @@ function action_op()
 	if not fs.access("/etc/init.d/tasks") then
 		-- fallback (shouldn't happen on iStoreOS with luci-lib-taskd installed)
 		local cmd = script_path .. " " .. util.shellquote(op)
+		if install_channel ~= "" and (op == "install" or op == "upgrade") then
+			cmd = "INSTALL_CHANNEL=" .. util.shellquote(install_channel) .. " " .. cmd
+		end
 		sys.exec("( " .. cmd .. " ) >/dev/null 2>&1 &")
 		write_json({ ok = true, queued = true, task_id = task_id, warning = "taskd missing; fallback to background exec" })
 		return
 	end
 
 	local cmd = string.format("\"%s\" %s", script_path, op)
+	if install_channel ~= "" and (op == "install" or op == "upgrade") then
+		cmd = "INSTALL_CHANNEL=" .. util.shellquote(install_channel) .. " " .. cmd
+	end
 	local rc = sys.call("/etc/init.d/tasks task_add " .. task_id .. " " .. util.shellquote(cmd) .. " >/dev/null 2>&1")
 	if rc == 0 then
 		write_json({ ok = true, task_id = task_id })

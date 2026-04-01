@@ -301,6 +301,32 @@
   border-color: transparent;
 }
 
+.oclm-button-tag {
+  min-height: 30px;
+  height: 30px;
+  padding: 0 12px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 700;
+  background: rgba(47, 103, 246, 0.08);
+  color: var(--oclm-primary);
+  border: 1px solid rgba(47, 103, 246, 0.18);
+  box-shadow: none;
+}
+
+.oclm-button-tag:hover {
+  color: var(--oclm-primary);
+  border-color: rgba(47, 103, 246, 0.3);
+  background: rgba(47, 103, 246, 0.12);
+  filter: none;
+}
+
+.oclm-app[data-darkmode="true"] .oclm-button-tag {
+  background: rgba(91, 134, 255, 0.12);
+  border-color: rgba(91, 134, 255, 0.24);
+  color: var(--oclm-primary);
+}
+
 .oclm-form-grid {
   display: grid;
   gap: 14px;
@@ -389,6 +415,16 @@
   color: var(--oclm-subtle);
   font-size: 12px;
   line-height: 1.45;
+}
+
+.oclm-inline-link {
+  color: var(--oclm-primary);
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.oclm-inline-link:hover {
+  text-decoration: underline;
 }
 
 .oclm-toggle {
@@ -517,6 +553,10 @@
   align-items: center;
   gap: 12px;
   flex-wrap: wrap;
+}
+
+.oclm-section-submit-right {
+  justify-content: flex-end;
 }
 
 .oclm-applied-hint {

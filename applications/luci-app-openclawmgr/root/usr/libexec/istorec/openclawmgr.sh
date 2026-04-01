@@ -6,6 +6,9 @@ APP="openclawmgr"
 UCI_NS="openclawmgr"
 LOCK_DIR="/tmp/openclawmgr-installer.lock"
 DIAG_PREFIX="/tmp/openclawmgr-diag"
+OPENCLAW_STABLE_NPM_TAG="openclaw@2026.3.28"
+OPENCLAW_STABLE_VERSION="2026.3.28"
+INSTALL_CHANNEL="${INSTALL_CHANNEL:-}"
 
 log_ts() { date "+%Y-%m-%d %H:%M:%S"; }
 
@@ -391,6 +394,10 @@ local_openclaw_version() {
 
 latest_openclaw_version() {
 	local npm_registry=""
+	if [ "${INSTALL_CHANNEL:-stable}" != "latest" ]; then
+		printf "%s\n" "$OPENCLAW_STABLE_VERSION"
+		return 0
+	fi
 	[ -x "$NPM_BIN" ] || return 0
 	if [ "${INSTALL_ACCELERATED:-1}" = "1" ]; then
 		npm_registry="https://registry.npmmirror.com"
@@ -403,6 +410,14 @@ latest_openclaw_version() {
 		HOME="$DATA_DIR" npm_config_cache="${BASE_DIR}/npm-cache" \
 			PATH="${NODE_DIR}/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
 			"$NPM_BIN" view openclaw version 2>/dev/null | tr -d '\r' | head -n 1
+	fi
+}
+
+target_openclaw_package() {
+	if [ "${INSTALL_CHANNEL:-stable}" = "latest" ]; then
+		printf "%s\n" "openclaw@latest"
+	else
+		printf "%s\n" "$OPENCLAW_STABLE_NPM_TAG"
 	fi
 }
 
@@ -969,7 +984,9 @@ install_openclaw() {
 		npm_registry="https://registry.npmmirror.com"
 	fi
 
-	write_installer_log "Installing OpenClaw from npm"
+		local target_pkg=""
+		target_pkg="$(target_openclaw_package)"
+		write_installer_log "Installing OpenClaw from npm (${target_pkg})"
 	write_installer_log "Node.js: $(PATH=\"${NODE_DIR}/bin:/usr/sbin:/usr/bin:/sbin:/bin\" \"$NODE_BIN\" --version 2>/dev/null || echo unknown), npm: $(PATH=\"${NODE_DIR}/bin:/usr/sbin:/usr/bin:/sbin:/bin\" \"$NPM_BIN\" --version 2>/dev/null || echo unknown)"
 	write_installer_log "npm prefix: $GLOBAL_DIR, cache: ${BASE_DIR}/npm-cache, musl: $(is_musl && echo yes || echo no) ${flags:+($flags)}"
 	write_installer_log "npm registry: ${npm_registry:-default}"
@@ -1008,12 +1025,12 @@ install_openclaw() {
 	if [ -n "$npm_registry" ]; then
 		HOME="$DATA_DIR" npm_config_cache="${BASE_DIR}/npm-cache" npm_config_registry="$npm_registry" \
 			PATH="${NODE_DIR}/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-			"$NPM_BIN" install -g "openclaw@latest" --prefix="$GLOBAL_DIR" \
+			"$NPM_BIN" install -g "$target_pkg" --prefix="$GLOBAL_DIR" \
 			$flags --no-audit --no-fund --no-progress >"$tmp" 2>&1 &
 	else
 		HOME="$DATA_DIR" npm_config_cache="${BASE_DIR}/npm-cache" \
 			PATH="${NODE_DIR}/bin:/usr/sbin:/usr/bin:/sbin:/bin" \
-			"$NPM_BIN" install -g "openclaw@latest" --prefix="$GLOBAL_DIR" \
+			"$NPM_BIN" install -g "$target_pkg" --prefix="$GLOBAL_DIR" \
 			$flags --no-audit --no-fund --no-progress >"$tmp" 2>&1 &
 	fi
 	local npmpid="$!"
@@ -1413,6 +1430,7 @@ NODE_VERSION="24.14.0"
 [ -n "$DEFAULT_AGENT" ] || DEFAULT_AGENT="anthropic"
 [ -n "$DEFAULT_MODEL" ] || DEFAULT_MODEL=""
 [ -n "$INSTALL_ACCELERATED" ] || INSTALL_ACCELERATED="1"
+[ -n "$INSTALL_CHANNEL" ] || INSTALL_CHANNEL="stable"
 [ -n "$PROVIDER_API_KEY" ] || PROVIDER_API_KEY=""
 [ -n "$PROVIDER_BASE_URL" ] || PROVIDER_BASE_URL=""
 
@@ -1445,6 +1463,10 @@ esac
 case "$INSTALL_ACCELERATED" in
 	1|true|yes|on) INSTALL_ACCELERATED="1" ;;
 	*) INSTALL_ACCELERATED="0" ;;
+esac
+case "$INSTALL_CHANNEL" in
+	latest) INSTALL_CHANNEL="latest" ;;
+	*) INSTALL_CHANNEL="stable" ;;
 esac
 
 require_base_dir() {

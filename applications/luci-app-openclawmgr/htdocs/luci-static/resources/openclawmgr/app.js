@@ -211,24 +211,23 @@
 
   function updateActionLabel(status) {
     var updateCheck = getUpdateCheck();
-    if (updateCheck.upgrading || (status && status.installing && status.task_op === "upgrade")) return "更新中";
     if (updateCheck.checking) return "检测中…";
-    if (updateCheck.hasUpdate) return "更新 OpenClaw";
     return "检测更新";
   }
 
   function statusNoteText(status) {
-    var updateCheck = getUpdateCheck();
     if (status && status.installing) {
       return status.task_op === "upgrade"
         ? "更新任务正在后台运行，可打开任务日志查看进度。"
         : "安装任务正在后台运行，可打开任务日志查看进度。";
     }
+    return "";
+  }
+
+  function versionNoteText() {
+    var updateCheck = getUpdateCheck();
     if (updateCheck.checking) {
       return "正在检测远程版本，请稍候…";
-    }
-    if (updateCheck.upgrading) {
-      return "更新任务已提交，请稍候查看版本变化。";
     }
     if (updateCheck.error) {
       return updateCheck.error;
@@ -464,6 +463,7 @@
     var updateCheck = getUpdateCheck();
     var installLabel = status.installing ? (status.task_op === "upgrade" ? "更新中" : "安装中") : "立即安装";
     var installAcceleratedChecked = form.install_accelerated == null ? true : form.install_accelerated === true;
+    var installChannel = form.install_channel === "latest" ? "latest" : "stable";
     var showInstallAction = !status.installed;
     var showUpdateAction = status.installed && !status.installing;
     var showServiceActions = status.installed && !status.installing;
@@ -504,7 +504,6 @@
       '<label class="oclm-check"><input type="checkbox" id="oclm-install-accelerated"' + (installAcceleratedChecked ? ' checked' : '') + ' />Kspeeder 加速安装</label>' +
       '</div>' +
       '<button id="oclm-open-console" class="oclm-button oclm-button-primary' + ((status.running || status.reachable) ? '' : ' oclm-hidden') + '" type="button" data-open-console="1"' + (state.consoleReady ? '' : ' disabled') + '>' + openclawIcon("oclm-button-icon") + (state.consoleReady ? '打开控制台' : '控制台准备中…') + '</button>' +
-      '<button id="oclm-update-btn" class="oclm-button oclm-button-primary' + (showUpdateAction ? '' : ' oclm-hidden') + '" type="button" data-update-action="1"' + ((updateCheck.checking || updateCheck.upgrading) ? ' disabled' : '') + '>' + updateActionLabel(status) + '</button>' +
       '<a id="oclm-open-community" class="oclm-button oclm-button-community" href="https://www.koolcenter.com/t/topic/19042" target="_blank" rel="noreferrer noopener">' + communityIcon("oclm-button-icon") + '玩家交流</a>' +
       '<button id="oclm-cancel-install" class="oclm-button oclm-button-danger' + (status.installing ? '' : ' oclm-hidden') + '" type="button" data-op="cancel_install">停止安装</button>' +
       '</div>' +
@@ -516,6 +515,7 @@
       '<button class="oclm-tab' + (activeTab === "basic" ? ' is-active' : '') + '" type="button" data-tab="basic">基础配置</button>' +
       '<button class="oclm-tab' + (activeTab === "ai" ? ' is-active' : '') + '" type="button" data-tab="ai">AI配置</button>' +
       '<button class="oclm-tab' + (activeTab === "access" ? ' is-active' : '') + '" type="button" data-tab="access">访问控制</button>' +
+      '<button class="oclm-tab' + (activeTab === "version" ? ' is-active' : '') + '" type="button" data-tab="version">版本管理</button>' +
       '<button class="oclm-tab' + (activeTab === "cleanup" ? ' is-active' : '') + '" type="button" data-tab="cleanup">卸载清理</button>' +
       '</div>' +
       '<div class="' + (activeTab === "basic" ? '' : 'oclm-hidden') + '">' +
@@ -567,6 +567,22 @@
       fieldToggle("允许通过 HTTP 访问时认证", "allow_insecure_auth", form.allow_insecure_auth, "仅控制 HTTP 下的控制台认证，不影响端口监听") +
       fieldToggle("关闭设备身份校验", "disable_device_auth", form.disable_device_auth, "警告：仅建议在可信环境中开启，在内网生效") +
       '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-access"' + (savingAccess ? ' disabled' : '') + '>' + (savingAccess ? '应用中…' : '保存访问控制设置') + '</button>' + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
+      '</div></div>' +
+
+      '<div class="' + (activeTab === "version" ? '' : 'oclm-hidden') + '">' +
+      '<div class="oclm-section-heading"><h2>版本管理</h2><div class="oclm-hint">openclaw 官方正在快速迭代，最新版本可能不兼容旧版本配置导致无法启动。请<a class="oclm-inline-link" href="https://www.koolcenter.com/t/topic/19042" target="_blank" rel="noreferrer noopener">加入交流群</a>了解最新稳定版本号</div></div>' +
+      '<div class="oclm-form-grid">' +
+      fieldInput("当前版本", '<div class="oclm-version-tags"><span class="oclm-tag">OpenClaw <strong>' + escapeHtml(status.openclaw_version || "-") + '</strong></span>' +
+        (showUpdateAction ? '<button id="oclm-update-btn" class="oclm-button oclm-button-tag" type="button" data-update-action="1"' + (updateCheck.checking ? ' disabled' : '') + '>' + updateActionLabel(status) + '</button>' : '') +
+        '</div>' +
+        '<div class="oclm-status-note' + (versionNoteText() ? '' : ' oclm-hidden') + '">' + escapeHtml(versionNoteText()) + '</div>') +
+      fieldInput("安装版本", selectHtml("oclm-install-channel", installChannel, [
+        ["stable", "openclaw@2026.3.28(稳定版)"],
+        ["latest", "openclaw@latest(最新版)"]
+      ])) +
+      '<div class="oclm-section-submit oclm-section-submit-right">' +
+      '<button class="oclm-button oclm-button-primary" type="button" id="oclm-version-install" data-version-install-action="1"' + (status.installing ? ' disabled' : '') + '>' + installLabel + '</button>' +
+      '</div>' +
       '</div></div>' +
 
       '<div class="' + (activeTab === "cleanup" ? '' : 'oclm-hidden') + '">' +
@@ -667,7 +683,7 @@
     }
     if (updateBtn) {
       updateBtn.textContent = updateActionLabel(status);
-      updateBtn.disabled = !!(updateCheck.checking || updateCheck.upgrading);
+      updateBtn.disabled = !!updateCheck.checking;
       if (showUpdateAction) updateBtn.classList.remove("oclm-hidden");
       else updateBtn.classList.add("oclm-hidden");
     }
@@ -779,6 +795,9 @@
     var installAccelEl = getEl("oclm-install-accelerated");
     if (installAccelEl) state.form.install_accelerated = !!installAccelEl.checked;
 
+    var installChannelEl = getEl("oclm-install-channel");
+    if (installChannelEl) state.form.install_channel = installChannelEl.value === "latest" ? "latest" : "stable";
+
     var agentEl = getEl("oclm-agent");
     if (agentEl) state.form.default_agent = agentEl.value;
 
@@ -854,6 +873,7 @@
     Array.prototype.forEach.call(root.querySelectorAll("[data-install-action]"), function(el) {
       el.onclick = function() {
         var accelerated = !!(root.getElementById("oclm-install-accelerated") && root.getElementById("oclm-install-accelerated").checked);
+        var installChannel = (root.getElementById("oclm-install-channel") && root.getElementById("oclm-install-channel").value === "latest") ? "latest" : ((state.form && state.form.install_channel === "latest") ? "latest" : "stable");
         var baseDirEl = root.getElementById("oclm-base-dir");
         var baseDir = baseDirEl && baseDirEl.value ? baseDirEl.value.trim() : "";
         if (!baseDir) {
@@ -876,8 +896,9 @@
             return;
           }
           state.form.install_accelerated = accelerated;
+          state.form.install_channel = installChannel;
           state.form.base_dir = baseDir;
-          return postForm(config.opUrl, { op: "install" });
+          return postForm(config.opUrl, { op: "install", install_channel: installChannel });
         }).then(function(rv) {
           if (!rv) return;
           if (!rv || !rv.ok) {
@@ -901,45 +922,69 @@
       };
     });
 
-    Array.prototype.forEach.call(root.querySelectorAll("[data-update-action]"), function(el) {
+    Array.prototype.forEach.call(root.querySelectorAll("[data-version-install-action]"), function(el) {
       el.onclick = function() {
-        var updateCheck = getUpdateCheck();
-        if (!state.status || !state.status.installed || state.status.installing) {
+        var accelerated = !!(root.getElementById("oclm-install-accelerated") && root.getElementById("oclm-install-accelerated").checked);
+        var installChannel = (root.getElementById("oclm-install-channel") && root.getElementById("oclm-install-channel").value === "latest") ? "latest" : "stable";
+        var baseDirEl = root.getElementById("oclm-base-dir");
+        var baseDir = baseDirEl && baseDirEl.value ? baseDirEl.value.trim() : "";
+        var op = (state.status && state.status.installed) ? "upgrade" : "install";
+        if (!baseDir) {
+          window.alert("请先选择数据目录并保存应用，再执行安装。");
+          if (baseDirEl) baseDirEl.focus();
           return;
         }
-
-        if (updateCheck.hasUpdate) {
-          updateCheck.upgrading = true;
-          updateCheck.error = "";
-          state.status.installing = true;
-          state.status.task_running = true;
-          state.status.task_op = "upgrade";
-          render();
-          postForm(config.opUrl, { op: "upgrade" }).then(function(rv) {
-            if (!rv || !rv.ok) {
-              updateCheck.upgrading = false;
-              state.status.installing = false;
-              state.status.task_running = false;
-              state.status.task_op = "";
-              render();
-              if (rv && rv.busy && rv.running_task_id) {
-                showTaskLog(rv.running_task_id);
-                return;
-              }
-              window.alert((rv && rv.error) || "启动更新失败");
-              return;
-            }
-            state.lastTaskRunning = true;
-            showTaskLog((rv && (rv.running_task_id || rv.task_id)) || "openclawmgr");
-            scheduleStatusRefresh(10, 1000);
-          }).catch(function() {
-            updateCheck.upgrading = false;
+        if (!state.status || state.status.installing) {
+          return;
+        }
+        state.status.installing = true;
+        state.status.task_running = true;
+        state.status.task_op = op;
+        render();
+        postJson(config.configUrl, { base_dir: baseDir, install_accelerated: accelerated }).then(function(cfgRv) {
+          if (!cfgRv || !cfgRv.ok) {
             state.status.installing = false;
             state.status.task_running = false;
             state.status.task_op = "";
             render();
-            window.alert("启动更新失败");
-          });
+            window.alert((cfgRv && cfgRv.error) || "保存安装选项失败");
+            return;
+          }
+          state.form.install_accelerated = accelerated;
+          state.form.install_channel = installChannel;
+          state.form.base_dir = baseDir;
+          return postForm(config.opUrl, { op: op, install_channel: installChannel });
+        }).then(function(rv) {
+          if (!rv) return;
+          if (!rv.ok) {
+            if (rv.busy && rv.running_task_id) {
+              showTaskLog(rv.running_task_id);
+              return;
+            }
+            state.status.installing = false;
+            state.status.task_running = false;
+            state.status.task_op = "";
+            render();
+            window.alert((rv && rv.error) || "启动安装失败");
+            return;
+          }
+          state.lastTaskRunning = true;
+          showTaskLog((rv && (rv.running_task_id || rv.task_id)) || "openclawmgr");
+          scheduleStatusRefresh(10, 1000);
+        }).catch(function() {
+          state.status.installing = false;
+          state.status.task_running = false;
+          state.status.task_op = "";
+          render();
+          window.alert("启动安装失败");
+        });
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-update-action]"), function(el) {
+      el.onclick = function() {
+        var updateCheck = getUpdateCheck();
+        if (!state.status || !state.status.installed || state.status.installing) {
           return;
         }
 
@@ -960,7 +1005,6 @@
           }
           updateCheck.checked = true;
           updateCheck.hasUpdate = !!rv.has_update;
-          updateCheck.upgrading = false;
           updateCheck.error = "";
           updateCheck.localVersion = String(rv.local_version || (state.status && state.status.openclaw_version) || "");
           updateCheck.remoteVersion = String(rv.remote_version || "");
@@ -991,6 +1035,13 @@
     if (installAccelerated) {
       installAccelerated.onchange = function() {
         state.form.install_accelerated = !!installAccelerated.checked;
+      };
+    }
+
+    var installChannel = root.getElementById("oclm-install-channel");
+    if (installChannel) {
+      installChannel.onchange = function() {
+        state.form.install_channel = installChannel.value === "latest" ? "latest" : "stable";
       };
     }
 
@@ -1178,13 +1229,9 @@
         updateCheck.localVersion = String(state.status.openclaw_version || "");
       }
       if (!state.status || !state.status.installed) {
-        updateCheck.upgrading = false;
         updateCheck.hasUpdate = false;
         updateCheck.checked = false;
-      } else if (state.status.installing && state.status.task_op === "upgrade") {
-        updateCheck.upgrading = true;
       } else if (!state.status.installing) {
-        updateCheck.upgrading = false;
         if (updateCheck.remoteVersion && updateCheck.localVersion && updateCheck.remoteVersion === updateCheck.localVersion) {
           updateCheck.hasUpdate = false;
           updateCheck.checked = true;
@@ -1223,7 +1270,9 @@
       if (!data || !data.ok) {
         return;
       }
+      var currentInstallChannel = state.form && state.form.install_channel === "latest" ? "latest" : "stable";
       state.form = data.config || {};
+      state.form.install_channel = currentInstallChannel;
       state.form.default_model = resolveModelValue(state.form);
       state.options = data.options || {};
       if (!state.form.base_dir) {
