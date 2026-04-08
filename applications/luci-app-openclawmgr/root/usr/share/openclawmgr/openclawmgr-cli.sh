@@ -33,6 +33,45 @@ prompt_default() {
 
 uci_get() { uci -q get "openclawmgr.main.$1" 2>/dev/null || true; }
 
+is_musl() {
+	ldd --version 2>&1 | grep -qi musl && return 0
+	[ -e /lib/ld-musl-*.so.1 ] 2>/dev/null && return 0
+	return 1
+}
+
+init_git_transport() {
+	command -v git >/dev/null 2>&1 || return 0
+	mkdir -p "$DATA_DIR" 2>/dev/null || true
+	git config --file "$DATA_DIR/.gitconfig" --add url."https://github.com/".insteadOf "ssh://git@github.com/" 2>/dev/null || true
+	git config --file "$DATA_DIR/.gitconfig" --add url."https://github.com/".insteadOf "ssh://git@github.com" 2>/dev/null || true
+	git config --file "$DATA_DIR/.gitconfig" --add url."https://github.com/".insteadOf "git@github.com:" 2>/dev/null || true
+}
+
+init_npm_env() {
+	INSTALL_ACCELERATED="${INSTALL_ACCELERATED:-$(uci_get install_accelerated)}"
+	[ -n "$INSTALL_ACCELERATED" ] || INSTALL_ACCELERATED="1"
+	case "$INSTALL_ACCELERATED" in
+		1|true|yes|on) INSTALL_ACCELERATED="1" ;;
+		*) INSTALL_ACCELERATED="0" ;;
+	esac
+
+	NPM_CACHE_DIR="${BASE_DIR}/npm-cache"
+	export npm_config_cache="$NPM_CACHE_DIR"
+	export npm_config_prefix="$GLOBAL_DIR"
+	export npm_config_audit="false"
+	export npm_config_fund="false"
+	export npm_config_progress="false"
+	export npm_config_update_notifier="false"
+
+	if is_musl; then
+		export npm_config_ignore_scripts="true"
+	fi
+
+	if [ "$INSTALL_ACCELERATED" = "1" ]; then
+		export npm_config_registry="https://registry.npmmirror.com"
+	fi
+}
+
 init_paths() {
 	BASE_DIR="${BASE_DIR:-$(uci_get base_dir)}"
 	if [ -z "$BASE_DIR" ]; then
@@ -54,6 +93,8 @@ init_paths() {
 	export OPENCLAW_STATE_DIR="${DATA_DIR}/.openclaw"
 	export OPENCLAW_CONFIG_PATH="$CONFIG_FILE"
 	export PATH="${NODE_DIR}/bin:${GLOBAL_DIR}/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+	init_git_transport
+	init_npm_env
 }
 
 find_openclaw_entry() {
@@ -99,20 +140,30 @@ detect_openclaw_version() {
 }
 
 print_cli_env_summary() {
-	local node_v npm_v openclaw_v
+	local node_v npm_v openclaw_v npm_registry musl_state ignore_scripts
 	node_v="$(node -v 2>/dev/null | first_line_or_empty)"
 	npm_v="$(npm -v 2>/dev/null | first_line_or_empty)"
 	openclaw_v="$(detect_openclaw_version)"
+	npm_registry="$(npm config get registry 2>/dev/null | tr -d '\r' | first_line_or_empty)"
+	musl_state="no"
+	ignore_scripts="${npm_config_ignore_scripts:-false}"
+	is_musl && musl_state="yes"
 
 	[ -n "$node_v" ] || node_v="未安装"
 	[ -n "$npm_v" ] || npm_v="未安装"
 	[ -n "$openclaw_v" ] || openclaw_v="未安装"
+	[ -n "$npm_registry" ] || npm_registry="unknown"
 
 	printf '%s\n' "${BOLD}环境摘要${NC}"
 	printf '%s\n' "  base_dir      ${BASE_DIR}"
 	printf '%s\n' "  config        ${CONFIG_FILE}"
 	printf '%s\n' "  node          ${node_v}"
 	printf '%s\n' "  npm           ${npm_v}"
+	printf '%s\n' "  npm prefix    ${npm_config_prefix:-${GLOBAL_DIR}}"
+	printf '%s\n' "  npm cache     ${npm_config_cache:-${NPM_CACHE_DIR:-}}"
+	printf '%s\n' "  npm registry  ${npm_registry}"
+	printf '%s\n' "  musl          ${musl_state}"
+	printf '%s\n' "  ignore scripts ${ignore_scripts}"
 	printf '%s\n' "  openclaw      ${openclaw_v}"
 }
 
@@ -155,8 +206,10 @@ action_configure() {
 action_cli_env() {
 	printf '\n'
 	info "=== OpenClaw CLI 环境 ==="
-	printf '%s\n' "${DIM}已注入 BASE_DIR / NODE_DIR / GLOBAL_DIR / DATA_DIR / OPENCLAW_* / PATH${NC}"
+	printf '%s\n' "${DIM}已注入 BASE_DIR / NODE_DIR / GLOBAL_DIR / DATA_DIR / OPENCLAW_* / PATH / npm_config_*${NC}"
 	printf '%s\n' "${DIM}可直接执行 openclaw doctor / openclaw configure / node -v / npm -v 等命令${NC}"
+	printf '%s\n' "${DIM}此环境下 npm -g 默认安装到 ${GLOBAL_DIR}，并复用 OpenClawMgr 的缓存/镜像配置${NC}"
+	printf '%s\n' "${DIM}若系统为 musl，将自动启用 ignore-scripts，并预置 GitHub HTTPS 重写${NC}"
 	printf '%s\n' "${DIM}输入 exit 可退出终端${NC}"
 	printf '\n'
 	print_cli_env_summary
