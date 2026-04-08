@@ -19,6 +19,10 @@ function index()
 	entry({"admin", "services", "openclawmgr", "check_update"}, call("action_check_update")).leaf = true
 	entry({"admin", "services", "openclawmgr", "config_data"}, call("action_config_data")).leaf = true
 	entry({"admin", "services", "openclawmgr", "apply_config"}, call("action_apply_config")).leaf = true
+	entry({"admin", "services", "openclawmgr", "security_data"}, call("action_security_data")).leaf = true
+	entry({"admin", "services", "openclawmgr", "security_add"}, call("action_security_add")).leaf = true
+	entry({"admin", "services", "openclawmgr", "security_remove"}, call("action_security_remove")).leaf = true
+	entry({"admin", "services", "openclawmgr", "security_recheck"}, call("action_security_recheck")).leaf = true
 
 	entry({"admin", "services", "openclawmgr", "logs_api"}, call("action_logs")).leaf = true
 
@@ -66,6 +70,51 @@ local function write_json(obj)
 	local http = require "luci.http"
 	http.prepare_content("application/json")
 	http.write_json(obj)
+end
+
+local function read_json_file(path)
+	local jsonc = require "luci.jsonc"
+	local f = io.open(path, "r")
+	if not f then return nil end
+	local raw = f:read("*a")
+	f:close()
+	if not raw or raw == "" then return nil end
+	return jsonc.parse(raw)
+end
+
+local function openclaw_config_path(base_dir)
+	base_dir = tostring(base_dir or ""):gsub("^%s+", ""):gsub("%s+$", "")
+	if base_dir == "" then
+		return ""
+	end
+	return base_dir .. "/data/.openclaw/openclaw.json"
+end
+
+local function get_runtime_gateway_config(base_dir, fallback)
+	fallback = fallback or {}
+	local cfg = read_json_file(openclaw_config_path(base_dir)) or {}
+	local gateway = cfg.gateway or {}
+	local auth = gateway.auth or {}
+	local port = tostring(gateway.port or fallback.port or "18789")
+	if not port:match("^%d+$") then
+		port = tostring(fallback.port or "18789")
+	end
+	if not port:match("^%d+$") then
+		port = "18789"
+	end
+	local bind = tostring(gateway.bind or fallback.bind or "lan")
+	if bind ~= "loopback" and bind ~= "lan" and bind ~= "auto" and bind ~= "tailnet" and bind ~= "custom" then
+		bind = tostring(fallback.bind or "lan")
+		if bind ~= "loopback" and bind ~= "lan" and bind ~= "auto" and bind ~= "tailnet" and bind ~= "custom" then
+			bind = "lan"
+		end
+	end
+	local token = tostring(auth.token or fallback.token or "")
+	return {
+		port = port,
+		bind = bind,
+		token = token,
+	}
 end
 
 local function read_json_body()
@@ -273,6 +322,213 @@ local function get_host()
 	return host
 end
 
+local function security_config_path(base_dir)
+	base_dir = trim(base_dir)
+	if base_dir == "" then
+		return ""
+	end
+	return base_dir .. "/data/.openclawmgr/openclawmgr-security.json"
+end
+
+local function load_security_config(base_dir)
+	local data = read_json_file(security_config_path(base_dir))
+	if type(data) ~= "table" or type(data.items) ~= "table" then
+		return { items = {} }
+	end
+	return data
+end
+
+local function save_security_config(base_dir, data)
+	local jsonc = require "luci.jsonc"
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	local path = security_config_path(base_dir)
+	local dir = base_dir .. "/data/.openclawmgr"
+	local tmp = path .. ".tmp"
+	local f
+
+	if trim(path) == "" then
+		return false
+	end
+	sys.call("mkdir -p " .. util.shellquote(dir) .. " >/dev/null 2>&1")
+	f = io.open(tmp, "w")
+	if not f then
+		return false
+	end
+	f:write(jsonc.stringify(data) or "{\"items\":[]}")
+	f:close()
+	if not os.rename(tmp, path) then
+		os.remove(tmp)
+		return false
+	end
+	return true
+end
+
+local function security_stat(path)
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	local raw = sys.exec("stat -c '%u:%g:%a' " .. util.shellquote(path) .. " 2>/dev/null"):gsub("%s+$", "")
+	local uid, gid, mode = raw:match("^(%d+):(%d+):(%d+)$")
+	if not uid then
+		return nil
+	end
+	return {
+		uid = tonumber(uid),
+		gid = tonumber(gid),
+		mode = mode,
+	}
+end
+
+local function security_path_exists(path)
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	return sys.call("[ -e " .. util.shellquote(path) .. " ] >/dev/null 2>&1") == 0
+end
+
+local function security_path_is_dir(path)
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	return sys.call("[ -d " .. util.shellquote(path) .. " ] >/dev/null 2>&1") == 0
+end
+
+local function security_probe(path)
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	local raw = sys.exec("stat -Lc '%F|%u|%g|%a' " .. util.shellquote(path) .. " 2>/dev/null"):gsub("%s+$", "")
+	local kind, uid, gid, mode = raw:match("^(.-)|(%d+)|(%d+)|(%d+)$")
+	if kind then
+		return {
+			kind = kind,
+			uid = tonumber(uid),
+			gid = tonumber(gid),
+			mode = mode,
+		}
+	end
+	if security_path_is_dir(path) then
+		return { kind = "directory" }
+	end
+	if security_path_exists(path) then
+		return { kind = "other" }
+	end
+	return nil
+end
+
+local function security_apply(path)
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	local quoted = util.shellquote(path)
+	if sys.call("chown root:root " .. quoted .. " >/dev/null 2>&1") ~= 0 then
+		return false, "chown failed"
+	end
+	if sys.call("chmod 0750 " .. quoted .. " >/dev/null 2>&1") ~= 0 then
+		return false, "chmod failed"
+	end
+	return true
+end
+
+local function security_restore(path, uid, gid, mode)
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	local quoted = util.shellquote(path)
+	if sys.call("chown " .. tostring(uid) .. ":" .. tostring(gid) .. " " .. quoted .. " >/dev/null 2>&1") ~= 0 then
+		return false, "restore chown failed"
+	end
+	if sys.call("chmod " .. tostring(mode) .. " " .. quoted .. " >/dev/null 2>&1") ~= 0 then
+		return false, "restore chmod failed"
+	end
+	return true
+end
+
+local function security_protection_mode()
+	return "仅允许 root 和 root 组访问"
+end
+
+local function security_check_item(item)
+	if security_path_is_dir(item.path) then
+		local st = security_stat(item.path)
+		if not st then
+			return {
+				id = tostring(item.id or ""),
+				path = tostring(item.path or ""),
+				protectionMode = security_protection_mode(),
+				status = "check-failed",
+				checkResult = "检测失败",
+			}
+		end
+		if st.uid == 0 and st.gid == 0 and (st.mode == "750" or st.mode == "0750") then
+			return {
+				id = tostring(item.id or ""),
+				path = tostring(item.path or ""),
+				protectionMode = security_protection_mode(),
+				status = "active",
+				checkResult = "openclawmgr 无法进入该目录",
+			}
+		end
+		return {
+			id = tostring(item.id or ""),
+			path = tostring(item.path or ""),
+			protectionMode = security_protection_mode(),
+			status = "inactive",
+			checkResult = "目录权限与预期不一致",
+		}
+	end
+	if not security_path_exists(item.path) then
+		return {
+			id = tostring(item.id or ""),
+			path = tostring(item.path or ""),
+			protectionMode = security_protection_mode(),
+			status = "not-found",
+			checkResult = "目录不存在",
+		}
+	end
+	return {
+		id = tostring(item.id or ""),
+		path = tostring(item.path or ""),
+		protectionMode = security_protection_mode(),
+		status = "check-failed",
+		checkResult = "目标不是目录",
+	}
+end
+
+local function validate_security_path(path, base_dir, items)
+	path = trim(path)
+	base_dir = trim(base_dir)
+	if path == "" then
+		return false, "请输入目录路径"
+	end
+	if not path:match("^/") then
+		return false, "请输入绝对路径"
+	end
+	if path == "/" then
+		return false, "不能添加根目录 /"
+	end
+	for _, item in ipairs(items or {}) do
+		if tostring(item.path or "") == path then
+			return false, "该目录已在列表中"
+		end
+	end
+	if base_dir ~= "" then
+		local esc_base = base_dir:gsub("([^%w])", "%%%1")
+		local esc_path = path:gsub("([^%w])", "%%%1")
+		if path == base_dir or path:match("^" .. esc_base .. "/") then
+			return false, "不能添加 OpenClaw 的运行目录"
+		end
+		if base_dir:match("^" .. esc_path .. "/") then
+			return false, "不能添加 OpenClaw 运行目录的父目录"
+		end
+	end
+	return true
+end
+
+local function find_security_item(items, id)
+	for index, item in ipairs(items or {}) do
+		if tostring(item.id or "") == tostring(id or "") then
+			return item, index
+		end
+	end
+	return nil, nil
+end
+
 function action_logs()
 	local http = require "luci.http"
 	local sys = require "luci.sys"
@@ -472,10 +728,15 @@ function action_status()
 	local task = get_task_state("openclawmgr")
 
 	local enabled = uci:get("openclawmgr", "main", "enabled") or "0"
-	local port = uci:get("openclawmgr", "main", "port") or "18789"
-	local bind = uci:get("openclawmgr", "main", "bind") or "lan"
 	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
-	local token = uci:get("openclawmgr", "main", "token") or ""
+	local runtime_gateway = get_runtime_gateway_config(base_dir, {
+		port = uci:get("openclawmgr", "main", "port") or "18789",
+		bind = uci:get("openclawmgr", "main", "bind") or "lan",
+		token = uci:get("openclawmgr", "main", "token") or "",
+	})
+	local port = runtime_gateway.port
+	local bind = runtime_gateway.bind
+	local token = runtime_gateway.token
 
 	if not port:match("^%d+$") then port = "18789" end
 
@@ -549,11 +810,13 @@ end
 function action_ready()
 	local uci = require "luci.model.uci".cursor()
 
-	local port = uci:get("openclawmgr", "main", "port") or "18789"
-	local bind = uci:get("openclawmgr", "main", "bind") or "lan"
 	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
-
-	if not port:match("^%d+$") then port = "18789" end
+	local runtime_gateway = get_runtime_gateway_config(base_dir, {
+		port = uci:get("openclawmgr", "main", "port") or "18789",
+		bind = uci:get("openclawmgr", "main", "bind") or "lan",
+	})
+	local port = runtime_gateway.port
+	local bind = runtime_gateway.bind
 
 	if base_dir == "" then
 		write_json({ ok = true, ready = false, reason = "base_dir missing" })
@@ -654,25 +917,255 @@ end
 function action_config_data()
 	local http = require "luci.http"
 	local jsonc = require "luci.jsonc"
+	local sys = require "luci.sys"
+	local util = require "luci.util"
 	local uci = require "luci.model.uci".cursor()
 	local model = require "luci.model.openclawmgr"
 
-	local function read_json_file(path)
-		local f = io.open(path, "r")
-		if not f then return nil end
-		local raw = f:read("*a")
+	local function write_json_file(path, obj)
+		local dir = path:match("^(.+)/[^/]+$")
+		if dir and dir ~= "" then
+			sys.call("mkdir -p " .. util.shellquote(dir) .. " >/dev/null 2>&1")
+		end
+		local encoded = jsonc.stringify(obj, true) or "{}"
+		encoded = encoded:gsub("\\/", "/")
+		local f = io.open(path, "w")
+		if not f then
+			return false
+		end
+		f:write(encoded)
+		f:write("\n")
 		f:close()
-		if not raw or raw == "" then return nil end
-		return jsonc.parse(raw)
+		return true
 	end
 
-	local function infer_custom_provider_model(base_dir)
+	local function config_path(base_dir)
+		return openclaw_config_path(base_dir)
+	end
+
+	local function ensure_table(parent, key)
+		if type(parent[key]) ~= "table" then
+			parent[key] = {}
+		end
+		return parent[key]
+	end
+
+	local infer_custom_provider_model
+	local display_model_name
+
+	local function env_key_for_agent(agent)
+		if agent == "openai" then return "OPENAI_API_KEY" end
+		if agent == "anthropic" then return "ANTHROPIC_API_KEY" end
+		if agent == "minimax-cn" then return "MINIMAX_API_KEY" end
+		if agent == "moonshot" then return "MOONSHOT_API_KEY" end
+		return ""
+	end
+
+	local function default_model_for_agent(agent, current_custom_model)
+		if agent == "openai" then return "gpt-5.2" end
+		if agent == "anthropic" then return "claude-sonnet-4-6" end
+		if agent == "minimax-cn" then return "MiniMax-M2.5" end
+		if agent == "moonshot" then return "kimi-k2.5" end
+		if agent == "custom-provider" then return trim(current_custom_model) ~= "" and trim(current_custom_model) or "custom-model" end
+		return "claude-sonnet-4-6"
+	end
+
+	local function normalized_model_path(agent, value, current_custom_model)
+		local model_name = display_model_name(value)
+		if model_name == "" then
+			model_name = default_model_for_agent(agent, current_custom_model)
+		end
+		return agent .. "/" .. model_name
+	end
+
+	local function infer_agent_from_cfg(cfg)
+		local primary = cfg.agents and cfg.agents.defaults and cfg.agents.defaults.model and cfg.agents.defaults.model.primary
+		if type(primary) == "string" and primary:match("^[^/]+/.+") then
+			return primary:match("^([^/]+)/") or ""
+		end
+		local providers = cfg.models and cfg.models.providers
+		if type(providers) == "table" then
+			for _, agent in ipairs({ "openai", "anthropic", "minimax-cn", "moonshot", "custom-provider" }) do
+				if type(providers[agent]) == "table" then
+					return agent
+				end
+			end
+		end
+		return ""
+	end
+
+	local function get_runtime_config(base_dir)
+		local cfg = read_json_file(config_path(base_dir)) or {}
+		local gateway_cfg = get_runtime_gateway_config(base_dir, {
+			port = uci:get("openclawmgr", "main", "port") or "18789",
+			bind = uci:get("openclawmgr", "main", "bind") or "lan",
+			token = uci:get("openclawmgr", "main", "token") or "",
+		})
+		local gateway = cfg.gateway or {}
+		local control = gateway.controlUi or {}
+		local auth = gateway.auth or {}
+		local primary = cfg.agents and cfg.agents.defaults and cfg.agents.defaults.model and cfg.agents.defaults.model.primary
+		local agent = infer_agent_from_cfg(cfg)
+		if agent == "" then
+			agent = uci:get("openclawmgr", "main", "default_agent") or "anthropic"
+		end
+
+		local default_model = ""
+		if type(primary) == "string" and primary ~= "" then
+			default_model = display_model_name(primary)
+		elseif agent == "custom-provider" then
+			default_model = infer_custom_provider_model(base_dir)
+		else
+			default_model = display_model_name(uci:get("openclawmgr", "main", "default_model") or "")
+		end
+
+		local provider = cfg.models and cfg.models.providers and cfg.models.providers[agent] or {}
+		local env = cfg.env or {}
+		local provider_api_key = ""
+		local env_key = env_key_for_agent(agent)
+		if env_key ~= "" and type(env[env_key]) == "string" then
+			provider_api_key = env[env_key]
+		elseif type(provider.apiKey) == "string" then
+			provider_api_key = provider.apiKey
+		else
+			provider_api_key = uci:get("openclawmgr", "main", "provider_api_key") or ""
+		end
+
+		local allowed_origins = {}
+		if type(control.allowedOrigins) == "table" then
+			for _, item in ipairs(control.allowedOrigins) do
+				item = trim(item)
+				if item ~= "" then
+					allowed_origins[#allowed_origins + 1] = item
+				end
+			end
+		elseif #allowed_origins == 0 then
+			for _, item in ipairs(uci:get_list("openclawmgr", "main", "allowed_origins") or {}) do
+				item = trim(item)
+				if item ~= "" then
+					allowed_origins[#allowed_origins + 1] = item
+				end
+			end
+		end
+
+		local allow_insecure_auth = control.allowInsecureAuth
+		if type(allow_insecure_auth) ~= "boolean" then
+			allow_insecure_auth = (uci:get("openclawmgr", "main", "allow_insecure_auth") or "1") == "1"
+		end
+
+		local disable_device_auth = control.dangerouslyDisableDeviceAuth
+		if type(disable_device_auth) ~= "boolean" then
+			disable_device_auth = (uci:get("openclawmgr", "main", "disable_device_auth") or "1") == "1"
+		end
+
+		local provider_base_url = ""
+		if type(provider.baseUrl) == "string" then
+			provider_base_url = provider.baseUrl
+		else
+			provider_base_url = uci:get("openclawmgr", "main", "provider_base_url") or ""
+		end
+
+		return {
+			port = gateway_cfg.port,
+			bind = gateway_cfg.bind,
+			token = gateway_cfg.token,
+			allowed_origins = allowed_origins,
+			allow_insecure_auth = allow_insecure_auth,
+			disable_device_auth = disable_device_auth,
+			default_agent = agent,
+			default_model = default_model,
+			provider_api_key = provider_api_key,
+			provider_base_url = provider_base_url,
+		}
+	end
+
+	local function write_runtime_config(base_dir, service_cfg, runtime_cfg)
+		local path = config_path(base_dir)
+		if path == "" then
+			return false
+		end
+		local cfg = read_json_file(path) or {}
+		local gateway = ensure_table(cfg, "gateway")
+		gateway.mode = "local"
+		gateway.port = tonumber(service_cfg.port) or 18789
+		gateway.bind = service_cfg.bind or "lan"
+		local auth = ensure_table(gateway, "auth")
+		auth.mode = "token"
+		auth.token = runtime_cfg.token or ""
+		local control = ensure_table(gateway, "controlUi")
+		control.enabled = true
+		control.allowedOrigins = runtime_cfg.allowed_origins or {}
+		control.allowInsecureAuth = runtime_cfg.allow_insecure_auth == true
+		control.dangerouslyDisableDeviceAuth = runtime_cfg.disable_device_auth == true
+		control.dangerouslyAllowHostHeaderOriginFallback = service_cfg.bind ~= "loopback"
+
+		local env = type(cfg.env) == "table" and cfg.env or {}
+		for _, key in ipairs({ "OPENAI_API_KEY", "ANTHROPIC_API_KEY", "MINIMAX_API_KEY", "MOONSHOT_API_KEY" }) do
+			env[key] = nil
+		end
+		local env_key = env_key_for_agent(runtime_cfg.default_agent)
+		if env_key ~= "" and trim(runtime_cfg.provider_api_key) ~= "" then
+			env[env_key] = runtime_cfg.provider_api_key
+		end
+		cfg.env = next(env) and env or nil
+
+		local models = ensure_table(cfg, "models")
+		if type(models.mode) ~= "string" or models.mode == "" then
+			models.mode = "merge"
+		end
+		local providers = {}
+		models.providers = providers
+		local provider = {}
+		providers[runtime_cfg.default_agent] = provider
+		local model_name = display_model_name(runtime_cfg.default_model)
+		if model_name == "" then
+			model_name = default_model_for_agent(runtime_cfg.default_agent, infer_custom_provider_model(base_dir))
+		end
+		if runtime_cfg.default_agent == "openai" then
+			provider.api = "openai-completions"
+			provider.baseUrl = trim(runtime_cfg.provider_base_url) ~= "" and runtime_cfg.provider_base_url or "https://api.openai.com/v1"
+			provider.apiKey = trim(runtime_cfg.provider_api_key) ~= "" and runtime_cfg.provider_api_key or nil
+			provider.authHeader = nil
+		elseif runtime_cfg.default_agent == "anthropic" then
+			provider.api = "anthropic-messages"
+			provider.baseUrl = trim(runtime_cfg.provider_base_url) ~= "" and runtime_cfg.provider_base_url or "https://api.anthropic.com"
+			provider.apiKey = trim(runtime_cfg.provider_api_key) ~= "" and runtime_cfg.provider_api_key or nil
+			provider.authHeader = nil
+		elseif runtime_cfg.default_agent == "minimax-cn" then
+			provider.api = "anthropic-messages"
+			provider.baseUrl = trim(runtime_cfg.provider_base_url) ~= "" and runtime_cfg.provider_base_url or "https://api.minimaxi.com/anthropic"
+			provider.apiKey = trim(runtime_cfg.provider_api_key) ~= "" and runtime_cfg.provider_api_key or nil
+			provider.authHeader = true
+		elseif runtime_cfg.default_agent == "moonshot" then
+			provider.api = "openai-completions"
+			provider.baseUrl = trim(runtime_cfg.provider_base_url) ~= "" and runtime_cfg.provider_base_url or "https://api.moonshot.cn/v1"
+			provider.apiKey = trim(runtime_cfg.provider_api_key) ~= "" and runtime_cfg.provider_api_key or nil
+			provider.authHeader = nil
+		else
+			provider.api = "openai-completions"
+			provider.baseUrl = runtime_cfg.provider_base_url or ""
+			provider.apiKey = trim(runtime_cfg.provider_api_key) ~= "" and runtime_cfg.provider_api_key or nil
+			provider.authHeader = nil
+		end
+		provider.models = {
+			{ id = model_name, name = model_name }
+		}
+
+		local agents = ensure_table(cfg, "agents")
+		local defaults = ensure_table(agents, "defaults")
+		local model_cfg = ensure_table(defaults, "model")
+		model_cfg.primary = normalized_model_path(runtime_cfg.default_agent, model_name, infer_custom_provider_model(base_dir))
+
+		return write_json_file(path, cfg)
+	end
+
+	infer_custom_provider_model = function(base_dir)
 		base_dir = tostring(base_dir or "")
 		if base_dir == "" then return "" end
 		local cfg = read_json_file(base_dir .. "/data/.openclaw/openclaw.json") or {}
 		local primary = cfg.agents and cfg.agents.defaults and cfg.agents.defaults.model and cfg.agents.defaults.model.primary
 		if type(primary) == "string" and primary:match("^custom%-provider/.+") then
-			return primary
+			return primary:gsub("^[^/]+/", "")
 		end
 		local providers = cfg.models and cfg.models.providers
 		local custom = providers and providers["custom-provider"]
@@ -680,9 +1173,17 @@ function action_config_data()
 		local first = type(models) == "table" and models[1] or nil
 		local id = first and first.id
 		if type(id) == "string" and id ~= "" then
-			return "custom-provider/" .. id
+			return id
 		end
 		return ""
+	end
+
+	display_model_name = function(value)
+		value = tostring(value or "")
+		if value == "" then
+			return ""
+		end
+		return value:gsub("^[^/]+/", "")
 	end
 
 	if (http.getenv("REQUEST_METHOD") or "GET") == "POST" then
@@ -701,7 +1202,8 @@ function action_config_data()
 			return body[key] ~= nil
 		end
 
-		local requested_default_agent = tostring(has("default_agent") and body.default_agent or (uci:get("openclawmgr", section, "default_agent") or "anthropic"))
+		local current = get_runtime_config(uci:get("openclawmgr", section, "base_dir") or "")
+		local requested_default_agent = tostring(has("default_agent") and body.default_agent or current.default_agent or "anthropic")
 
 		if has("enabled") then
 			uci:set("openclawmgr", section, "enabled", bool_to_uci(body.enabled == true or body.enabled == "1"))
@@ -718,7 +1220,6 @@ function action_config_data()
 				write_json({ ok = false, error = "invalid port (must be 1025-65535)" })
 				return
 			end
-			uci:set("openclawmgr", section, "port", port)
 		end
 
 		if has("bind") then
@@ -727,7 +1228,6 @@ function action_config_data()
 				write_json({ ok = false, error = "invalid bind" })
 				return
 			end
-			uci:set("openclawmgr", section, "bind", bind)
 		end
 
 		if has("base_dir") then
@@ -745,19 +1245,10 @@ function action_config_data()
 				write_json({ ok = false, error = "invalid default_agent" })
 				return
 			end
-			uci:set("openclawmgr", section, "default_agent", agent)
-		end
-
-		if has("default_model") then
-			uci:set("openclawmgr", section, "default_model", tostring(body.default_model or ""))
 		end
 
 		if has("install_accelerated") then
 			uci:set("openclawmgr", section, "install_accelerated", bool_to_uci(body.install_accelerated == true or body.install_accelerated == "1"))
-		end
-
-		if has("provider_api_key") then
-			uci:set("openclawmgr", section, "provider_api_key", tostring(body.provider_api_key or ""))
 		end
 
 		if has("provider_base_url") then
@@ -770,45 +1261,78 @@ function action_config_data()
 				write_json({ ok = false, error = "invalid provider_base_url" })
 				return
 			end
-			uci:set("openclawmgr", section, "provider_base_url", value)
 		end
 
 		if has("token") then
-			uci:set("openclawmgr", section, "token", tostring(body.token or ""))
+			body.token = tostring(body.token or "")
 		end
+
+		local effective_base_dir = tostring(has("base_dir") and body.base_dir or (uci:get("openclawmgr", section, "base_dir") or ""))
+		local effective_port = tostring(has("port") and body.port or current.port or "18789")
+		local effective_bind = tostring(has("bind") and body.bind or current.bind or "lan")
+		local runtime_cfg = {
+			token = tostring(has("token") and body.token or current.token or ""),
+			allowed_origins = current.allowed_origins,
+			allow_insecure_auth = current.allow_insecure_auth,
+			disable_device_auth = current.disable_device_auth,
+			default_agent = requested_default_agent,
+			default_model = tostring(has("default_model") and body.default_model or current.default_model or ""),
+			provider_api_key = tostring(has("provider_api_key") and body.provider_api_key or current.provider_api_key or ""),
+			provider_base_url = tostring(has("provider_base_url") and body.provider_base_url or current.provider_base_url or ""),
+		}
 
 		if has("allowed_origins") then
 			local origins = {}
 			if type(body.allowed_origins) == "table" then
 				for _, item in ipairs(body.allowed_origins) do
-					item = tostring(item or ""):match("^%s*(.-)%s*$")
-					if item and item ~= "" then
-						table.insert(origins, item)
+					item = trim(item)
+					if item ~= "" then
+						origins[#origins + 1] = item
 					end
 				end
 			end
-			if #origins > 0 then
-				uci:set_list("openclawmgr", section, "allowed_origins", origins)
-			else
-				uci:delete("openclawmgr", section, "allowed_origins")
-			end
+			runtime_cfg.allowed_origins = origins
 		end
 
 		if has("allow_insecure_auth") then
-			uci:set("openclawmgr", section, "allow_insecure_auth", bool_to_uci(body.allow_insecure_auth == true or body.allow_insecure_auth == "1"))
+			runtime_cfg.allow_insecure_auth = (body.allow_insecure_auth == true or body.allow_insecure_auth == "1")
 		end
 
 		if has("disable_device_auth") then
-			uci:set("openclawmgr", section, "disable_device_auth", bool_to_uci(body.disable_device_auth == true or body.disable_device_auth == "1"))
+			runtime_cfg.disable_device_auth = (body.disable_device_auth == true or body.disable_device_auth == "1")
 		end
 
+		if runtime_cfg.default_agent == "custom-provider" and trim(runtime_cfg.provider_base_url) == "" then
+			write_json({ ok = false, error = "provider_base_url required for custom-provider" })
+			return
+		end
+		if trim(runtime_cfg.provider_base_url) ~= "" and not tostring(runtime_cfg.provider_base_url):match("^https?://") then
+			write_json({ ok = false, error = "invalid provider_base_url" })
+			return
+		end
+
+		uci:commit("openclawmgr")
+		if effective_base_dir == "" then
+			write_json({ ok = false, error = "base_dir required" })
+			return
+		end
+		local ok = write_runtime_config(effective_base_dir, {
+			port = effective_port,
+			bind = effective_bind,
+		}, runtime_cfg)
+		if not ok then
+			write_json({ ok = false, error = "write openclaw.json failed" })
+			return
+		end
+		for _, key in ipairs({ "port", "bind", "token", "allowed_origins", "allow_insecure_auth", "disable_device_auth", "default_agent", "default_model", "provider_api_key", "provider_base_url" }) do
+			uci:delete("openclawmgr", section, key)
+		end
 		uci:commit("openclawmgr")
 		write_json({ ok = true })
 		return
 	end
 
 	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
-	local port = uci:get("openclawmgr", "main", "port") or "18789"
 	local blocks = model.blocks()
 	local home = model.home()
 	local paths, default_path = model.find_paths(blocks, home, "Configs")
@@ -830,40 +1354,163 @@ function action_config_data()
 	end
 	add_choice(default_path or "/root/Configs/OpenClawMgr")
 
-	local allowed_origins = {}
-	for _, item in ipairs(uci:get_list("openclawmgr", "main", "allowed_origins") or {}) do
-		allowed_origins[#allowed_origins + 1] = item
-	end
-
-	local current_default_agent = uci:get("openclawmgr", "main", "default_agent") or "anthropic"
-	local current_default_model = uci:get("openclawmgr", "main", "default_model") or ""
-	if current_default_agent == "custom-provider" and current_default_model == "" then
-		current_default_model = infer_custom_provider_model(base_dir)
-	end
+	local runtime_cfg = get_runtime_config(base_dir)
 
 	write_json({
 		ok = true,
 		config = {
 			enabled = (uci:get("openclawmgr", "main", "enabled") or "0") == "1",
-			port = port,
-			bind = uci:get("openclawmgr", "main", "bind") or "lan",
+			port = runtime_cfg.port,
+			bind = runtime_cfg.bind,
 			base_dir = base_dir,
-			token = uci:get("openclawmgr", "main", "token") or "",
-			allowed_origins = allowed_origins,
-			allow_insecure_auth = (uci:get("openclawmgr", "main", "allow_insecure_auth") or "0") == "1",
-			disable_device_auth = (uci:get("openclawmgr", "main", "disable_device_auth") or "0") == "1",
-			default_agent = current_default_agent,
-			default_model = current_default_model,
+			token = runtime_cfg.token,
+			allowed_origins = runtime_cfg.allowed_origins,
+			allow_insecure_auth = runtime_cfg.allow_insecure_auth,
+			disable_device_auth = runtime_cfg.disable_device_auth,
+			default_agent = runtime_cfg.default_agent,
+			default_model = runtime_cfg.default_model,
 			install_accelerated = (uci:get("openclawmgr", "main", "install_accelerated") or "1") == "1",
-			provider_api_key = uci:get("openclawmgr", "main", "provider_api_key") or "",
-			provider_base_url = uci:get("openclawmgr", "main", "provider_base_url") or "",
+			provider_api_key = runtime_cfg.provider_api_key,
+			provider_base_url = runtime_cfg.provider_base_url,
 		},
 		options = {
 			base_dir_choices = choices,
 			suggested_base_dir = default_path or "",
-			default_origin = default_allowed_origin(port),
+			default_origin = default_allowed_origin(runtime_cfg.port),
 		}
 	})
+end
+
+function action_security_data()
+	local uci = require "luci.model.uci".cursor()
+	local base_dir = trim(uci:get("openclawmgr", "main", "base_dir") or "")
+	local data, items = nil, {}
+	if base_dir == "" then
+		write_json({ ok = true, items = items })
+		return
+	end
+	data = load_security_config(base_dir)
+	for _, item in ipairs(data.items or {}) do
+		items[#items + 1] = security_check_item(item)
+	end
+	write_json({ ok = true, items = items })
+end
+
+function action_security_add()
+	local uci = require "luci.model.uci".cursor()
+	if not require_csrf() then
+		return
+	end
+	local base_dir = trim(uci:get("openclawmgr", "main", "base_dir") or "")
+	local body = read_json_body() or {}
+	local path = trim(body.path or "")
+	local data, ok, err, item, st, probe = nil, nil, nil, nil, nil, nil
+	if base_dir == "" then
+		write_json({ ok = false, error = "base_dir required" })
+		return
+	end
+	data = load_security_config(base_dir)
+	ok, err = validate_security_path(path, base_dir, data.items)
+	if not ok then
+		write_json({ ok = false, error = err })
+		return
+	end
+	item = {
+		id = "dir_" .. tostring(os.time()) .. tostring(math.random(1000, 9999)),
+		path = path,
+		orig_uid = 0,
+		orig_gid = 0,
+		orig_mode = "755",
+	}
+	probe = security_probe(path)
+	if not probe then
+		write_json({ ok = false, error = "目录不存在" })
+		return
+	end
+	if probe.kind ~= "directory" then
+		write_json({ ok = false, error = "目标不是目录" })
+		return
+	end
+	st = security_stat(path)
+	if not st then
+		write_json({ ok = false, error = "读取目录权限失败" })
+		return
+	end
+	item.orig_uid = st.uid
+	item.orig_gid = st.gid
+	item.orig_mode = st.mode
+	ok, err = security_apply(path)
+	if not ok then
+		write_json({ ok = false, error = err or "apply failed" })
+		return
+	end
+	data.items[#data.items + 1] = item
+	if not save_security_config(base_dir, data) then
+		write_json({ ok = false, error = "save security config failed" })
+		return
+	end
+	write_json({ ok = true, item = security_check_item(item) })
+end
+
+function action_security_remove()
+	local uci = require "luci.model.uci".cursor()
+	if not require_csrf() then
+		return
+	end
+	local base_dir = trim(uci:get("openclawmgr", "main", "base_dir") or "")
+	local body = read_json_body() or {}
+	local id = tostring(body.id or "")
+	local mode = tostring(body.mode or "direct")
+	local data, item, index = nil, nil, nil
+	if base_dir == "" then
+		write_json({ ok = false, error = "base_dir required" })
+		return
+	end
+	if mode ~= "direct" and mode ~= "restore" then
+		write_json({ ok = false, error = "invalid mode" })
+		return
+	end
+	data = load_security_config(base_dir)
+	item, index = find_security_item(data.items, id)
+	if not item then
+		write_json({ ok = false, error = "item not found" })
+		return
+	end
+	if mode == "restore" and security_path_exists(item.path) then
+		local ok, err = security_restore(item.path, item.orig_uid, item.orig_gid, item.orig_mode)
+		if not ok then
+			write_json({ ok = false, error = err or "restore failed" })
+			return
+		end
+	end
+	table.remove(data.items, index)
+	if not save_security_config(base_dir, data) then
+		write_json({ ok = false, error = "save security config failed" })
+		return
+	end
+	write_json({ ok = true })
+end
+
+function action_security_recheck()
+	local uci = require "luci.model.uci".cursor()
+	if not require_csrf() then
+		return
+	end
+	local base_dir = trim(uci:get("openclawmgr", "main", "base_dir") or "")
+	local body = read_json_body() or {}
+	local id = tostring(body.id or "")
+	local data, item = nil, nil
+	if base_dir == "" then
+		write_json({ ok = false, error = "base_dir required" })
+		return
+	end
+	data = load_security_config(base_dir)
+	item = find_security_item(data.items, id)
+	if not item then
+		write_json({ ok = false, error = "item not found" })
+		return
+	end
+	write_json({ ok = true, item = security_check_item(item) })
 end
 
 function action_op()
@@ -980,11 +1627,13 @@ function action_diag_info()
 	local uci = require "luci.model.uci".cursor()
 
 	local base_dir = uci:get("openclawmgr", "main", "base_dir") or ""
-	local port = uci:get("openclawmgr", "main", "port") or "18789"
-	local bind = uci:get("openclawmgr", "main", "bind") or "lan"
 	local enabled = uci:get("openclawmgr", "main", "enabled") or "0"
-
-	if not port:match("^%d+$") then port = "18789" end
+	local runtime_gateway = get_runtime_gateway_config(base_dir, {
+		port = uci:get("openclawmgr", "main", "port") or "18789",
+		bind = uci:get("openclawmgr", "main", "bind") or "lan",
+	})
+	local port = runtime_gateway.port
+	local bind = runtime_gateway.bind
 
 	local avail_mb = 0
 	if base_dir ~= "" then

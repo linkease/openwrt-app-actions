@@ -14,16 +14,34 @@ _find_entry() {
 	return 1
 }
 
+_json_get() {
+	local file="$1" expr="$2"
+	[ -f "$file" ] || return 0
+	command -v jsonfilter >/dev/null 2>&1 || return 0
+	jsonfilter -i "$file" -e "$expr" 2>/dev/null || true
+}
+
 start_service() {
 	config_load openclawmgr
 	config_get_bool enabled main enabled 0
-	config_get port main port 18789
-	config_get bind main bind lan
 	config_get base_dir main base_dir ""
-	config_get token main token ""
+	local port="18789"
+	local bind="lan"
+	local token=""
 
 	[ "$enabled" -eq 1 ] || return 0
 	[ -n "$base_dir" ] || return 1
+
+	local data_dir="${base_dir}/data"
+	local config_file="${data_dir}/.openclaw/openclaw.json"
+	local json_port json_bind json_token
+	json_port="$(_json_get "$config_file" '@.gateway.port')"
+	json_bind="$(_json_get "$config_file" '@.gateway.bind')"
+	json_token="$(_json_get "$config_file" '@.gateway.auth.token')"
+	[ -n "$json_port" ] && port="$json_port"
+	[ -n "$json_bind" ] && bind="$json_bind"
+	[ -n "$json_token" ] && token="$json_token"
+
 	if echo "$port" | grep -Eq '^[0-9]+$'; then
 		if [ "$port" -le 1024 ] 2>/dev/null; then
 			logger -t openclawmgr "Refusing to start: unsafe port ${port} (must be >1024)"
@@ -35,7 +53,6 @@ start_service() {
 
 	local node_bin="${base_dir}/node/bin/node"
 	local global_dir="${base_dir}/global"
-	local data_dir="${base_dir}/data"
 	local env_file="${data_dir}/.openclaw/openclaw.env"
 	local entry="$(_find_entry "$global_dir")"
 	local openai_api_key=""

@@ -81,6 +81,41 @@ openclaw_cmd() {
 	return 127
 }
 
+openclaw() {
+	openclaw_cmd "$@"
+}
+
+first_line_or_empty() {
+	sed -n '1p' 2>/dev/null || true
+}
+
+detect_openclaw_version() {
+	local v=""
+	v="$(openclaw_cmd --version 2>/dev/null | first_line_or_empty)"
+	if [ -z "$v" ]; then
+		v="$(openclaw_cmd version 2>/dev/null | first_line_or_empty)"
+	fi
+	printf '%s' "$v"
+}
+
+print_cli_env_summary() {
+	local node_v npm_v openclaw_v
+	node_v="$(node -v 2>/dev/null | first_line_or_empty)"
+	npm_v="$(npm -v 2>/dev/null | first_line_or_empty)"
+	openclaw_v="$(detect_openclaw_version)"
+
+	[ -n "$node_v" ] || node_v="未安装"
+	[ -n "$npm_v" ] || npm_v="未安装"
+	[ -n "$openclaw_v" ] || openclaw_v="未安装"
+
+	printf '%s\n' "${BOLD}环境摘要${NC}"
+	printf '%s\n' "  base_dir      ${BASE_DIR}"
+	printf '%s\n' "  config        ${CONFIG_FILE}"
+	printf '%s\n' "  node          ${node_v}"
+	printf '%s\n' "  npm           ${npm_v}"
+	printf '%s\n' "  openclaw      ${openclaw_v}"
+}
+
 action_backup_config() {
 	mkdir -p "$BACKUP_DIR" 2>/dev/null || true
 	if [ ! -f "$CONFIG_FILE" ]; then
@@ -117,15 +152,33 @@ action_configure() {
 	openclaw_cmd configure || true
 }
 
+action_cli_env() {
+	printf '\n'
+	info "=== OpenClaw CLI 环境 ==="
+	printf '%s\n' "${DIM}已注入 BASE_DIR / NODE_DIR / GLOBAL_DIR / DATA_DIR / OPENCLAW_* / PATH${NC}"
+	printf '%s\n' "${DIM}可直接执行 openclaw doctor / openclaw configure / node -v / npm -v 等命令${NC}"
+	printf '%s\n' "${DIM}输入 exit 可退出终端${NC}"
+	printf '\n'
+	print_cli_env_summary
+	if cd "$DATA_DIR" 2>/dev/null; then
+		printf '%s\n' "${DIM}当前目录: ${DATA_DIR}${NC}"
+	else
+		warn "无法切换到数据目录，保持当前目录不变。"
+	fi
+	printf '\n'
+	exec sh -i
+}
+
 main_menu() {
 	while true; do
 		printf '\n'
 		printf '%s\n' "${BOLD}OpenClaw AI Gateway — CLI 配置入口（OpenClawMgr）${NC}"
 		printf '%s\n' "${DIM}base_dir: ${BASE_DIR}${NC}"
 		printf '\n'
-		printf '%s\n' "  ${CYAN}1)${NC} 🧭 官方配置向导  ${DIM}(openclaw configure)${NC}"
-		printf '%s\n' "  ${CYAN}2)${NC} 💾 备份配置"
-		printf '%s\n' "  ${CYAN}3)${NC} 📥 恢复配置"
+		printf '%s\n' "  ${CYAN}1)${NC} 💻 CLI环境  ${DIM}(仅注入环境，不执行 configure)${NC}"
+		printf '%s\n' "  ${CYAN}2)${NC} 🧭 官方配置向导  ${DIM}(openclaw configure)${NC}"
+		printf '%s\n' "  ${CYAN}3)${NC} 💾 备份配置"
+		printf '%s\n' "  ${CYAN}4)${NC} 📥 恢复配置"
 		printf '\n'
 		printf '%s\n' "  ${CYAN}0)${NC} 退出"
 		printf '\n'
@@ -133,9 +186,10 @@ main_menu() {
 		local c=""
 		c="$(prompt_default "请选择" "1")"
 		case "$c" in
-			1) action_configure; pause_enter ;;
-			2) action_backup_config || true; pause_enter ;;
-			3) action_restore_config || true; pause_enter ;;
+			1) action_cli_env ;;
+			2) action_configure; pause_enter ;;
+			3) action_backup_config || true; pause_enter ;;
+			4) action_restore_config || true; pause_enter ;;
 			0) ok "再见！"; exit 0 ;;
 			*) warn "无效选择" ;;
 		esac
@@ -146,12 +200,13 @@ init_paths
 
 case "${1:-}" in
 	--help|-h)
-		echo "Usage: openclawmgr-cli.sh [configure|backup|restore]"
+		echo "Usage: openclawmgr-cli.sh [configure|cli-env|backup|restore]"
 		;;
 	*)
 		case "${1:-menu}" in
 			menu) main_menu ;;
 			configure) action_configure; pause_enter ;;
+			cli-env) action_cli_env ;;
 			backup) action_backup_config || true; pause_enter ;;
 			restore) action_restore_config || true; pause_enter ;;
 			*) echo "Unknown command: ${1:-}" >&2; exit 2 ;;

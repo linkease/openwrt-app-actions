@@ -32,13 +32,14 @@ local data_dir = base_dir .. "/data"
 s = m:section(SimpleSection)
 
 o = s:option(Value, "mode", translate("Mode"))
+o:value("cli-env", translate("CLI终端 (仅注入环境)"))
 o:value("configure", translate("官方配置向导 (openclaw configure)"))
 o:value("backup", translate("备份配置"))
 o:value("restore", translate("恢复配置"))
-o.default = "configure"
+o.default = "cli-env"
 o.forcewrite = true
 
-o = s:option(DummyValue, "_tip", translate("CLI Config"))
+o = s:option(DummyValue, "_tip", translate("CLI终端"))
 o.rawhtml = true
 o.cfgvalue = function()
 	return translate("Starts a web terminal (LAN only) for common OpenClaw maintenance tasks.")
@@ -93,7 +94,7 @@ o.render = function(self, section, scope)
 end
 o.write = function(self, section)
 	local mode = m:formvalue("mode") or m:formvalue("cbid.OpenClawCLI.1.mode") or "configure"
-	if mode ~= "configure" and mode ~= "backup" and mode ~= "restore" then
+	if mode ~= "configure" and mode ~= "cli-env" and mode ~= "backup" and mode ~= "restore" then
 		mode = "configure"
 	end
 	start_ttyd(mode)

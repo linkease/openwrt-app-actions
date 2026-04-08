@@ -26,11 +26,25 @@
   }
 
   var root = container.attachShadow ? (container.shadowRoot || container.attachShadow({ mode: "open" })) : container;
+
+  function defaultProtectedDirectories() {
+    return [];
+  }
+
   var state = {
     status: null,
     form: null,
     options: null,
     newOrigin: "",
+    security: {
+      runningUser: "openclawmgr",
+      newDirectoryPath: "",
+      directoryError: "",
+      pendingAddPath: "",
+      deleteTargetId: null,
+      deleteTargetPath: "",
+      protectedDirectories: defaultProtectedDirectories()
+    },
     activeTab: "basic",
     savingSection: "",
     lastAppliedAt: "",
@@ -102,60 +116,32 @@
       .replace(/"/g, "&quot;");
   }
 
-  function modelForAgent(agent) {
+  function defaultModelForAgent(agent) {
     return {
-      openai: "openai/gpt-5.2",
-      anthropic: "anthropic/claude-sonnet-4-6",
-      "minimax-cn": "minimax-cn/MiniMax-M2.5",
-      moonshot: "moonshot/kimi-k2.5",
-      "custom-provider": "custom-provider/custom-model"
-    }[agent] || "anthropic/claude-sonnet-4-6";
+      openai: "gpt-5.2",
+      anthropic: "claude-sonnet-4-6",
+      "minimax-cn": "MiniMax-M2.5",
+      moonshot: "kimi-k2.5",
+      "custom-provider": "custom-model"
+    }[agent] || "claude-sonnet-4-6";
   }
 
-  function modelPrefixForAgent(agent) {
-    return {
-      openai: "openai",
-      anthropic: "anthropic",
-      "minimax-cn": "minimax-cn",
-      moonshot: "moonshot",
-      "custom-provider": "custom-provider"
-    }[agent] || "anthropic";
-  }
-
-  function normalizeModelValue(agent, value) {
-    var prefix = modelPrefixForAgent(agent);
+  function normalizeModelValue(value, fallback) {
     value = String(value || "").replace(/^\s+|\s+$/g, "");
     if (!value) {
-      return modelForAgent(agent);
+      return String(fallback || "");
     }
-    if (value.indexOf(prefix + "/") === 0) {
-      return value;
-    }
-    if (/^[^/]+\/.+/.test(value)) {
-      return prefix + "/" + value.replace(/^[^/]+\//, "");
-    }
-    return prefix + "/" + value;
-  }
-
-  function modelMatchesAgent(agent, model) {
-    model = String(model || "");
-    return model.indexOf(modelPrefixForAgent(agent) + "/") === 0;
+    return value.replace(/^[^/]+\//, "");
   }
 
   function resolveModelValue(form) {
     var agent = form && form.default_agent ? form.default_agent : "anthropic";
     var value = form && form.default_model ? String(form.default_model) : "";
-    if (!value || !modelMatchesAgent(agent, value)) {
-      return normalizeModelValue(agent, value);
-    }
-    return value;
+    return normalizeModelValue(value, defaultModelForAgent(agent));
   }
 
-  function modelPlaceholder(agent) {
-    if (agent === "custom-provider") {
-      return "例如 gpt-5.1 或 custom-provider/gpt-5.1";
-    }
-    return "请按照<provider>/<model-id>格式填写";
+  function modelPlaceholder() {
+    return "这里只填写模型名；例如 gpt-5.1";
   }
 
   function statusText(status) {
@@ -179,6 +165,101 @@
 
   function escapeAttr(value) {
     return escapeHtml(value).replace(/'/g, "&#39;");
+  }
+
+  function getSecurityState() {
+    if (!state.security) {
+      state.security = {
+        runningUser: "openclawmgr",
+        newDirectoryPath: "",
+        directoryError: "",
+        pendingAddPath: "",
+        deleteTargetId: null,
+        deleteTargetPath: "",
+        protectedDirectories: defaultProtectedDirectories()
+      };
+    }
+    if (!Array.isArray(state.security.protectedDirectories)) {
+      state.security.protectedDirectories = defaultProtectedDirectories();
+    }
+    if (state.security.newDirectoryPath == null) {
+      state.security.newDirectoryPath = "";
+    }
+    if (state.security.directoryError == null) {
+      state.security.directoryError = "";
+    }
+    if (state.security.pendingAddPath == null) {
+      state.security.pendingAddPath = "";
+    }
+    if (state.security.deleteTargetPath == null) {
+      state.security.deleteTargetPath = "";
+    }
+    return state.security;
+  }
+
+  function securityDataDirectory() {
+    var formBaseDir = state.form && state.form.base_dir ? String(state.form.base_dir) : "";
+    var statusBaseDir = state.status && state.status.base_dir ? String(state.status.base_dir) : "";
+    var suggestedBaseDir = state.options && state.options.suggested_base_dir ? String(state.options.suggested_base_dir) : "";
+    return formBaseDir || statusBaseDir || suggestedBaseDir || "";
+  }
+
+  function validateProtectedDirectory(path) {
+    var security = getSecurityState();
+    var value = String(path || "").replace(/^\s+|\s+$/g, "");
+    var dataDirectory = securityDataDirectory();
+    if (!value) {
+      return "请输入目录路径";
+    }
+    if (value.charAt(0) !== "/") {
+      return "请输入绝对路径";
+    }
+    if (value === "/") {
+      return "不能添加根目录 /";
+    }
+    if (dataDirectory && (value === dataDirectory || value.indexOf(dataDirectory + "/") === 0)) {
+      return "不能添加 OpenClaw 的运行目录";
+    }
+    if (dataDirectory && dataDirectory.indexOf(value + "/") === 0) {
+      return "不能添加 OpenClaw 运行目录的父目录";
+    }
+    if (security.protectedDirectories.some(function(item) { return item.path === value; })) {
+      return "该目录已在列表中";
+    }
+    return "";
+  }
+
+  function securityProtectionMode(level) {
+    return level === "strict" ? "仅允许 root 访问" : "仅允许 root 和 root 组访问";
+  }
+
+  function securityStatusBadge(status) {
+    var map = {
+      active: ["已生效", "is-active"],
+      inactive: ["未生效", "is-danger"],
+      "not-found": ["目录不存在", "is-muted"],
+      denied: ["已拒绝", "is-active"],
+      "check-failed": ["检测失败", "is-danger"]
+    };
+    var item = map[status] || [status || "未知", "is-muted"];
+    return '<span class="oclm-security-badge ' + item[1] + '">' + escapeHtml(item[0]) + '</span>';
+  }
+
+  function loadSecurityData(done) {
+    if (!config.securityDataUrl) {
+      if (typeof done === "function") done();
+      return;
+    }
+    request(config.securityDataUrl).then(function(rv) {
+      var security = getSecurityState();
+      security.protectedDirectories = rv && rv.ok && Array.isArray(rv.items) ? rv.items : [];
+      render();
+      if (typeof done === "function") done(rv);
+    }).catch(function() {
+      getSecurityState().protectedDirectories = [];
+      render();
+      if (typeof done === "function") done(null);
+    });
   }
 
   function maskedTokenUrl(url) {
@@ -335,6 +416,26 @@
       '</svg>';
   }
 
+  function refreshIcon(className) {
+    return '' +
+      '<svg class="' + escapeAttr(className || "") + '" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M21 12a9 9 0 0 1-15.4 6.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+      '<path d="M3 12a9 9 0 0 1 15.4-6.4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+      '<path d="M3 4v5h5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+      '<path d="M21 20v-5h-5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"></path>' +
+      '</svg>';
+  }
+
+  function trashIcon(className) {
+    return '' +
+      '<svg class="' + escapeAttr(className || "") + '" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">' +
+      '<path d="M3 6h18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+      '<path d="M8 6V4.5A1.5 1.5 0 0 1 9.5 3h5A1.5 1.5 0 0 1 16 4.5V6" stroke="currentColor" stroke-width="1.8"></path>' +
+      '<path d="M19 6l-1 13a2 2 0 0 1-2 1H8a2 2 0 0 1-2-1L5 6" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"></path>' +
+      '<path d="M10 11v5M14 11v5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"></path>' +
+      '</svg>';
+  }
+
   function taskWindowAvailable() {
     return !!(window.taskd && window.taskd.show_log);
   }
@@ -448,6 +549,7 @@
     var status = state.status || {};
     var form = state.form || {};
     var options = state.options || { base_dir_choices: [] };
+    var security = getSecurityState();
     var allowedOrigins = Array.isArray(form.allowed_origins) ? form.allowed_origins : [];
     var baseDirOptions = (options.base_dir_choices || []).map(function(path) {
       return '<option value="' + escapeHtml(path) + '"></option>';
@@ -472,6 +574,24 @@
     var savingAi = state.savingSection === "ai";
     var savingAccess = state.savingSection === "access";
     var noteText = statusNoteText(status);
+    var securityList = security.protectedDirectories.map(function(item) {
+      return '' +
+        '<div class="oclm-security-row">' +
+        '<div class="oclm-security-row-main">' +
+        '<div class="oclm-security-item-path"><code>' + escapeHtml(item.path) + '</code>' + securityStatusBadge(item.status) + '</div>' +
+        '<div class="oclm-security-item-grid">' +
+        '<div><span class="oclm-security-key">保护方式：</span>' + escapeHtml(item.protectionMode) + '</div>' +
+        '<div><span class="oclm-security-key">检测结果：</span>' + escapeHtml(item.checkResult) + '</div>' +
+        '</div>' +
+        '</div>' +
+        '<div class="oclm-security-row-actions">' +
+        '<button class="oclm-icon-ghost-button" type="button" data-security-recheck="' + escapeAttr(item.id) + '" title="重新检测" aria-label="重新检测">' + refreshIcon("oclm-row-icon") + '</button>' +
+        '<button class="oclm-icon-ghost-button oclm-icon-ghost-danger" type="button" data-security-delete="' + escapeAttr(item.id) + '" title="删除" aria-label="删除">' + trashIcon("oclm-row-icon") + '</button>' +
+        '</div>' +
+        '</div>';
+    }).join("");
+    var addDialogOpen = !!security.pendingAddPath;
+    var deleteDialogOpen = security.deleteTargetId != null;
 
     var canStartService = !status.running && !status.reachable;
     var canStopService = !!status.running;
@@ -515,6 +635,7 @@
       '<button class="oclm-tab' + (activeTab === "basic" ? ' is-active' : '') + '" type="button" data-tab="basic">基础配置</button>' +
       '<button class="oclm-tab' + (activeTab === "ai" ? ' is-active' : '') + '" type="button" data-tab="ai">AI配置</button>' +
       '<button class="oclm-tab' + (activeTab === "access" ? ' is-active' : '') + '" type="button" data-tab="access">访问控制</button>' +
+      '<button class="oclm-tab' + (activeTab === "security" ? ' is-active' : '') + '" type="button" data-tab="security">安全设置</button>' +
       '<button class="oclm-tab' + (activeTab === "version" ? ' is-active' : '') + '" type="button" data-tab="version">版本管理</button>' +
       '<button class="oclm-tab' + (activeTab === "cleanup" ? ' is-active' : '') + '" type="button" data-tab="cleanup">卸载清理</button>' +
       '</div>' +
@@ -553,7 +674,7 @@
         : "如果你的供应商兼容 OpenAI 协议，可选择“自定义供应商”并在下方填写地址与模型。") + '</div>') +
       fieldInput("API 密钥", passwordHtml("oclm-api-key", form.provider_api_key || "", "sk-...")) +
       fieldInput(form.default_agent === "custom-provider" ? "服务地址" : "中转地址（可选）", '<input class="oclm-control" type="text" id="oclm-base-url" value="' + escapeHtml(form.provider_base_url || "") + '" placeholder="https://api.example.com" />') +
-      fieldInput("默认模型", '<input class="oclm-control" type="text" id="oclm-model" value="' + escapeAttr(resolveModelValue(form)) + '" placeholder="' + escapeAttr(modelPlaceholder(form.default_agent)) + '" /><div class="oclm-hint">将按照“供应商名称/模型名称”的格式保存</div>') +
+      fieldInput("默认模型", '<input class="oclm-control" type="text" id="oclm-model" value="' + escapeAttr(resolveModelValue(form)) + '" placeholder="' + escapeAttr(modelPlaceholder(form.default_agent)) + '" /><div class="oclm-hint">这里只填写模型名；例如 gpt-5.1</div>') +
       '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-ai"' + (savingAi ? ' disabled' : '') + '>' + (savingAi ? '应用中…' : '保存 AI配置') + '</button>' + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
       '</div></div>' +
 
@@ -568,6 +689,37 @@
       fieldToggle("关闭设备身份校验", "disable_device_auth", form.disable_device_auth, "警告：仅建议在可信环境中开启，在内网生效") +
       '<div class="oclm-section-submit"><button class="oclm-button oclm-button-primary" type="button" id="oclm-save-access"' + (savingAccess ? ' disabled' : '') + '>' + (savingAccess ? '应用中…' : '保存访问控制设置') + '</button>' + (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') + '</div>' +
       '</div></div>' +
+
+      '<div class="' + (activeTab === "security" ? '' : 'oclm-hidden') + '">' +
+      '<div class="oclm-security-hero">' +
+      '<h3 class="oclm-security-hero-title">🔒 禁止访问目录</h3>' +
+      '<div class="oclm-hint">在 OpenClaw 以 ' + escapeHtml(security.runningUser) + ' 用户运行时禁止读取本地敏感目录。可能导致影响其他程序访问，请谨慎使用。</div>' +
+      '</div>' +
+      '<div class="oclm-security-stack">' +
+      '<div class="oclm-security-card">' +
+      '<div class="oclm-security-input-row">' +
+      '<div class="oclm-security-input-wrap">' +
+      '<input class="oclm-control' + (security.directoryError ? ' oclm-control-danger' : '') + '" type="text" id="oclm-security-path" value="' + escapeAttr(security.newDirectoryPath || "") + '" placeholder="/mnt/vio3-1/no-claw" />' +
+      '<div id="oclm-security-error" class="oclm-security-error' + (security.directoryError ? '' : ' oclm-hidden') + '">' + escapeHtml(security.directoryError || "") + '</div>' +
+      '<div class="oclm-hint">请输入绝对路径。不建议添加整个磁盘根目录或 OpenClaw 自身工作目录。</div>' +
+      '</div>' +
+      '<button class="oclm-button oclm-button-primary" type="button" id="oclm-security-add">添加目录</button>' +
+      '</div>' +
+      (security.protectedDirectories.length
+        ? '<div class="oclm-security-list-box"><div class="oclm-security-list">' + securityList + '</div></div>'
+        : '<div class="oclm-security-empty"><div class="oclm-security-empty-icon">🔒</div><div>暂无受保护的目录</div><div class="oclm-hint">添加目录以限制 OpenClaw 访问</div></div>') +
+      '</div>' +
+      '<div class="oclm-security-info-card">' +
+      '<h3>ℹ 使用说明</h3>' +
+      '<ul>' +
+      '<li>本功能通过 Linux 文件权限限制 openclawmgr 用户访问目录。</li>' +
+      '<li>本功能不是容器或沙箱隔离。</li>' +
+      '<li>修改目录权限后，可能影响其他服务或用户访问这些目录。</li>' +
+      '<li>请勿将 OpenClaw 的数据目录、程序目录加入禁止访问列表。</li>' +
+      '</ul>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
 
       '<div class="' + (activeTab === "version" ? '' : 'oclm-hidden') + '">' +
       '<div class="oclm-section-heading"><h2>版本管理</h2><div class="oclm-hint">openclaw 官方正在快速迭代，最新版本可能不兼容旧版本配置导致无法启动。请<a class="oclm-inline-link" href="https://www.koolcenter.com/t/topic/19042" target="_blank" rel="noreferrer noopener">加入交流群</a>了解最新稳定版本号</div></div>' +
@@ -592,6 +744,41 @@
       '<button class="oclm-button" type="button" data-op="uninstall_openclaw">卸载 OpenClaw（保留 Node）</button>' +
       '<button class="oclm-button oclm-button-danger" type="button" data-op="uninstall">卸载</button>' +
       '<button class="oclm-button oclm-button-danger" type="button" data-op="purge">彻底清理</button>' +
+      '</div>' +
+      '</div>' +
+      '<div class="oclm-dialog' + (deleteDialogOpen ? '' : ' oclm-hidden') + '">' +
+      '<div class="oclm-dialog-card">' +
+      '<h3>删除禁止访问目录</h3>' +
+      '<div class="oclm-dialog-text">确定要从保护列表中移除以下目录吗？</div>' +
+      '<code class="oclm-dialog-code">' + escapeHtml(security.deleteTargetPath || "") + '</code>' +
+      '<div class="oclm-dialog-text">请选择删除方式：</div>' +
+      '<div class="oclm-dialog-actions">' +
+      '<button class="oclm-button oclm-dialog-option" type="button" id="oclm-security-delete-direct"><span class="oclm-dialog-option-title">直接删除</span><span class="oclm-dialog-option-note">仅从列表移除，不改变目录权限</span></button>' +
+      '<button class="oclm-button oclm-dialog-option" type="button" id="oclm-security-delete-restore"><span class="oclm-dialog-option-title">恢复其他用户组可访问（drwxr-xr-x）</span><span class="oclm-dialog-option-note">移除并恢复权限</span></button>' +
+      '</div>' +
+      '<div class="oclm-dialog-footer">' +
+      '<button class="oclm-button oclm-button-danger" type="button" id="oclm-security-delete-cancel">取消</button>' +
+      '</div>' +
+      '</div>' +
+      '</div>' +
+      '<div class="oclm-dialog' + (addDialogOpen ? '' : ' oclm-hidden') + '">' +
+      '<div class="oclm-dialog-card">' +
+      '<h3>确认添加禁止访问目录</h3>' +
+      '<div class="oclm-dialog-text">添加后将尝试修改该目录权限，限制 OpenClaw 对其访问：</div>' +
+      '<code class="oclm-dialog-code">' + escapeHtml(security.pendingAddPath || "") + '</code>' +
+      '<div class="oclm-dialog-warning">' +
+      '<div class="oclm-dialog-warning-title">请确认你已知晓以下风险：</div>' +
+      '<ul>' +
+      '<li>该目录的 Linux 权限会被修改为仅允许 root 和 root 组访问。</li>' +
+      '<li>这可能影响其他服务、用户或脚本对该目录的正常访问。</li>' +
+      '<li>本功能不是容器或沙箱隔离，只是基于系统文件权限限制。</li>' +
+      '<li>请勿将 OpenClaw 自身的数据目录、程序目录加入禁止访问列表。</li>' +
+      '</ul>' +
+      '</div>' +
+      '<div class="oclm-dialog-footer">' +
+      '<button class="oclm-button" type="button" id="oclm-security-add-cancel">取消</button>' +
+      '<button class="oclm-button oclm-button-danger" type="button" id="oclm-security-add-confirm">确认添加</button>' +
+      '</div>' +
       '</div>' +
       '</div>' +
       '</section>' +
@@ -821,6 +1008,10 @@
 
     var newOriginEl = getEl("oclm-new-origin");
     if (newOriginEl) state.newOrigin = newOriginEl.value;
+
+    var securityPathEl = getEl("oclm-security-path");
+    if (securityPathEl) getSecurityState().newDirectoryPath = securityPathEl.value;
+
   }
 
   function bindEvents() {
@@ -1060,11 +1251,11 @@
     if (agent) {
       agent.onchange = function() {
         syncDraftFromDom();
-        state.form.default_agent = agent.value;
-        state.form.default_model = modelForAgent(agent.value);
-        render();
-      };
-    }
+      state.form.default_agent = agent.value;
+      state.form.default_model = defaultModelForAgent(agent.value);
+      render();
+    };
+  }
 
     var apiKey = root.getElementById("oclm-api-key");
     if (apiKey) {
@@ -1125,6 +1316,158 @@
       };
     });
 
+    var securityPath = root.getElementById("oclm-security-path");
+    if (securityPath) {
+      securityPath.oninput = function() {
+        var security = getSecurityState();
+        security.newDirectoryPath = securityPath.value;
+        if (security.directoryError) {
+          security.directoryError = "";
+          securityPath.classList.remove("oclm-control-danger");
+          var errorEl = root.getElementById("oclm-security-error");
+          if (errorEl) {
+            errorEl.textContent = "";
+            errorEl.classList.add("oclm-hidden");
+          }
+        }
+      };
+    }
+
+    var securityAdd = root.getElementById("oclm-security-add");
+    if (securityAdd) {
+      securityAdd.onclick = function() {
+        var security = getSecurityState();
+        var path = securityPath && securityPath.value ? securityPath.value.replace(/^\s+|\s+$/g, "") : "";
+        var error = validateProtectedDirectory(path);
+        if (error) {
+          security.directoryError = error;
+          render();
+          return;
+        }
+        security.pendingAddPath = path;
+        render();
+      };
+    }
+
+    var securityAddCancel = root.getElementById("oclm-security-add-cancel");
+    if (securityAddCancel) {
+      securityAddCancel.onclick = function() {
+        var security = getSecurityState();
+        security.pendingAddPath = "";
+        render();
+      };
+    }
+
+    var securityAddConfirm = root.getElementById("oclm-security-add-confirm");
+    if (securityAddConfirm) {
+      securityAddConfirm.onclick = function() {
+        var security = getSecurityState();
+        var path = security.pendingAddPath || "";
+        if (!path) {
+          render();
+          return;
+        }
+        postJson(config.securityAddUrl, { path: path }).then(function(rv) {
+          if (!rv || !rv.ok) {
+            security.pendingAddPath = "";
+            security.directoryError = (rv && rv.error) || "添加目录失败";
+            render();
+            return;
+          }
+          security.pendingAddPath = "";
+          security.newDirectoryPath = "";
+          security.directoryError = "";
+          loadSecurityData();
+        }).catch(function() {
+          security.pendingAddPath = "";
+          security.directoryError = "添加目录失败";
+          render();
+        });
+      };
+    }
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-security-recheck]"), function(el) {
+      el.onclick = function() {
+        var id = el.getAttribute("data-security-recheck");
+        if (!id) return;
+        postJson(config.securityRecheckUrl, { id: id }).then(function(rv) {
+          if (!rv || !rv.ok) {
+            window.alert((rv && rv.error) || "重新检测失败");
+            return;
+          }
+          loadSecurityData();
+        }).catch(function() {
+          window.alert("重新检测失败");
+        });
+      };
+    });
+
+    Array.prototype.forEach.call(root.querySelectorAll("[data-security-delete]"), function(el) {
+      el.onclick = function() {
+        var id = el.getAttribute("data-security-delete");
+        if (!id) return;
+        var security = getSecurityState();
+        var target = null;
+        security.protectedDirectories.forEach(function(item) {
+          if (item.id === id) {
+            target = item;
+          }
+        });
+        if (!target) return;
+        security.deleteTargetId = id;
+        security.deleteTargetPath = target.path;
+        render();
+      };
+    });
+
+    var securityDeleteDirect = root.getElementById("oclm-security-delete-direct");
+    if (securityDeleteDirect) {
+      securityDeleteDirect.onclick = function() {
+        var security = getSecurityState();
+        if (security.deleteTargetId == null) return;
+        postJson(config.securityRemoveUrl, { id: security.deleteTargetId, mode: "direct" }).then(function(rv) {
+          if (!rv || !rv.ok) {
+            window.alert((rv && rv.error) || "删除失败");
+            return;
+          }
+          security.deleteTargetId = null;
+          security.deleteTargetPath = "";
+          loadSecurityData();
+        }).catch(function() {
+          window.alert("删除失败");
+        });
+      };
+    }
+
+    var securityDeleteRestore = root.getElementById("oclm-security-delete-restore");
+    if (securityDeleteRestore) {
+      securityDeleteRestore.onclick = function() {
+        var security = getSecurityState();
+        if (security.deleteTargetId == null) return;
+        postJson(config.securityRemoveUrl, { id: security.deleteTargetId, mode: "restore" }).then(function(rv) {
+          if (!rv || !rv.ok) {
+            window.alert((rv && rv.error) || "恢复并删除失败");
+            return;
+          }
+          security.deleteTargetId = null;
+          security.deleteTargetPath = "";
+          loadSecurityData();
+        }).catch(function() {
+          window.alert("恢复并删除失败");
+        });
+      };
+    }
+
+    var securityDeleteCancel = root.getElementById("oclm-security-delete-cancel");
+    if (securityDeleteCancel) {
+      securityDeleteCancel.onclick = function() {
+        var security = getSecurityState();
+        security.deleteTargetId = null;
+        security.deleteTargetPath = "";
+        render();
+      };
+    }
+
     var saveBasic = root.getElementById("oclm-save-basic");
     if (saveBasic) {
       saveBasic.onclick = function() {
@@ -1148,7 +1491,7 @@
     if (saveAi) {
       saveAi.onclick = function() {
         var agentValue = root.getElementById("oclm-agent").value;
-        var modelValue = normalizeModelValue(agentValue, root.getElementById("oclm-model").value);
+        var modelValue = normalizeModelValue(root.getElementById("oclm-model").value, defaultModelForAgent(agentValue));
         var baseUrlValue = root.getElementById("oclm-base-url").value;
         if (agentValue === "custom-provider" && !String(baseUrlValue || "").replace(/^\s+|\s+$/g, "")) {
           window.alert("自定义供应商必须填写服务地址");
@@ -1282,11 +1625,13 @@
         }
       }
       render();
+      loadSecurityData();
       refreshStatus();
     }).catch(function() {
       state.form = state.form || {};
       state.options = state.options || { base_dir_choices: [] };
       render();
+      loadSecurityData();
     });
   }
 

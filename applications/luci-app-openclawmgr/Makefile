@@ -1,7 +1,7 @@
 
 include $(TOPDIR)/rules.mk
 
-PKG_VERSION:=0.1.9
+PKG_VERSION:=0.1.10
 PKG_RELEASE:=
 
 LUCI_TITLE:=LuCI support for OpenClaw Launcher

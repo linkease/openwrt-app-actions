@@ -41,6 +41,25 @@ uci_get_list() {
 		sed -n "s/^${UCI_NS}\\.main\\.${key}='\\(.*\\)'$/\\1/p"
 }
 
+json_get() {
+	local file="$1" expr="$2"
+	[ -f "$file" ] || return 0
+	command -v jsonfilter >/dev/null 2>&1 || return 0
+	jsonfilter -i "$file" -e "$expr" 2>/dev/null || true
+}
+
+load_gateway_runtime_from_json() {
+	local cfg="${DATA_DIR}/.openclaw/openclaw.json"
+	[ -f "$cfg" ] || return 0
+	local json_port json_bind json_token
+	json_port="$(json_get "$cfg" '@.gateway.port')"
+	json_bind="$(json_get "$cfg" '@.gateway.bind')"
+	json_token="$(json_get "$cfg" '@.gateway.auth.token')"
+	[ -n "$json_port" ] && PORT="$json_port"
+	[ -n "$json_bind" ] && BIND="$json_bind"
+	[ -n "$json_token" ] && TOKEN="$json_token"
+}
+
 fmt_elapsed() {
 	local total="${1:-0}" h m s
 	case "$total" in ''|*[!0-9]*) total=0 ;; esac
@@ -252,6 +271,12 @@ gen_token() {
 	(hexdump -n 24 -e '24/1 "%02x"' /dev/urandom 2>/dev/null) || \
 	(openssl rand -hex 24 2>/dev/null) || \
 	(date +%s | md5sum 2>/dev/null | awk '{print $1}')
+}
+
+ensure_token() {
+	if [ -z "${TOKEN:-}" ]; then
+		TOKEN="$(gen_token)"
+	fi
 }
 
 is_musl() {
@@ -573,46 +598,58 @@ ensure_gateway_config() {
 		host_header_fallback="true"
 	fi
 
-	local allow_insecure="false"
-	if [ "${ALLOW_INSECURE_AUTH:-0}" = "1" ]; then
-		allow_insecure="true"
+	local allow_insecure=""
+	if [ -n "${ALLOW_INSECURE_AUTH:-}" ]; then
+		if [ "$ALLOW_INSECURE_AUTH" = "1" ]; then
+			allow_insecure="true"
+		else
+			allow_insecure="false"
+		fi
 	fi
 
-	local disable_device_auth="false"
-	if [ "${DISABLE_DEVICE_AUTH:-0}" = "1" ]; then
-		disable_device_auth="true"
+	local disable_device_auth=""
+	if [ -n "${DISABLE_DEVICE_AUTH:-}" ]; then
+		if [ "$DISABLE_DEVICE_AUTH" = "1" ]; then
+			disable_device_auth="true"
+		else
+			disable_device_auth="false"
+		fi
 	fi
 
 	local allowed_origins="$ALLOWED_ORIGINS"
-	if [ -z "$allowed_origins" ]; then
-		allowed_origins="$(default_allowed_origins)"
-	fi
 	local selected_key selected_model selected_base_url override_base_url base_url_mode
-	selected_key="$(agent_key_name)"
-	selected_model="$(agent_default_model)"
-	selected_base_url="$(agent_default_base_url)"
+	selected_key=""
+	selected_model=""
+	selected_base_url=""
 	override_base_url=""
-	base_url_mode="default"
-	if [ -n "${PROVIDER_BASE_URL:-}" ]; then
-		if is_valid_http_url "$PROVIDER_BASE_URL"; then
-			override_base_url="$PROVIDER_BASE_URL"
-			base_url_mode="override"
-		else
-			write_installer_log "Ignoring invalid relay URL for ${DEFAULT_AGENT:-anthropic}: ${PROVIDER_BASE_URL}"
-			base_url_mode="preserve"
+	base_url_mode=""
+	if [ -n "${DEFAULT_AGENT:-}" ]; then
+		selected_key="$(agent_key_name)"
+		selected_model="$(agent_default_model)"
+		selected_base_url="$(agent_default_base_url)"
+		base_url_mode="default"
+		if [ -n "${PROVIDER_BASE_URL:-}" ]; then
+			if is_valid_http_url "$PROVIDER_BASE_URL"; then
+				override_base_url="$PROVIDER_BASE_URL"
+				base_url_mode="override"
+			else
+				write_installer_log "Ignoring invalid relay URL for ${DEFAULT_AGENT}: ${PROVIDER_BASE_URL}"
+				base_url_mode="preserve"
+			fi
 		fi
 	fi
 
 	mkdir -p "$(dirname "$cfg")" 2>/dev/null || true
 	CFG_PATH="$cfg" \
 	ALLOWED_ORIGINS_RAW="$allowed_origins" \
+	DEFAULT_ALLOWED_ORIGINS_RAW="$(default_allowed_origins)" \
 	GATEWAY_PORT="$PORT" \
 	GATEWAY_BIND="$BIND" \
 	GATEWAY_TOKEN="$TOKEN" \
 	GATEWAY_ALLOW_INSECURE="$allow_insecure" \
 	GATEWAY_DISABLE_DEVICE_AUTH="$disable_device_auth" \
 	GATEWAY_HOST_HEADER_FALLBACK="$host_header_fallback" \
-	DEFAULT_AGENT_NAME="${DEFAULT_AGENT:-anthropic}" \
+	DEFAULT_AGENT_NAME="${DEFAULT_AGENT:-}" \
 	DEFAULT_AGENT_KEY="$selected_key" \
 	DEFAULT_AGENT_MODEL="$selected_model" \
 	DEFAULT_AGENT_BASE_URL="$selected_base_url" \
@@ -633,6 +670,25 @@ end
 
 local function bool_env(name)
 	return os.getenv(name) == "true"
+end
+
+local function optional_env(name)
+	local value = os.getenv(name)
+	if value == nil or value == "" then
+		return nil
+	end
+	return value
+end
+
+local function optional_bool_env(name)
+	local value = optional_env(name)
+	if value == "true" then
+		return true
+	end
+	if value == "false" then
+		return false
+	end
+	return nil
 end
 
 local function split_lines(raw)
@@ -685,123 +741,166 @@ local gateway = ensure_table(cfg, "gateway")
 gateway.mode = "local"
 gateway.port = tonumber(os.getenv("GATEWAY_PORT")) or 18789
 gateway.bind = os.getenv("GATEWAY_BIND") or "lan"
-gateway.auth = { mode = "token", token = os.getenv("GATEWAY_TOKEN") or "" }
+local auth = ensure_table(gateway, "auth")
+auth.mode = "token"
+auth.token = os.getenv("GATEWAY_TOKEN") or ""
 
 local control = ensure_table(gateway, "controlUi")
 control.enabled = true
-control.basePath = nil
-control.allowedOrigins = split_lines(os.getenv("ALLOWED_ORIGINS_RAW"))
-control.allowInsecureAuth = bool_env("GATEWAY_ALLOW_INSECURE")
-control.dangerouslyDisableDeviceAuth = bool_env("GATEWAY_DISABLE_DEVICE_AUTH")
+local configured_origins = optional_env("ALLOWED_ORIGINS_RAW")
+if configured_origins then
+	control.allowedOrigins = split_lines(configured_origins)
+elseif type(control.allowedOrigins) ~= "table" or next(control.allowedOrigins) == nil then
+	control.allowedOrigins = split_lines(os.getenv("DEFAULT_ALLOWED_ORIGINS_RAW") or "")
+end
+local allow_insecure = optional_bool_env("GATEWAY_ALLOW_INSECURE")
+if allow_insecure ~= nil then
+	control.allowInsecureAuth = allow_insecure
+elseif type(control.allowInsecureAuth) ~= "boolean" then
+	control.allowInsecureAuth = true
+end
+local disable_device_auth = optional_bool_env("GATEWAY_DISABLE_DEVICE_AUTH")
+if disable_device_auth ~= nil then
+	control.dangerouslyDisableDeviceAuth = disable_device_auth
+elseif type(control.dangerouslyDisableDeviceAuth) ~= "boolean" then
+	control.dangerouslyDisableDeviceAuth = true
+end
 control.dangerouslyAllowHostHeaderOriginFallback = bool_env("GATEWAY_HOST_HEADER_FALLBACK")
 
-local env = {}
-local selected_env_key = os.getenv("DEFAULT_AGENT_KEY")
-local selected_api_key = os.getenv("DEFAULT_AGENT_API_KEY") or ""
-if selected_env_key and selected_env_key ~= "" and selected_api_key ~= "" then
+local env = ensure_table(cfg, "env")
+local selected_env_key = optional_env("DEFAULT_AGENT_KEY")
+local selected_api_key = optional_env("DEFAULT_AGENT_API_KEY")
+if selected_env_key and selected_api_key then
 	env[selected_env_key] = selected_api_key
 end
 cfg.env = next(env) and env or nil
+
+local function update_api_key(provider)
+	if selected_api_key ~= nil then
+		provider.apiKey = selected_api_key ~= "" and selected_api_key or nil
+	end
+end
+
+local function env_key_for_provider(id)
+	if id == "openai" then return "OPENAI_API_KEY" end
+	if id == "anthropic" then return "ANTHROPIC_API_KEY" end
+	if id == "minimax-cn" then return "MINIMAX_API_KEY" end
+	if id == "moonshot" then return "MOONSHOT_API_KEY" end
+	return nil
+end
 
 	local models = ensure_table(cfg, "models")
 	if type(models.mode) ~= "string" or models.mode == "" then
 		models.mode = "merge"
 	end
-	local providers = ensure_table(models, "providers")
 
-	local current_provider_id = os.getenv("DEFAULT_AGENT_NAME") or "anthropic"
-	local current_provider = ensure_table(providers, current_provider_id)
+	local current_provider_id = optional_env("DEFAULT_AGENT_NAME")
+	local primary_model = optional_env("DEFAULT_AGENT_MODEL")
+	local current_primary = cfg.agents and cfg.agents.defaults and cfg.agents.defaults.model and cfg.agents.defaults.model.primary
+	if not primary_model and type(current_primary) == "string" and current_primary ~= "" then
+		primary_model = current_primary
+	end
+	if not current_provider_id and type(primary_model) == "string" and primary_model:match("^[^/]+/.+") then
+		current_provider_id = primary_model:match("^([^/]+)/")
+	end
+	if not current_provider_id or current_provider_id == "" then
+		current_provider_id = "anthropic"
+	end
+	if not primary_model or primary_model == "" then
+		if current_provider_id == "openai" then
+			primary_model = "openai/gpt-5.2"
+		elseif current_provider_id == "anthropic" then
+			primary_model = "anthropic/claude-sonnet-4-6"
+		elseif current_provider_id == "minimax-cn" then
+			primary_model = "minimax-cn/MiniMax-M2.5"
+		elseif current_provider_id == "moonshot" then
+			primary_model = "moonshot/kimi-k2.5"
+		elseif current_provider_id == "custom-provider" then
+			primary_model = "custom-provider/custom-model"
+			local custom = models.providers and models.providers["custom-provider"]
+			local first = custom and custom.models and custom.models[1]
+			if type(first) == "table" and type(first.id) == "string" and first.id ~= "" then
+				primary_model = "custom-provider/" .. first.id
+			end
+		else
+			primary_model = "anthropic/claude-sonnet-4-6"
+		end
+	end
+	local current_model_id = primary_model:match("^[^/]+/(.+)$") or primary_model
+	if current_model_id == "" then
+		current_model_id = "claude-sonnet-4-6"
+	end
+
+	local old_providers = type(models.providers) == "table" and models.providers or {}
+	local preserved_provider = type(old_providers[current_provider_id]) == "table" and old_providers[current_provider_id] or {}
+	local providers = {}
+	models.providers = providers
+	local current_provider = preserved_provider
+	providers[current_provider_id] = current_provider
 
 if current_provider_id == "openai" then
 	current_provider.api = "openai-completions"
 	current_provider.baseUrl = "https://api.openai.com/v1"
-	current_provider.apiKey = selected_api_key
+	update_api_key(current_provider)
 	current_provider.models = {
-		{ id = "gpt-5.2", name = "GPT-5.2" },
+		{ id = current_model_id, name = current_model_id },
 	}
 elseif current_provider_id == "anthropic" then
 	current_provider.api = "anthropic-messages"
 	current_provider.baseUrl = "https://api.anthropic.com"
-	current_provider.apiKey = selected_api_key
+	update_api_key(current_provider)
 	current_provider.models = {
-		{ id = "claude-sonnet-4-6", name = "Claude Sonnet 4.6" },
+		{ id = current_model_id, name = current_model_id },
 	}
 elseif current_provider_id == "minimax-cn" then
 	current_provider.api = "anthropic-messages"
 	current_provider.baseUrl = "https://api.minimaxi.com/anthropic"
-	current_provider.apiKey = selected_api_key
+	update_api_key(current_provider)
 	current_provider.authHeader = true
 	current_provider.models = {
-		{ id = "MiniMax-M2.5", name = "MiniMax M2.5" },
+		{ id = current_model_id, name = current_model_id },
 	}
 elseif current_provider_id == "moonshot" then
 	current_provider.api = "openai-completions"
 	current_provider.baseUrl = "https://api.moonshot.cn/v1"
-	current_provider.apiKey = selected_api_key
+	update_api_key(current_provider)
 	current_provider.models = {
-		{ id = "kimi-k2.5", name = "Kimi K2.5" },
+		{ id = current_model_id, name = current_model_id },
 	}
 elseif current_provider_id == "custom-provider" then
-	local primary_model = os.getenv("DEFAULT_AGENT_MODEL") or "custom-provider/custom-model"
-	local custom_model_id = primary_model:match("^[^/]+/(.+)$") or primary_model
-	if custom_model_id == "" then
-		custom_model_id = "custom-model"
+	if current_model_id == "" then
+		current_model_id = "custom-model"
 	end
 	current_provider.api = "openai-completions"
-	current_provider.baseUrl = os.getenv("DEFAULT_AGENT_OVERRIDE_BASE_URL") or current_provider.baseUrl
-	current_provider.apiKey = selected_api_key
+	current_provider.baseUrl = optional_env("DEFAULT_AGENT_OVERRIDE_BASE_URL") or current_provider.baseUrl
+	update_api_key(current_provider)
 	current_provider.authHeader = nil
 	current_provider.models = {
-		{
-			reasoning = false,
-			name = custom_model_id .. " (Custom Provider)",
-			cost = {
-				input = 0,
-				cacheRead = 0,
-				cacheWrite = 0,
-				output = 0,
-			},
-			id = custom_model_id,
-			maxTokens = 4096,
-			contextWindow = 16000,
-			input = { "text" },
-		},
+		{ id = current_model_id, name = current_model_id },
 	}
 end
 
-	local override_base = os.getenv("DEFAULT_AGENT_OVERRIDE_BASE_URL") or ""
-	local base_url_mode = os.getenv("DEFAULT_AGENT_BASE_URL_MODE") or "default"
+	local override_base = optional_env("DEFAULT_AGENT_OVERRIDE_BASE_URL") or ""
+	local base_url_mode = optional_env("DEFAULT_AGENT_BASE_URL_MODE") or ""
 	if current_provider_id == "custom-provider" and override_base ~= "" then
 		current_provider.baseUrl = override_base
 	elseif base_url_mode == "override" and override_base ~= "" then
 		current_provider.baseUrl = override_base
 	elseif base_url_mode == "default" then
-		current_provider.baseUrl = os.getenv("DEFAULT_AGENT_BASE_URL") or current_provider.baseUrl
-	end
-
-	-- luci.jsonc encodes empty Lua tables as JSON arrays ([]). To avoid producing
-	-- invalid provider entries like {"deepseek/deepseek-chat":[]}, drop provider
-	-- records that are empty or look like a provider/model string.
-	do
-		local to_del = {}
-		for k, v in pairs(providers) do
-			if type(k) == "string" and k:find("/", 1, true) then
-				table.insert(to_del, k)
-			elseif type(v) == "table" and next(v) == nil then
-				table.insert(to_del, k)
-			end
-		end
-		for _, k in ipairs(to_del) do
-			providers[k] = nil
-		end
+		current_provider.baseUrl = optional_env("DEFAULT_AGENT_BASE_URL") or current_provider.baseUrl
 	end
 
 local agents = ensure_table(cfg, "agents")
 local defaults = ensure_table(agents, "defaults")
 local model = ensure_table(defaults, "model")
-model.primary = os.getenv("DEFAULT_AGENT_MODEL") or "anthropic/claude-sonnet-4-6"
+model.primary = primary_model or "anthropic/claude-sonnet-4-6"
 
-prune_empty_tables(cfg)
+local current_env_key = env_key_for_provider(current_provider_id)
+local next_env = {}
+if current_env_key and type(current_provider.apiKey) == "string" and current_provider.apiKey ~= "" then
+	next_env[current_env_key] = current_provider.apiKey
+end
+cfg.env = next(next_env) and next_env or nil
 
 local encoded = json.stringify(cfg, true)
 if encoded then
@@ -814,7 +913,7 @@ f:close()
 
 local env_path = cfg_path:gsub("openclaw%.json$", "openclaw.env")
 local envf = assert(io.open(env_path, "w"))
-if selected_env_key and selected_env_key ~= "" and selected_api_key ~= "" then
+if selected_env_key and selected_env_key ~= "" and selected_api_key and selected_api_key ~= "" then
 	local val = tostring(selected_api_key)
 	val = val:gsub("\\", "\\\\"):gsub("\n", "\\n"):gsub('"', '\\"')
 	envf:write(selected_env_key .. '="' .. val .. '"\n')
@@ -1147,11 +1246,7 @@ upgrade_openclaw() {
 		uci -q commit "$UCI_NS" >/dev/null 2>&1 || true
 
 		# Ensure token exists even if runtime is already installed (service start requires it).
-		TOKEN="$(uci_get token)"
-		if [ -z "$TOKEN" ]; then
-			TOKEN="$(gen_token)"
-			uci -q set "${UCI_NS}.main.token=$TOKEN" && uci -q commit "$UCI_NS" || true
-		fi
+		ensure_token
 		ensure_gateway_config || true
 
 		if have_openclaw_runtime; then
@@ -1233,6 +1328,7 @@ do_start() {
 	write_installer_log "== start begin =="
 	ensure_dirs
 	fix_data_permissions || true
+	ensure_token
 	ensure_safe_port_for_start || exit 1
 	/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
 	uci -q set "${UCI_NS}.main.enabled=1" && uci -q commit "$UCI_NS" || true
@@ -1255,6 +1351,7 @@ do_restart() {
 	write_installer_log "== restart begin =="
 	ensure_dirs
 	fix_data_permissions || true
+	ensure_token
 	ensure_safe_port_for_start || exit 1
 	ensure_gateway_config || true
 	/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
@@ -1266,6 +1363,7 @@ do_restart() {
 		write_installer_log "== apply_config begin =="
 		ensure_dirs
 		fix_data_permissions || true
+		ensure_token
 		ensure_gateway_config || true
 
 		local pid=""
@@ -1425,14 +1523,8 @@ PROVIDER_BASE_URL="$(uci_get provider_base_url)"
 [ -n "$BIND" ] || BIND="lan"
 [ -n "$ENABLED" ] || ENABLED="0"
 NODE_VERSION="24.14.0"
-	[ -n "$ALLOW_INSECURE_AUTH" ] || ALLOW_INSECURE_AUTH="1"
-	[ -n "$DISABLE_DEVICE_AUTH" ] || DISABLE_DEVICE_AUTH="1"
-[ -n "$DEFAULT_AGENT" ] || DEFAULT_AGENT="anthropic"
-[ -n "$DEFAULT_MODEL" ] || DEFAULT_MODEL=""
 [ -n "$INSTALL_ACCELERATED" ] || INSTALL_ACCELERATED="1"
 [ -n "$INSTALL_CHANNEL" ] || INSTALL_CHANNEL="stable"
-[ -n "$PROVIDER_API_KEY" ] || PROVIDER_API_KEY=""
-[ -n "$PROVIDER_BASE_URL" ] || PROVIDER_BASE_URL=""
 
 case "$PORT" in
 	''|*[!0-9]*) PORT="18789" ;;
@@ -1449,14 +1541,17 @@ case "$ENABLED" in
 	*) ENABLED="0" ;;
 esac
 case "$ALLOW_INSECURE_AUTH" in
+	'') ;;
 	1|true|yes|on) ALLOW_INSECURE_AUTH="1" ;;
 	*) ALLOW_INSECURE_AUTH="0" ;;
 esac
 case "$DISABLE_DEVICE_AUTH" in
+	'') ;;
 	1|true|yes|on) DISABLE_DEVICE_AUTH="1" ;;
 	*) DISABLE_DEVICE_AUTH="0" ;;
 esac
 case "$DEFAULT_AGENT" in
+	'') ;;
 	openai|anthropic|minimax-cn|moonshot|custom-provider) ;;
 	*) DEFAULT_AGENT="anthropic" ;;
 esac
@@ -1495,6 +1590,21 @@ ensure_safe_port_for_start() {
 NODE_DIR="${BASE_DIR}/node"
 GLOBAL_DIR="${BASE_DIR}/global"
 DATA_DIR="${BASE_DIR}/data"
+
+if [ -n "$BASE_DIR" ]; then
+	load_gateway_runtime_from_json
+fi
+
+case "$PORT" in
+	''|*[!0-9]*) PORT="18789" ;;
+esac
+if [ "$PORT" -lt 1 ] 2>/dev/null || [ "$PORT" -gt 65535 ] 2>/dev/null; then
+	PORT="18789"
+fi
+case "$BIND" in
+	loopback|lan|auto|tailnet|custom) ;;
+	*) BIND="lan" ;;
+esac
 
 	NODE_BIN="${NODE_DIR}/bin/node"
 	NPM_BIN="${NODE_DIR}/bin/npm"
