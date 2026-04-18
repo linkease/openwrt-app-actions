@@ -1,0 +1,4 @@
+config main
+	option 'port' '8787'
+	option 'data_path' ''
+	option 'workspace_path' ''
