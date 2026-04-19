@@ -828,10 +828,15 @@
 .oclm-dialog {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  min-width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
   z-index: 9998;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   padding: 20px;
   background: rgba(15, 23, 42, 0.42);
 }
@@ -932,10 +937,15 @@
 .oclm-log-modal {
   position: fixed;
   inset: 0;
+  width: 100vw;
+  min-width: 100vw;
+  height: 100vh;
+  min-height: 100vh;
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
+  box-sizing: border-box;
   padding: 20px;
   background: rgba(15, 23, 42, 0.42);
 }

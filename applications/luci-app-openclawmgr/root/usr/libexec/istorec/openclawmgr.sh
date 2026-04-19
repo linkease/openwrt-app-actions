@@ -25,6 +25,9 @@ validate_base_dir() {
 	esac
 	[ "$dir" != "/" ] || return 1
 	case "$dir" in
+		/root|/root/*) return 1 ;;
+	esac
+	case "$dir" in
 		*"/../"*|*"/.."|*"/./"*|*"/.") return 1 ;;
 	esac
 	case "$dir" in

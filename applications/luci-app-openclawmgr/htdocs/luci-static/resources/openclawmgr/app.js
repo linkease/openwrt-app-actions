@@ -65,6 +65,14 @@
     }
   };
   var styleText = "";
+  var noticeOverlay = null;
+  var noticeCard = null;
+  var noticeTitle = null;
+  var noticeMessage = null;
+  var noticeCloseButton = null;
+  var actionDialogOverlay = null;
+  var actionDialogCard = null;
+  state.formErrors = state.formErrors || { base_dir: "" };
 
   function request(url, options) {
     options = options || {};
@@ -197,11 +205,376 @@
     return state.security;
   }
 
+  function ensureNoticeDialog() {
+    if (noticeOverlay && noticeOverlay.parentNode) {
+      return;
+    }
+
+    noticeOverlay = document.createElement("div");
+    noticeOverlay.style.position = "fixed";
+    noticeOverlay.style.inset = "0";
+    noticeOverlay.style.zIndex = "2147483647";
+    noticeOverlay.style.display = "none";
+    noticeOverlay.style.alignItems = "center";
+    noticeOverlay.style.justifyContent = "center";
+    noticeOverlay.style.padding = "20px";
+    noticeOverlay.style.boxSizing = "border-box";
+    noticeOverlay.style.background = "rgba(15, 23, 42, 0.42)";
+
+    noticeCard = document.createElement("div");
+    noticeCard.style.width = "min(560px, calc(100vw - 40px))";
+    noticeCard.style.borderRadius = "18px";
+    noticeCard.style.border = "1px solid rgba(217, 225, 238, 0.95)";
+    noticeCard.style.background = "#ffffff";
+    noticeCard.style.boxShadow = "0 10px 28px rgba(15, 23, 42, 0.18)";
+    noticeCard.style.padding = "20px";
+    noticeCard.style.boxSizing = "border-box";
+    noticeCard.style.color = "#1f2937";
+
+    noticeTitle = document.createElement("h3");
+    noticeTitle.style.margin = "0 0 10px";
+    noticeTitle.style.fontSize = "18px";
+    noticeTitle.style.fontWeight = "700";
+
+    noticeMessage = document.createElement("div");
+    noticeMessage.style.marginBottom = "16px";
+    noticeMessage.style.color = "#6b7280";
+    noticeMessage.style.lineHeight = "1.6";
+
+    var footer = document.createElement("div");
+    footer.style.display = "flex";
+    footer.style.justifyContent = "flex-end";
+    footer.style.gap = "14px";
+
+    noticeCloseButton = document.createElement("button");
+    noticeCloseButton.type = "button";
+    noticeCloseButton.textContent = "知道了";
+    noticeCloseButton.style.appearance = "none";
+    noticeCloseButton.style.display = "inline-flex";
+    noticeCloseButton.style.alignItems = "center";
+    noticeCloseButton.style.justifyContent = "center";
+    noticeCloseButton.style.border = "1px solid #d9e1ee";
+    noticeCloseButton.style.background = "#2f67f6";
+    noticeCloseButton.style.color = "#ffffff";
+    noticeCloseButton.style.borderRadius = "10px";
+    noticeCloseButton.style.height = "36px";
+    noticeCloseButton.style.minWidth = "96px";
+    noticeCloseButton.style.padding = "0 14px";
+    noticeCloseButton.style.fontSize = "13px";
+    noticeCloseButton.style.fontWeight = "600";
+    noticeCloseButton.style.cursor = "pointer";
+    noticeCloseButton.onclick = function() {
+      closeNoticeDialog();
+    };
+
+    footer.appendChild(noticeCloseButton);
+    noticeCard.appendChild(noticeTitle);
+    noticeCard.appendChild(noticeMessage);
+    noticeCard.appendChild(footer);
+    noticeOverlay.appendChild(noticeCard);
+    document.body.appendChild(noticeOverlay);
+  }
+
+  function openNoticeDialog(message, title) {
+    ensureNoticeDialog();
+    noticeTitle.textContent = String(title || "提示");
+    noticeMessage.textContent = String(message || "");
+    noticeOverlay.style.display = "flex";
+  }
+
+  function closeNoticeDialog() {
+    if (!noticeOverlay) {
+      return;
+    }
+    noticeOverlay.style.display = "none";
+  }
+
+  function ensureActionDialog() {
+    if (actionDialogOverlay && actionDialogOverlay.parentNode) {
+      return;
+    }
+
+    actionDialogOverlay = document.createElement("div");
+    actionDialogOverlay.style.position = "fixed";
+    actionDialogOverlay.style.inset = "0";
+    actionDialogOverlay.style.zIndex = "2147483646";
+    actionDialogOverlay.style.display = "none";
+    actionDialogOverlay.style.alignItems = "center";
+    actionDialogOverlay.style.justifyContent = "center";
+    actionDialogOverlay.style.padding = "20px";
+    actionDialogOverlay.style.boxSizing = "border-box";
+    actionDialogOverlay.style.background = "rgba(15, 23, 42, 0.42)";
+
+    actionDialogCard = document.createElement("div");
+    actionDialogCard.style.width = "min(560px, calc(100vw - 40px))";
+    actionDialogCard.style.borderRadius = "18px";
+    actionDialogCard.style.border = "1px solid rgba(217, 225, 238, 0.95)";
+    actionDialogCard.style.background = "#ffffff";
+    actionDialogCard.style.boxShadow = "0 10px 28px rgba(15, 23, 42, 0.18)";
+    actionDialogCard.style.padding = "20px";
+    actionDialogCard.style.boxSizing = "border-box";
+    actionDialogCard.style.color = "#1f2937";
+
+    actionDialogOverlay.appendChild(actionDialogCard);
+    document.body.appendChild(actionDialogOverlay);
+  }
+
+  function makeActionDialogText(text, muted) {
+    var el = document.createElement("div");
+    el.textContent = String(text || "");
+    el.style.marginBottom = "10px";
+    el.style.lineHeight = "1.6";
+    el.style.color = muted ? "#6b7280" : "#1f2937";
+    return el;
+  }
+
+  function makeActionDialogCode(text) {
+    var el = document.createElement("code");
+    el.textContent = String(text || "");
+    el.style.display = "block";
+    el.style.marginBottom = "14px";
+    el.style.padding = "10px 12px";
+    el.style.borderRadius = "12px";
+    el.style.background = "rgba(47, 103, 246, 0.08)";
+    el.style.color = "#1f2937";
+    el.style.overflowWrap = "anywhere";
+    return el;
+  }
+
+  function makeActionDialogFooter() {
+    var el = document.createElement("div");
+    el.style.display = "flex";
+    el.style.justifyContent = "flex-end";
+    el.style.gap = "14px";
+    el.style.marginTop = "12px";
+    return el;
+  }
+
+  function makeActionDialogButton(label, kind, onclick) {
+    var button = document.createElement("button");
+    button.type = "button";
+    button.textContent = String(label || "");
+    button.style.appearance = "none";
+    button.style.display = "inline-flex";
+    button.style.alignItems = "center";
+    button.style.justifyContent = "center";
+    button.style.border = "1px solid " + (kind === "danger" ? "#ef4444" : kind === "primary" ? "#2f67f6" : "#d9e1ee");
+    button.style.background = kind === "danger" ? "#ef4444" : kind === "primary" ? "#2f67f6" : "#ffffff";
+    button.style.color = kind === "default" ? "#1f2937" : "#ffffff";
+    button.style.borderRadius = "10px";
+    button.style.minWidth = "96px";
+    button.style.minHeight = "36px";
+    button.style.padding = "0 14px";
+    button.style.fontSize = "13px";
+    button.style.fontWeight = "600";
+    button.style.cursor = "pointer";
+    button.onclick = onclick;
+    return button;
+  }
+
+  function makeActionDialogOption(title, note, onclick) {
+    var button = document.createElement("button");
+    var titleEl = document.createElement("span");
+    var noteEl = document.createElement("span");
+
+    button.type = "button";
+    button.style.appearance = "none";
+    button.style.display = "flex";
+    button.style.flexDirection = "column";
+    button.style.alignItems = "flex-start";
+    button.style.justifyContent = "flex-start";
+    button.style.gap = "4px";
+    button.style.width = "100%";
+    button.style.padding = "12px 14px";
+    button.style.border = "1px solid #d9e1ee";
+    button.style.borderRadius = "12px";
+    button.style.background = "#ffffff";
+    button.style.cursor = "pointer";
+    button.style.textAlign = "left";
+    button.onclick = onclick;
+
+    titleEl.textContent = String(title || "");
+    titleEl.style.color = "#1f2937";
+    titleEl.style.fontWeight = "700";
+
+    noteEl.textContent = String(note || "");
+    noteEl.style.color = "#6b7280";
+    noteEl.style.fontSize = "12px";
+    noteEl.style.fontWeight = "500";
+
+    button.appendChild(titleEl);
+    button.appendChild(noteEl);
+    return button;
+  }
+
+  function hideActionDialog() {
+    if (actionDialogOverlay) {
+      actionDialogOverlay.style.display = "none";
+    }
+  }
+
+  function syncActionDialog() {
+    ensureActionDialog();
+    while (actionDialogCard.firstChild) {
+      actionDialogCard.removeChild(actionDialogCard.firstChild);
+    }
+
+    var security = getSecurityState();
+    var deleteDialogOpen = security.deleteTargetId != null;
+    var addDialogOpen = !!security.pendingAddPath;
+
+    if (!deleteDialogOpen && !addDialogOpen) {
+      hideActionDialog();
+      return;
+    }
+
+    var title = document.createElement("h3");
+    title.style.margin = "0 0 12px";
+    title.style.fontSize = "18px";
+    title.style.fontWeight = "700";
+    actionDialogCard.appendChild(title);
+
+    if (deleteDialogOpen) {
+      var actions = document.createElement("div");
+      title.textContent = "删除禁止访问目录";
+      actionDialogCard.appendChild(makeActionDialogText("确定要从保护列表中移除以下目录吗？", true));
+      actionDialogCard.appendChild(makeActionDialogCode(security.deleteTargetPath || ""));
+      actionDialogCard.appendChild(makeActionDialogText("请选择删除方式：", true));
+
+      actions.style.display = "grid";
+      actions.style.gap = "10px";
+      actions.appendChild(makeActionDialogOption("直接删除", "仅从列表移除，不改变目录权限", function() {
+        handleSecurityDelete("direct");
+      }));
+      actions.appendChild(makeActionDialogOption("恢复其他用户组可访问（drwxr-xr-x）", "移除并恢复权限", function() {
+        handleSecurityDelete("restore");
+      }));
+      actionDialogCard.appendChild(actions);
+
+      var deleteFooter = makeActionDialogFooter();
+      deleteFooter.appendChild(makeActionDialogButton("取消", "default", function() {
+        var nextSecurity = getSecurityState();
+        nextSecurity.deleteTargetId = null;
+        nextSecurity.deleteTargetPath = "";
+        render();
+      }));
+      actionDialogCard.appendChild(deleteFooter);
+    } else if (addDialogOpen) {
+      title.textContent = "确认添加禁止访问目录";
+      actionDialogCard.appendChild(makeActionDialogText("添加后将尝试修改该目录权限，限制 OpenClaw 对其访问：", true));
+      actionDialogCard.appendChild(makeActionDialogCode(security.pendingAddPath || ""));
+
+      var warning = document.createElement("div");
+      warning.style.marginTop = "4px";
+      warning.style.marginBottom = "14px";
+      warning.style.padding = "12px 14px";
+      warning.style.border = "1px solid rgba(245, 158, 11, 0.24)";
+      warning.style.borderRadius = "12px";
+      warning.style.background = "rgba(245, 158, 11, 0.08)";
+
+      var warningTitle = document.createElement("div");
+      warningTitle.textContent = "请确认你已知晓以下风险：";
+      warningTitle.style.marginBottom = "8px";
+      warningTitle.style.color = "#1f2937";
+      warningTitle.style.fontSize = "13px";
+      warningTitle.style.fontWeight = "700";
+
+      var warningList = document.createElement("ul");
+      warningList.style.margin = "0";
+      warningList.style.paddingLeft = "18px";
+      warningList.style.color = "#6b7280";
+
+      [
+        "该目录的 Linux 权限会被修改为仅允许 root 和 root 组访问。",
+        "这可能影响其他服务、用户或脚本对该目录的正常访问。",
+        "本功能不是容器或沙箱隔离，只是基于系统文件权限限制。",
+        "请勿将 OpenClaw 自身的数据目录、程序目录加入禁止访问列表。"
+      ].forEach(function(text) {
+        var item = document.createElement("li");
+        item.textContent = text;
+        warningList.appendChild(item);
+      });
+
+      warning.appendChild(warningTitle);
+      warning.appendChild(warningList);
+      actionDialogCard.appendChild(warning);
+
+      var addFooter = makeActionDialogFooter();
+      addFooter.appendChild(makeActionDialogButton("取消", "default", function() {
+        var nextSecurity = getSecurityState();
+        nextSecurity.pendingAddPath = "";
+        render();
+      }));
+      addFooter.appendChild(makeActionDialogButton("确认添加", "danger", function() {
+        handleSecurityAddConfirm();
+      }));
+      actionDialogCard.appendChild(addFooter);
+    }
+
+    actionDialogOverlay.style.display = "flex";
+  }
+
+  function handleSecurityAddConfirm() {
+    var security = getSecurityState();
+    var path = security.pendingAddPath || "";
+    if (!path) {
+      render();
+      return;
+    }
+    postJson(config.securityAddUrl, { path: path }).then(function(rv) {
+      if (!rv || !rv.ok) {
+        security.pendingAddPath = "";
+        security.directoryError = (rv && rv.error) || "添加目录失败";
+        render();
+        return;
+      }
+      security.pendingAddPath = "";
+      security.newDirectoryPath = "";
+      security.directoryError = "";
+      loadSecurityData();
+    }).catch(function() {
+      security.pendingAddPath = "";
+      security.directoryError = "添加目录失败";
+      render();
+    });
+  }
+
+  function handleSecurityDelete(mode) {
+    var security = getSecurityState();
+    if (security.deleteTargetId == null) {
+      return;
+    }
+    postJson(config.securityRemoveUrl, { id: security.deleteTargetId, mode: mode }).then(function(rv) {
+      if (!rv || !rv.ok) {
+        openNoticeDialog((rv && rv.error) || (mode === "restore" ? "恢复并删除失败" : "删除失败"));
+        return;
+      }
+      security.deleteTargetId = null;
+      security.deleteTargetPath = "";
+      loadSecurityData();
+    }).catch(function() {
+      openNoticeDialog(mode === "restore" ? "恢复并删除失败" : "删除失败");
+    });
+  }
+
   function securityDataDirectory() {
     var formBaseDir = state.form && state.form.base_dir ? String(state.form.base_dir) : "";
     var statusBaseDir = state.status && state.status.base_dir ? String(state.status.base_dir) : "";
     var suggestedBaseDir = state.options && state.options.suggested_base_dir ? String(state.options.suggested_base_dir) : "";
     return formBaseDir || statusBaseDir || suggestedBaseDir || "";
+  }
+
+  function getFormErrors() {
+    state.formErrors = state.formErrors || { base_dir: "" };
+    if (state.formErrors.base_dir == null) {
+      state.formErrors.base_dir = "";
+    }
+    return state.formErrors;
+  }
+
+  function isBaseDirErrorMessage(message) {
+    var text = String(message || "");
+    return text.indexOf("数据目录") >= 0 || text.indexOf("base_dir") >= 0;
   }
 
   function validateProtectedDirectory(path) {
@@ -443,7 +816,7 @@
   function showTaskLog(taskId) {
     taskId = taskId || "openclawmgr";
     if (!taskWindowAvailable()) {
-      window.alert("任务窗口不可用（未加载 taskd/xterm）。请安装 luci-lib-taskd 和 luci-lib-xterm，然后强制刷新页面。");
+      openNoticeDialog("任务窗口不可用（未加载 taskd/xterm）。请安装 luci-lib-taskd 和 luci-lib-xterm，然后强制刷新页面。");
       return;
     }
     var now = Date.now ? Date.now() : (+new Date());
@@ -548,6 +921,7 @@
   function render() {
     var status = state.status || {};
     var form = state.form || {};
+    var formErrors = getFormErrors();
     var options = state.options || { base_dir_choices: [] };
     var security = getSecurityState();
     var allowedOrigins = Array.isArray(form.allowed_origins) ? form.allowed_origins : [];
@@ -590,9 +964,6 @@
         '</div>' +
         '</div>';
     }).join("");
-    var addDialogOpen = !!security.pendingAddPath;
-    var deleteDialogOpen = security.deleteTargetId != null;
-
     var canStartService = !status.running && !status.reachable;
     var canStopService = !!status.running;
 
@@ -648,7 +1019,8 @@
         ["loopback", "仅本机"],
         ["auto", "自动"]
       ])) +
-      fieldInput("数据目录", '<input class="oclm-control" type="text" id="oclm-base-dir" list="oclm-base-dir-options" value="' + escapeAttr(form.base_dir || "") + '" /><datalist id="oclm-base-dir-options">' + baseDirOptions + '</datalist>') +
+      fieldInput("数据目录", '<input class="oclm-control' + (formErrors.base_dir ? ' oclm-control-danger' : '') + '" type="text" id="oclm-base-dir" list="oclm-base-dir-options" value="' + escapeAttr(form.base_dir || "") + '" /><datalist id="oclm-base-dir-options">' + baseDirOptions + '</datalist>' +
+        '<div id="oclm-base-dir-error" class="oclm-security-error' + (formErrors.base_dir ? '' : ' oclm-hidden') + '">' + escapeHtml(formErrors.base_dir || "") + '</div>') +
       '<div class="oclm-section-submit">' +
       '<button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' +
       '<span id="oclm-service-actions" class="oclm-inline-buttons' + (showServiceActions ? '' : ' oclm-hidden') + '">' +
@@ -745,45 +1117,10 @@
       '<button class="oclm-button oclm-button-danger" type="button" data-op="uninstall">卸载</button>' +
       '<button class="oclm-button oclm-button-danger" type="button" data-op="purge">彻底清理</button>' +
       '</div>' +
-      '</div>' +
-      '<div class="oclm-dialog' + (deleteDialogOpen ? '' : ' oclm-hidden') + '">' +
-      '<div class="oclm-dialog-card">' +
-      '<h3>删除禁止访问目录</h3>' +
-      '<div class="oclm-dialog-text">确定要从保护列表中移除以下目录吗？</div>' +
-      '<code class="oclm-dialog-code">' + escapeHtml(security.deleteTargetPath || "") + '</code>' +
-      '<div class="oclm-dialog-text">请选择删除方式：</div>' +
-      '<div class="oclm-dialog-actions">' +
-      '<button class="oclm-button oclm-dialog-option" type="button" id="oclm-security-delete-direct"><span class="oclm-dialog-option-title">直接删除</span><span class="oclm-dialog-option-note">仅从列表移除，不改变目录权限</span></button>' +
-      '<button class="oclm-button oclm-dialog-option" type="button" id="oclm-security-delete-restore"><span class="oclm-dialog-option-title">恢复其他用户组可访问（drwxr-xr-x）</span><span class="oclm-dialog-option-note">移除并恢复权限</span></button>' +
-      '</div>' +
-      '<div class="oclm-dialog-footer">' +
-      '<button class="oclm-button oclm-button-danger" type="button" id="oclm-security-delete-cancel">取消</button>' +
-      '</div>' +
-      '</div>' +
-      '</div>' +
-      '<div class="oclm-dialog' + (addDialogOpen ? '' : ' oclm-hidden') + '">' +
-      '<div class="oclm-dialog-card">' +
-      '<h3>确认添加禁止访问目录</h3>' +
-      '<div class="oclm-dialog-text">添加后将尝试修改该目录权限，限制 OpenClaw 对其访问：</div>' +
-      '<code class="oclm-dialog-code">' + escapeHtml(security.pendingAddPath || "") + '</code>' +
-      '<div class="oclm-dialog-warning">' +
-      '<div class="oclm-dialog-warning-title">请确认你已知晓以下风险：</div>' +
-      '<ul>' +
-      '<li>该目录的 Linux 权限会被修改为仅允许 root 和 root 组访问。</li>' +
-      '<li>这可能影响其他服务、用户或脚本对该目录的正常访问。</li>' +
-      '<li>本功能不是容器或沙箱隔离，只是基于系统文件权限限制。</li>' +
-      '<li>请勿将 OpenClaw 自身的数据目录、程序目录加入禁止访问列表。</li>' +
-      '</ul>' +
-      '</div>' +
-      '<div class="oclm-dialog-footer">' +
-      '<button class="oclm-button" type="button" id="oclm-security-add-cancel">取消</button>' +
-      '<button class="oclm-button oclm-button-danger" type="button" id="oclm-security-add-confirm">确认添加</button>' +
-      '</div>' +
-      '</div>' +
-      '</div>' +
       '</section>' +
       '</div></div></div>';
 
+    syncActionDialog();
     bindEvents();
   }
 
@@ -1036,7 +1373,7 @@
               showTaskLog(rv.running_task_id);
               return;
             }
-            window.alert((rv && rv.error) || "操作失败");
+            openNoticeDialog((rv && rv.error) || "操作失败");
             return;
           }
           state.lastTaskRunning = true;
@@ -1049,12 +1386,12 @@
     Array.prototype.forEach.call(root.querySelectorAll("[data-open-console]"), function(el) {
       el.onclick = function() {
         if (!state.consoleReady) {
-          window.alert("控制台正在启动，请稍候再试。");
+          openNoticeDialog("控制台正在启动，请稍候再试。");
           return;
         }
         var url = (state.status && state.status.token_url) || "";
         if (!url) {
-          window.alert("控制台地址不可用");
+          openNoticeDialog("控制台地址不可用");
           return;
         }
         window.open(url, "_blank", "noreferrer");
@@ -1068,7 +1405,7 @@
         var baseDirEl = root.getElementById("oclm-base-dir");
         var baseDir = baseDirEl && baseDirEl.value ? baseDirEl.value.trim() : "";
         if (!baseDir) {
-          window.alert("请先选择数据目录并保存应用，再执行安装。");
+          openNoticeDialog("请先选择数据目录并保存应用，再执行安装。");
           if (baseDirEl) baseDirEl.focus();
           return;
         }
@@ -1083,7 +1420,7 @@
           if (!cfgRv || !cfgRv.ok) {
             state.status.installing = false;
             render();
-            window.alert((cfgRv && cfgRv.error) || "保存安装选项失败");
+            openNoticeDialog((cfgRv && cfgRv.error) || "保存安装选项失败");
             return;
           }
           state.form.install_accelerated = accelerated;
@@ -1099,7 +1436,7 @@
             }
             state.status.installing = false;
             render();
-            window.alert((rv && rv.error) || "启动安装失败");
+            openNoticeDialog((rv && rv.error) || "启动安装失败");
             return;
           }
           state.lastTaskRunning = true;
@@ -1108,7 +1445,7 @@
         }).catch(function() {
           state.status.installing = false;
           render();
-          window.alert("启动安装失败");
+          openNoticeDialog("启动安装失败");
         });
       };
     });
@@ -1121,7 +1458,7 @@
         var baseDir = baseDirEl && baseDirEl.value ? baseDirEl.value.trim() : "";
         var op = (state.status && state.status.installed) ? "upgrade" : "install";
         if (!baseDir) {
-          window.alert("请先选择数据目录并保存应用，再执行安装。");
+          openNoticeDialog("请先选择数据目录并保存应用，再执行安装。");
           if (baseDirEl) baseDirEl.focus();
           return;
         }
@@ -1138,7 +1475,7 @@
             state.status.task_running = false;
             state.status.task_op = "";
             render();
-            window.alert((cfgRv && cfgRv.error) || "保存安装选项失败");
+            openNoticeDialog((cfgRv && cfgRv.error) || "保存安装选项失败");
             return;
           }
           state.form.install_accelerated = accelerated;
@@ -1156,7 +1493,7 @@
             state.status.task_running = false;
             state.status.task_op = "";
             render();
-            window.alert((rv && rv.error) || "启动安装失败");
+            openNoticeDialog((rv && rv.error) || "启动安装失败");
             return;
           }
           state.lastTaskRunning = true;
@@ -1167,7 +1504,7 @@
           state.status.task_running = false;
           state.status.task_op = "";
           render();
-          window.alert("启动安装失败");
+          openNoticeDialog("启动安装失败");
         });
       };
     });
@@ -1191,7 +1528,7 @@
             updateCheck.localVersion = String((rv && rv.local_version) || (state.status && state.status.openclaw_version) || "");
             updateCheck.remoteVersion = String((rv && rv.remote_version) || "");
             render();
-            window.alert(updateCheck.error);
+            openNoticeDialog(updateCheck.error);
             return;
           }
           updateCheck.checked = true;
@@ -1206,7 +1543,7 @@
           updateCheck.hasUpdate = false;
           updateCheck.error = "检测更新失败";
           render();
-          window.alert("检测更新失败");
+          openNoticeDialog("检测更新失败");
         });
       };
     });
@@ -1349,55 +1686,18 @@
       };
     }
 
-    var securityAddCancel = root.getElementById("oclm-security-add-cancel");
-    if (securityAddCancel) {
-      securityAddCancel.onclick = function() {
-        var security = getSecurityState();
-        security.pendingAddPath = "";
-        render();
-      };
-    }
-
-    var securityAddConfirm = root.getElementById("oclm-security-add-confirm");
-    if (securityAddConfirm) {
-      securityAddConfirm.onclick = function() {
-        var security = getSecurityState();
-        var path = security.pendingAddPath || "";
-        if (!path) {
-          render();
-          return;
-        }
-        postJson(config.securityAddUrl, { path: path }).then(function(rv) {
-          if (!rv || !rv.ok) {
-            security.pendingAddPath = "";
-            security.directoryError = (rv && rv.error) || "添加目录失败";
-            render();
-            return;
-          }
-          security.pendingAddPath = "";
-          security.newDirectoryPath = "";
-          security.directoryError = "";
-          loadSecurityData();
-        }).catch(function() {
-          security.pendingAddPath = "";
-          security.directoryError = "添加目录失败";
-          render();
-        });
-      };
-    }
-
     Array.prototype.forEach.call(root.querySelectorAll("[data-security-recheck]"), function(el) {
       el.onclick = function() {
         var id = el.getAttribute("data-security-recheck");
         if (!id) return;
         postJson(config.securityRecheckUrl, { id: id }).then(function(rv) {
           if (!rv || !rv.ok) {
-            window.alert((rv && rv.error) || "重新检测失败");
+            openNoticeDialog((rv && rv.error) || "重新检测失败");
             return;
           }
           loadSecurityData();
         }).catch(function() {
-          window.alert("重新检测失败");
+          openNoticeDialog("重新检测失败");
         });
       };
     });
@@ -1420,61 +1720,31 @@
       };
     });
 
-    var securityDeleteDirect = root.getElementById("oclm-security-delete-direct");
-    if (securityDeleteDirect) {
-      securityDeleteDirect.onclick = function() {
-        var security = getSecurityState();
-        if (security.deleteTargetId == null) return;
-        postJson(config.securityRemoveUrl, { id: security.deleteTargetId, mode: "direct" }).then(function(rv) {
-          if (!rv || !rv.ok) {
-            window.alert((rv && rv.error) || "删除失败");
-            return;
-          }
-          security.deleteTargetId = null;
-          security.deleteTargetPath = "";
-          loadSecurityData();
-        }).catch(function() {
-          window.alert("删除失败");
-        });
-      };
-    }
-
-    var securityDeleteRestore = root.getElementById("oclm-security-delete-restore");
-    if (securityDeleteRestore) {
-      securityDeleteRestore.onclick = function() {
-        var security = getSecurityState();
-        if (security.deleteTargetId == null) return;
-        postJson(config.securityRemoveUrl, { id: security.deleteTargetId, mode: "restore" }).then(function(rv) {
-          if (!rv || !rv.ok) {
-            window.alert((rv && rv.error) || "恢复并删除失败");
-            return;
-          }
-          security.deleteTargetId = null;
-          security.deleteTargetPath = "";
-          loadSecurityData();
-        }).catch(function() {
-          window.alert("恢复并删除失败");
-        });
-      };
-    }
-
-    var securityDeleteCancel = root.getElementById("oclm-security-delete-cancel");
-    if (securityDeleteCancel) {
-      securityDeleteCancel.onclick = function() {
-        var security = getSecurityState();
-        security.deleteTargetId = null;
-        security.deleteTargetPath = "";
-        render();
-      };
-    }
-
     var saveBasic = root.getElementById("oclm-save-basic");
+    var baseDirInput = root.getElementById("oclm-base-dir");
+    if (baseDirInput) {
+      baseDirInput.oninput = function() {
+        var formErrors = getFormErrors();
+        if (formErrors.base_dir) {
+          formErrors.base_dir = "";
+          render();
+        }
+      };
+    }
     if (saveBasic) {
       saveBasic.onclick = function() {
+        var formErrors = getFormErrors();
+        var baseDirValue = root.getElementById("oclm-base-dir").value;
+        if (!String(baseDirValue || "").replace(/^\s+|\s+$/g, "")) {
+          formErrors.base_dir = "数据目录不能为空";
+          render();
+          return;
+        }
+        formErrors.base_dir = "";
         var payload = {
           port: root.getElementById("oclm-port").value,
           bind: root.getElementById("oclm-bind").value,
-          base_dir: root.getElementById("oclm-base-dir").value,
+          base_dir: baseDirValue,
           install_accelerated: !!(root.getElementById("oclm-install-accelerated") && root.getElementById("oclm-install-accelerated").checked),
         };
         state.savingSection = "basic";
@@ -1482,7 +1752,7 @@
         postJson(config.configUrl, payload).then(function(rv) { handleSaveResult(rv, "basic"); }).catch(function() {
           state.savingSection = "";
           render();
-          window.alert("保存失败");
+          openNoticeDialog("保存失败");
         });
       };
     }
@@ -1494,7 +1764,7 @@
         var modelValue = normalizeModelValue(root.getElementById("oclm-model").value, defaultModelForAgent(agentValue));
         var baseUrlValue = root.getElementById("oclm-base-url").value;
         if (agentValue === "custom-provider" && !String(baseUrlValue || "").replace(/^\s+|\s+$/g, "")) {
-          window.alert("自定义供应商必须填写服务地址");
+          openNoticeDialog("自定义供应商必须填写服务地址");
           return;
         }
         var payload = {
@@ -1510,7 +1780,7 @@
         postJson(config.configUrl, payload).then(function(rv) { handleSaveResult(rv, "ai"); }).catch(function() {
           state.savingSection = "";
           render();
-          window.alert("保存失败");
+          openNoticeDialog("保存失败");
         });
       };
     }
@@ -1529,7 +1799,7 @@
         postJson(config.configUrl, payload).then(function(rv) { handleSaveResult(rv, "access"); }).catch(function() {
           state.savingSection = "";
           render();
-          window.alert("保存失败");
+          openNoticeDialog("保存失败");
         });
       };
     }
@@ -1537,16 +1807,25 @@
 
   function handleSaveResult(rv, section) {
     if (!rv || !rv.ok) {
+      var formErrors = getFormErrors();
       state.savingSection = "";
+      if (section === "basic" && isBaseDirErrorMessage(rv && rv.error)) {
+        formErrors.base_dir = (rv && rv.error) || "数据目录错误";
+        render();
+        return;
+      }
       render();
-      window.alert((rv && rv.error) || "保存失败");
+      openNoticeDialog((rv && rv.error) || "保存失败");
       return;
+    }
+    if (section === "basic") {
+      getFormErrors().base_dir = "";
     }
     postForm(config.applyUrl, {}).then(function(applyRv) {
       state.savingSection = "";
       if (!applyRv || !applyRv.ok) {
         render();
-        window.alert((applyRv && applyRv.error) || "应用配置失败");
+        openNoticeDialog((applyRv && applyRv.error) || "应用配置失败");
         loadConfig();
         scheduleStatusRefresh(3, 600);
         return;
@@ -1558,7 +1837,7 @@
     }).catch(function() {
       state.savingSection = "";
       render();
-      window.alert("应用配置失败");
+      openNoticeDialog("应用配置失败");
       loadConfig();
       scheduleStatusRefresh(3, 600);
     });
