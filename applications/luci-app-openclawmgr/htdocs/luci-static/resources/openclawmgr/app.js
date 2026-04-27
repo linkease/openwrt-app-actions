@@ -996,6 +996,11 @@
       '</div>' +
       '<button id="oclm-open-console" class="oclm-button oclm-button-primary' + ((status.running || status.reachable) ? '' : ' oclm-hidden') + '" type="button" data-open-console="1"' + (state.consoleReady ? '' : ' disabled') + '>' + openclawIcon("oclm-button-icon") + (state.consoleReady ? '打开控制台' : '控制台准备中…') + '</button>' +
       '<a id="oclm-open-community" class="oclm-button oclm-button-community" href="https://www.koolcenter.com/t/topic/19042" target="_blank" rel="noreferrer noopener">' + communityIcon("oclm-button-icon") + '玩家交流</a>' +
+      '<div id="oclm-service-actions" class="oclm-service-actions-row' + (showServiceActions ? '' : ' oclm-hidden') + '">' +
+      '<button id="oclm-btn-start" class="oclm-button oclm-button-service-start' + (canStartService ? '' : ' oclm-hidden') + '" type="button" data-op="start">启动服务</button>' +
+      '<button id="oclm-btn-stop" class="oclm-button oclm-button-service-stop' + (canStopService ? '' : ' oclm-hidden') + '" type="button" data-op="stop">停止服务</button>' +
+      '<button id="oclm-btn-restart" class="oclm-button oclm-button-service-restart" type="button" data-op="restart">重启服务</button>' +
+      '</div>' +
       '<button id="oclm-cancel-install" class="oclm-button oclm-button-danger' + (status.installing ? '' : ' oclm-hidden') + '" type="button" data-op="cancel_install">停止安装</button>' +
       '</div>' +
       '<div id="oclm-status-note" class="oclm-status-note' + (noteText ? '' : ' oclm-hidden') + '">' + escapeHtml(noteText) + '</div>' +
@@ -1023,11 +1028,6 @@
         '<div id="oclm-base-dir-error" class="oclm-security-error' + (formErrors.base_dir ? '' : ' oclm-hidden') + '">' + escapeHtml(formErrors.base_dir || "") + '</div>') +
       '<div class="oclm-section-submit">' +
       '<button class="oclm-button oclm-button-primary" type="button" id="oclm-save-basic"' + (savingBasic ? ' disabled' : '') + '>' + (savingBasic ? '应用中…' : '保存并应用') + '</button>' +
-      '<span id="oclm-service-actions" class="oclm-inline-buttons' + (showServiceActions ? '' : ' oclm-hidden') + '">' +
-      '<button id="oclm-btn-start" class="oclm-button' + (canStartService ? '' : ' oclm-hidden') + '" type="button" data-op="start">启动服务</button>' +
-      '<button id="oclm-btn-stop" class="oclm-button' + (canStopService ? '' : ' oclm-hidden') + '" type="button" data-op="stop">停止服务</button>' +
-      '<button id="oclm-btn-restart" class="oclm-button" type="button" data-op="restart">重启服务</button>' +
-      '</span>' +
       (state.lastAppliedAt ? '<span class="oclm-applied-hint">已于 ' + escapeHtml(state.lastAppliedAt) + ' 更新配置</span>' : '') +
       '</div>' +
       '</div></div>' +

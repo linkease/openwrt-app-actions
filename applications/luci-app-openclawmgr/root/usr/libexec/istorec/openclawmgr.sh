@@ -713,17 +713,54 @@ local function ensure_table(parent, key)
 	return parent[key]
 end
 
+local function is_array(node)
+	if type(node) ~= "table" then
+		return false
+	end
+	local count = 0
+	for k, _ in pairs(node) do
+		if type(k) ~= "number" or k < 1 or k % 1 ~= 0 then
+			return false
+		end
+		count = count + 1
+	end
+	for i = 1, count do
+		if node[i] == nil then
+			return false
+		end
+	end
+	return true
+end
+
 local function prune_empty_tables(node)
 	if type(node) ~= "table" then
 		return false
 	end
 
-	for k, v in pairs(node) do
-		if type(v) == "table" then
-			prune_empty_tables(v)
-			if next(v) == nil then
-				node[k] = nil
+	if is_array(node) then
+		local compact = {}
+		for i = 1, #node do
+			local value = node[i]
+			if type(value) == "table" then
+				if not prune_empty_tables(value) then
+					compact[#compact + 1] = value
+				end
+			else
+				compact[#compact + 1] = value
 			end
+		end
+		for i = #node, 1, -1 do
+			node[i] = nil
+		end
+		for i = 1, #compact do
+			node[i] = compact[i]
+		end
+		return #node == 0
+	end
+
+	for k, v in pairs(node) do
+		if type(v) == "table" and prune_empty_tables(v) then
+			node[k] = nil
 		end
 	end
 
@@ -904,6 +941,8 @@ if current_env_key and type(current_provider.apiKey) == "string" and current_pro
 	next_env[current_env_key] = current_provider.apiKey
 end
 cfg.env = next(next_env) and next_env or nil
+
+prune_empty_tables(cfg)
 
 local encoded = json.stringify(cfg, true)
 if encoded then
@@ -1335,7 +1374,6 @@ do_start() {
 	ensure_safe_port_for_start || exit 1
 	/etc/init.d/openclawmgr enable >/dev/null 2>&1 || true
 	uci -q set "${UCI_NS}.main.enabled=1" && uci -q commit "$UCI_NS" || true
-	ensure_gateway_config || true
 	/etc/init.d/openclawmgr restart >/dev/null 2>&1 || /etc/init.d/openclawmgr start >/dev/null 2>&1 || true
 	write_installer_log "== start done =="
 }
@@ -1356,7 +1394,6 @@ do_restart() {
 	fix_data_permissions || true
 	ensure_token
 	ensure_safe_port_for_start || exit 1
-	ensure_gateway_config || true
 	/etc/init.d/openclawmgr restart >/dev/null 2>&1 || true
 	write_installer_log "== restart done =="
 }

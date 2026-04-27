@@ -214,6 +214,12 @@
   flex-wrap: wrap;
 }
 
+.oclm-service-actions-row {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
 .oclm-check {
   display: inline-flex;
   align-items: center;
@@ -293,6 +299,39 @@
   color: #fff;
   filter: brightness(1.05);
   box-shadow: 0 10px 22px rgba(124, 58, 237, 0.3);
+}
+
+.oclm-button-service-start {
+  background: linear-gradient(180deg, #34d399, #0f766e);
+  color: #fff;
+  border-color: transparent;
+}
+
+.oclm-button-service-start:hover {
+  color: #fff;
+  filter: brightness(1.03);
+}
+
+.oclm-button-service-stop {
+  background: linear-gradient(180deg, #f59e0b, #d97706);
+  color: #fff;
+  border-color: transparent;
+}
+
+.oclm-button-service-stop:hover {
+  color: #fff;
+  filter: brightness(1.03);
+}
+
+.oclm-button-service-restart {
+  background: linear-gradient(180deg, #60a5fa, #1d4ed8);
+  color: #fff;
+  border-color: transparent;
+}
+
+.oclm-button-service-restart:hover {
+  color: #fff;
+  filter: brightness(1.03);
 }
 
 .oclm-button-danger {
