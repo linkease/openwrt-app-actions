@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       target:
-        description: 'target ["arm64", "x64", "mipsel"]'
+        description: 'target ["arm64", "x64", "mipsel", "arm"]'
         required: true
         default: 'arm64'
         type: choice
@@ -12,6 +12,7 @@ on:
           - arm64
           - x64
           - mipsel
+          - arm
 
 env:
   TZ: Asia/Shanghai
