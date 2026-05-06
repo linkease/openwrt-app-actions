@@ -139,9 +139,10 @@ jobs:
           CACHE_NAME: 'feeds-cache-apk'
         with:
           path: |
+            ~/openwrt-sdk-apk/feeds/base
             ~/openwrt-sdk-apk/feeds/base_root
             ~/openwrt-sdk-apk/feeds/luci
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME_APK }}-bl-1
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME_APK }}-bl-2
 
       - name: 'Restore ipk staging from cache'
         id: staging-cache
