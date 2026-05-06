@@ -150,7 +150,7 @@ jobs:
           CACHE_NAME: 'staging-cache'
         with:
           path: ~/openwrt-sdk/staging_dir
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-hht-3
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME }}-hht-2
 
       - name: 'Restore apk staging from cache'
         id: staging-cache-apk
@@ -159,7 +159,7 @@ jobs:
           CACHE_NAME: 'staging-cache-apk'
         with:
           path: ~/openwrt-sdk-apk/staging_dir
-          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME_APK }}-hht-3
+          key: ${{ env.CACHE_NAME }}-${{ env.SDK_NAME_APK }}-hht-2
 
       - name: Update feeds
         run: |
