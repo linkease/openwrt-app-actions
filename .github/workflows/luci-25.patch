@@ -1,0 +1,13 @@
+diff --git a/luci.mk b/luci.mk
+index 27e5302c..e001e582 100644
+--- a/luci.mk
++++ b/luci.mk
+@@ -58,6 +58,8 @@ LUCI_LANG.vi=Tiếng Việt (Vietnamese)
+ LUCI_LANG.yua=Yucateco (Yucatec Maya)
+ LUCI_LANG.zh_Hans=简体中文 (Simplified Chinese)
+ LUCI_LANG.zh_Hant=正體中文 (Traditional Chinese)
++LUCI_LANG.zh-cn=$(LUCI_LANG.zh_Hans)
++LUCI_LANG.zh-tw=$(LUCI_LANG.zh_Hant)
+ #LUCI_LANG_END
+ 
+ # Submenu titles
