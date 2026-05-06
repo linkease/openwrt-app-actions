@@ -345,22 +345,23 @@ jobs:
         run: |
           ( cd ${SDK_NAME}/bin/packages/${SDK_ARCH} && rm -rf base luci )
           ( cd ${SDK_NAME_APK}/bin/packages/${SDK_ARCH_APK} && rm -rf base luci )
+          mkdir ~/upload
+          cp -a ${SDK_NAME}/bin/packages/${SDK_ARCH} ~/upload/ipk
+          cp -a ${SDK_NAME_APK}/bin/packages/${SDK_ARCH_APK} ~/upload/apk
 
       - name: Upload bin directory
         uses: actions/upload-artifact@main
         if: steps.precompile.outputs.status == 'success' || steps.compile.outputs.status == 'success'
         with:
           name: ${{ matrix.target }}
-          path: |
-            ${{ env.SDK_NAME }}/bin/packages/${{ env.SDK_ARCH }}
-            ${{ env.SDK_NAME_APK }}/bin/packages/${{ env.SDK_ARCH_APK }}
+          path: ~/upload
 
       - name: PreCache - Clean
         run: |
-          git -C "${SDK_NAME}/feeds/luci" reset --hard HEAD
-          git -C "${SDK_NAME_APK}/feeds/luci" reset --hard HEAD
-          cd ${SDK_NAME}/staging_dir
-          rm -rf packages target-*
-          cd ${SDK_NAME_APK}/staging_dir
-          rm -rf packages target-*
+          for sdk in ~/openwrt-sdk ~/openwrt-sdk-apk; do
+            cd $sdk
+            git -C "feeds/luci" reset --hard HEAD
+            cd staging_dir
+            rm -rf packages target-*
+          done
 
