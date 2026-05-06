@@ -357,8 +357,8 @@ jobs:
 
       - name: PreCache - Clean
         run: |
-          git -C "${SDK_NAME}/feeds/luci" reset --hard HEAD^
-          git -C "${SDK_NAME_APK}/feeds/luci" reset --hard HEAD^
+          git -C "${SDK_NAME}/feeds/luci" reset --hard HEAD
+          git -C "${SDK_NAME_APK}/feeds/luci" reset --hard HEAD
           cd ${SDK_NAME}/staging_dir
           rm -rf packages target-*
           cd ${SDK_NAME_APK}/staging_dir
