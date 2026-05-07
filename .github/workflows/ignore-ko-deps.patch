@@ -1,0 +1,11 @@
+--- a/scripts/gen-dependencies.sh
++++ b/scripts/gen-dependencies.sh
+@@ -25,7 +25,7 @@
+   sort -u
+ 
+ tmp=$(mktemp $TMP_DIR/dep.XXXXXXXX)
+-for kmod in $(find $TARGETS -type f -name \*.ko); do
++for kmod in $(find $TARGETS -type f -name \*.k0o); do
+ 	$OBJCOPY -O binary -j .modinfo $kmod $tmp
+ 	sed -e 's,\x00,\n,g' $tmp | \
+ 		sed -ne '/^depends=.\+/ { s/^depends=//; s/,/.ko\n/g; s/$/.ko/p; q }'

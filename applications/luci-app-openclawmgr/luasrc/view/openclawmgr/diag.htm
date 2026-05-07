@@ -1,0 +1,244 @@
+<%+header%>
+
+<%
+local info_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "diag_info")
+local run_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "diag_run")
+local poll_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "diag_poll")
+local op_url = luci.dispatcher.build_url("admin", "services", "openclawmgr", "op")
+local token = (luci.dispatcher.context and luci.dispatcher.context.token) or ""
+%>
+
+<%+tasks/embed%>
+
+<style type="text/css">
+.oc-box{border:1px solid #e5e5e5;border-radius:8px;background:#fff;margin:0 0 16px 0;overflow:hidden}
+.oc-box .hd{padding:10px 14px;background:#f6f8fa;border-bottom:1px solid #eee;font-weight:600}
+.oc-box .bd{padding:12px 14px}
+.oc-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.oc-kv{font-size:13px;line-height:1.8}
+.oc-kv code{background:#f6f8fa;padding:2px 6px;border-radius:4px}
+.oc-tag{display:inline-block;padding:2px 10px;border-radius:999px;font-size:12px;border:1px solid #d0d7de;background:#fff}
+.ok{color:#1a7f37;border-color:#b7dfc3;background:#e6f7e9}
+.bad{color:#cf222e;border-color:#f0b8bf;background:#ffeef0}
+.warn{color:#9a6700;border-color:#f2d084;background:#fff8c5}
+.oc-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.oc-row .btn{display:inline-block;padding:6px 12px;border:1px solid #d0d7de;border-radius:6px;background:#fff;cursor:pointer}
+.oc-row .btn.primary{background:#0969da;border-color:#0969da;color:#fff}
+.oc-row .btn.danger{background:#cf222e;border-color:#cf222e;color:#fff}
+.oc-row .btn:disabled{opacity:.6;cursor:not-allowed}
+.oc-out{width:100%;height:300px;white-space:pre-wrap;background:#0b1020;color:#dbe2ff;border-radius:8px;padding:10px;overflow:auto;font-family:monospace;font-size:12px}
+@media (max-width: 1000px){.oc-grid{grid-template-columns:1fr}}
+</style>
+
+<div class="oc-box">
+	<div class="hd"><%:Quick Checks%></div>
+	<div class="bd">
+		<div class="oc-grid">
+			<div class="oc-kv">
+				<div><%:Base Dir%>: <code id="oc-base">-</code></div>
+				<div><%:Disk Available%>: <code id="oc-disk">-</code></div>
+				<div><%:Enable%>: <span id="oc-enabled" class="oc-tag">-</span></div>
+				<div><%:Running%>: <span id="oc-running" class="oc-tag">-</span> <span id="oc-pid"></span></div>
+			</div>
+			<div class="oc-kv">
+				<div><%:Node%>: <code id="oc-node">-</code> <span id="oc-has-node" class="oc-tag">-</span></div>
+				<div><%:OpenClaw%>: <code id="oc-ver">-</code> <span id="oc-has-oc" class="oc-tag">-</span></div>
+				<div><%:Config%>: <span id="oc-has-cfg" class="oc-tag">-</span></div>
+				<div><%:URL%>: <a id="oc-url" href="#" target="_blank" rel="noopener">-</a></div>
+			</div>
+		</div>
+		<div id="oc-hints" style="margin-top:10px;color:#666;font-size:12px;line-height:1.6"></div>
+	</div>
+</div>
+
+<div class="oc-box">
+	<div class="hd"><%:Service Actions%></div>
+	<div class="bd">
+		<div class="oc-row">
+			<button class="btn" onclick="ocSvc('restart')"><%:Restart Service%></button>
+			<button class="btn" onclick="ocSvc('upgrade')"><%:Upgrade%></button>
+			<button class="btn" onclick="ocConfirmUninstallOpenclaw()"><%:Uninstall OpenClaw (Keep Node)%></button>
+			<button class="btn" onclick="ocConfirmUninstall()"><%:Uninstall%></button>
+			<button class="btn danger" onclick="ocConfirmPurge()"><%:Purge%></button>
+		</div>
+		<div style="margin-top:10px;color:#666;font-size:12px;line-height:1.6">
+			<%:Purge is destructive and will remove data under Base Dir. Use it only for troubleshooting.%>
+		</div>
+	</div>
+</div>
+
+<div class="oc-box">
+	<div class="hd"><%:Diagnostics%></div>
+	<div class="bd">
+		<div class="oc-row">
+			<button id="btn-doctor" class="btn primary" onclick="ocRun('doctor')"><%:Run Doctor%></button>
+			<button id="btn-gwst" class="btn" onclick="ocRun('gateway_status')"><%:Gateway Status%></button>
+			<button id="btn-gwh" class="btn" onclick="ocRun('gateway_health')"><%:Gateway Health%></button>
+			<button id="btn-chst" class="btn" onclick="ocRun('channels_status')"><%:Channels Status%></button>
+			<button id="btn-logs" class="btn" onclick="ocRunLogs()"><%:Gateway Logs%></button>
+			<select id="oc-log-limit" style="padding:6px 8px;border:1px solid #d0d7de;border-radius:6px">
+				<option value="200">200</option>
+				<option value="500">500</option>
+				<option value="1000">1000</option>
+				<option value="2000">2000</option>
+			</select>
+		</div>
+		<div style="margin-top:10px;color:#666;font-size:12px">
+			<%:All actions run in background; output will appear below.%>
+		</div>
+		<div style="margin-top:10px">
+			<div class="oc-out" id="oc-out">-</div>
+		</div>
+	</div>
+</div>
+
+<script type="text/javascript">
+//<![CDATA[
+(function() {
+	var infoUrl = '<%=info_url%>';
+	var runUrl = '<%=run_url%>';
+	var pollUrl = '<%=poll_url%>';
+	var opUrl = '<%=op_url%>';
+	var csrfToken = '<%=token%>';
+
+	var currentOp = '';
+	var pollTimer = null;
+
+	function tag(el, ok, text) {
+		if (!el) return;
+		el.className = 'oc-tag ' + (ok === true ? 'ok' : ok === false ? 'bad' : 'warn');
+		el.textContent = text;
+	}
+
+	function setText(id, v) {
+		var el = document.getElementById(id);
+		if (el) el.textContent = (v === undefined || v === null || v === '') ? '-' : v;
+	}
+
+	function setLink(id, href) {
+		var el = document.getElementById(id);
+		if (!el) return;
+		if (!href || href === '-') {
+			el.textContent = '-';
+			el.href = '#';
+			return;
+		}
+		el.textContent = href;
+		el.href = href;
+	}
+
+	function refreshInfo() {
+		(new XHR()).get(infoUrl, null, function(x) {
+			try {
+				var d = JSON.parse(x.responseText);
+				setText('oc-base', d.base_dir);
+				setText('oc-disk', (d.available_mb || 0) + ' MB');
+				tag(document.getElementById('oc-enabled'), d.enabled === '1', d.enabled === '1' ? 'yes' : 'no');
+				tag(document.getElementById('oc-running'), d.running === true, d.running === true ? 'yes' : 'no');
+				setText('oc-pid', d.procd_pid ? ('(pid ' + d.procd_pid + ')') : '');
+				setText('oc-node', d.node_version || '-');
+				setText('oc-ver', d.openclaw_version || '-');
+				tag(document.getElementById('oc-has-node'), d.has_node === true, d.has_node ? 'node ok' : 'node missing');
+				tag(document.getElementById('oc-has-oc'), d.has_openclaw === true, d.has_openclaw ? 'openclaw ok' : 'openclaw missing');
+				tag(document.getElementById('oc-has-cfg'), d.has_config === true, d.has_config ? 'config ok' : 'config missing');
+				setLink('oc-url', d.url || '-');
+
+				var hints = [];
+				if (!d.default_gw) hints.push('No default gateway: internet unreachable (install/upgrade will fail).');
+				if (!d.has_node) hints.push('Node.js missing: click Install in the action bar.');
+				if (d.has_node && !d.has_openclaw) hints.push('OpenClaw not installed: click Install in the action bar.');
+				if (d.has_openclaw && !d.has_config) hints.push('Config missing: run Doctor or re-run Install to generate minimal config.');
+				if (d.available_mb && d.available_mb < 2048) hints.push('Disk space low (< 2GB): installation may fail.');
+				if (d.enabled === '1' && d.has_openclaw && !d.running) hints.push('Service enabled but not running: run Gateway Status or Doctor for details.');
+				document.getElementById('oc-hints').textContent = hints.length ? ('Hints: ' + hints.join(' ')) : 'Hints: -';
+			} catch (e) {}
+		});
+	}
+
+	function pollOnce() {
+		if (!currentOp) return;
+		(new XHR()).get(pollUrl, { op: currentOp }, function(x) {
+			try {
+				var d = JSON.parse(x.responseText);
+				document.getElementById('oc-out').textContent = d.log || '-';
+				if (d.state === 'done') {
+					stopPoll();
+				}
+			} catch (e) {}
+		});
+	}
+
+	function startPoll(op) {
+		currentOp = op;
+		if (pollTimer) window.clearInterval(pollTimer);
+		pollOnce();
+		pollTimer = window.setInterval(pollOnce, 1200);
+	}
+
+	function stopPoll() {
+		if (pollTimer) window.clearInterval(pollTimer);
+		pollTimer = null;
+	}
+
+	function disableButtons(disabled) {
+		var ids = ['btn-doctor','btn-gwst','btn-gwh','btn-chst','btn-logs'];
+		for (var i=0;i<ids.length;i++) {
+			var el = document.getElementById(ids[i]);
+			if (el) el.disabled = disabled;
+		}
+	}
+
+	window.ocRun = function(op) {
+		disableButtons(true);
+		(new XHR()).post(runUrl, { op: op, token: csrfToken }, function() {
+			disableButtons(false);
+			startPoll(op);
+		});
+	};
+
+	window.ocRunLogs = function() {
+		var limit = document.getElementById('oc-log-limit').value || '200';
+		disableButtons(true);
+		(new XHR()).post(runUrl, { op: 'logs', limit: limit, token: csrfToken }, function() {
+			disableButtons(false);
+			startPoll('logs');
+		});
+	};
+
+	window.ocSvc = function(op) {
+		(new XHR()).post(opUrl, { op: op, token: csrfToken }, function(x) {
+			try {
+				var d = JSON.parse(x.responseText || '{}');
+				if (window.taskd && window.taskd.show_log) {
+					if (d.running_task_id && d.running_task_id !== '') {
+						window.taskd.show_log(d.running_task_id);
+					} else if (d.task_id) {
+						window.taskd.show_log(d.task_id);
+					}
+				}
+			} catch (e) {}
+		});
+	};
+
+	window.ocConfirmUninstall = function() {
+		if (!confirm('<%:Uninstall will remove runtime but keep data under Base Dir. Continue?%>')) return;
+		window.ocSvc('uninstall');
+	};
+
+	window.ocConfirmUninstallOpenclaw = function() {
+		if (!confirm('<%:Uninstall OpenClaw runtime but keep Node.js. Continue?%>')) return;
+		window.ocSvc('uninstall_openclaw');
+	};
+
+	window.ocConfirmPurge = function() {
+		if (!confirm('<%:Purge will remove runtime and data under Base Dir. Continue?%>')) return;
+		window.ocSvc('purge');
+	};
+
+	refreshInfo();
+	window.setInterval(refreshInfo, 5000);
+})();
+//]]>
+</script>
+
+<%+footer%>

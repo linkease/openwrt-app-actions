@@ -1,0 +1,245 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8\n"
+
+msgid "OpenClaw"
+msgstr "OpenClaw"
+
+msgid "OpenClaw Launcher"
+msgstr "OpenClaw 启动器"
+
+msgid "Native installer & service manager for OpenClaw (procd + Node/npm)."
+msgstr "OpenClaw 原生安装器与服务管理（procd + Node/npm）。"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Open Web UI"
+msgstr "打开 Web 界面"
+
+msgid "Unavailable"
+msgstr "不可用"
+
+msgid "Service Status"
+msgstr "服务状态"
+
+msgid "Installed"
+msgstr "已安装"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Not running"
+msgstr "未运行"
+
+msgid "Not installed"
+msgstr "未安装"
+
+msgid "Node"
+msgstr "Node.js"
+
+msgid "URL"
+msgstr "访问地址"
+
+msgid "Actions"
+msgstr "操作"
+
+msgid "Install"
+msgstr "安装"
+
+msgid "Apply Settings"
+msgstr "应用设置"
+
+msgid "Upgrade"
+msgstr "升级"
+
+msgid "Start"
+msgstr "启动"
+
+msgid "Stop"
+msgstr "停止"
+
+msgid "Restart"
+msgstr "重启"
+
+msgid "Purge"
+msgstr "清理（含数据）"
+
+msgid "Installer Log"
+msgstr "安装日志"
+
+msgid "Service Actions"
+msgstr "服务操作"
+
+msgid "Restart Service"
+msgstr "重启服务"
+
+msgid "Purge will remove runtime and data under Base Dir. Continue?"
+msgstr "清理将删除运行时与安装目录下的数据。确定继续？"
+
+msgid "Purge is destructive and will remove data under Base Dir. Use it only for troubleshooting."
+msgstr "清理操作具有破坏性，会删除安装目录下的数据；仅建议用于排障。"
+
+msgid "Install/upgrade runs in background; check logs in the popup task window."
+msgstr "安装/升级在后台执行；请在弹出的任务日志窗口查看。"
+
+msgid "Task log will pop up after clicking an action."
+msgstr "点击操作后会弹出任务日志窗口。"
+
+msgid "Task window is not available (taskd/xterm not loaded). Please install luci-lib-taskd and luci-lib-xterm, then hard refresh the page."
+msgstr "任务窗口不可用（未加载 taskd/xterm）。请安装 luci-lib-taskd 和 luci-lib-xterm，然后强制刷新页面。"
+
+msgid "Config saved, but apply failed"
+msgstr "配置已保存，但应用失败"
+
+msgid "Another task running, try again later."
+msgstr "有任务正在运行，请稍后再试。"
+
+msgid "Click here to check running task"
+msgstr "点击这里查看正在运行的任务"
+
+msgid "Task Running"
+msgstr "任务运行中"
+
+msgid "Installing"
+msgstr "安装中"
+
+msgid "Stop Install"
+msgstr "停止安装"
+
+msgid "Failed to stop installation"
+msgstr "停止安装失败"
+
+msgid "No install task is running"
+msgstr "当前没有正在执行的安装任务"
+
+msgid "taskd is not available"
+msgstr "taskd 不可用"
+
+msgid "Diagnostics"
+msgstr "诊断"
+
+msgid "Quick Checks"
+msgstr "快速检查"
+
+msgid "Disk Available"
+msgstr "可用空间"
+
+msgid "Config"
+msgstr "配置文件"
+
+msgid "Run Doctor"
+msgstr "运行 Doctor"
+
+msgid "Gateway Status"
+msgstr "网关状态"
+
+msgid "Gateway Health"
+msgstr "网关健康检查"
+
+msgid "Gateway Logs"
+msgstr "网关日志"
+
+msgid "Channels Status"
+msgstr "渠道状态"
+
+msgid "All actions run in background; output will appear below."
+msgstr "所有操作在后台执行；输出会显示在下方。"
+
+msgid "Settings"
+msgstr "设置"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Port"
+msgstr "端口"
+
+msgid "Bind"
+msgstr "监听地址"
+
+msgid "Loopback"
+msgstr "仅本机"
+
+msgid "LAN"
+msgstr "LAN"
+
+msgid "Auto"
+msgstr "自动"
+
+msgid "Base Dir"
+msgstr "安装目录"
+
+msgid "Recommended. OpenClaw Launcher will install Node.js/OpenClaw runtime and store data under this directory."
+msgstr "推荐设置。OpenClaw 启动器会在该目录下安装 Node.js/OpenClaw 运行时并存放数据。"
+
+msgid "Gateway Token"
+msgstr "网关 Token"
+
+msgid "Allowed Origins"
+msgstr "允许的访问地址"
+
+msgid "Origins allowed to access Control UI over HTTP. Example: http://lan-ip:port"
+msgstr "允许通过 HTTP 访问控制台的来源域名，例如 http://LAN-IP:端口"
+
+msgid "Allow Insecure HTTP Control UI"
+msgstr "允许 HTTP 访问"
+
+msgid "Enable token-only Control UI access over HTTP (no device identity). Recommended only on trusted LAN; prefer HTTPS when possible."
+msgstr "允许通过 HTTP 使用仅令牌访问控制台（不校验设备身份）。仅建议在受信任的局域网使用，尽量使用 HTTPS。"
+
+msgid "Disable Device Auth"
+msgstr "关闭设备校验"
+
+msgid "Disable Control UI device identity checks (dangerous). Use only on trusted LAN."
+msgstr "关闭控制台设备身份校验（危险）。仅建议在受信任的局域网使用。"
+
+msgid "Default Agent"
+msgstr "默认 AGENT"
+
+msgid "Select the provider used by agents.defaults.model.primary."
+msgstr "选择 agents.defaults.model.primary 使用的提供商。"
+
+msgid "API Key"
+msgstr "API Key"
+
+msgid "Only updates the API key for the selected Default Agent."
+msgstr "只更新当前所选默认 AGENT 对应的 API Key。"
+
+msgid "Relay URL"
+msgstr "中转地址"
+
+msgid "Optional. Must start with http:// or https://. Leave empty to restore the selected provider's default baseUrl."
+msgstr "可选。必须以 http:// 或 https:// 开头。留空会恢复当前所选 provider 的默认 baseUrl。"
+
+msgid "Relay URL must start with http:// or https://"
+msgstr "中转地址必须以 http:// 或 https:// 开头"
+
+msgid "Default Model"
+msgstr "默认模型"
+
+msgid "OpenAI"
+msgstr "OpenAI"
+
+msgid "Anthropic"
+msgstr "Anthropic"
+
+msgid "MiniMax CN"
+msgstr "MiniMax CN"
+
+msgid "Moonshot CN"
+msgstr "Moonshot CN"
+
+msgid "Uninstall"
+msgstr "卸载（保留数据）"
+
+msgid "Uninstall OpenClaw (Keep Node)"
+msgstr "卸载 OpenClaw（保留 Node）"
+
+msgid "Uninstall OpenClaw runtime but keep Node.js. Continue?"
+msgstr "卸载 OpenClaw 运行时但保留 Node.js。确定继续？"
+
+msgid "Uninstall will remove runtime but keep data under Base Dir. Continue?"
+msgstr "卸载将删除运行时，但保留安装目录下的数据。确定继续？"
+
+msgid "Network Diagnostics"
+msgstr "网络诊断"

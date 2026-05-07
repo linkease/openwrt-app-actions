@@ -1,0 +1,44 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "Official website:"
+msgstr "官方网站："
+
+msgid "Hermes"
+msgstr "Hermes 消息服务"
+
+msgid "The self-improving AI agent that runs on your server. Layered memory that accumulates across sessions, a cron scheduler that fires while you're offline, and a skills system that saves reusable procedures automatically."
+msgstr "运行在您的服务器上的自我改进型人工智能代理。它采用跨会话累积的分层内存、在您离线时运行的定时任务调度程序，以及自动保存可重用程序的技能系统。"
+
+msgid "Port"
+msgstr "端口"
+
+msgid "Data path"
+msgstr "数据路径"
+
+msgid "Workspace path"
+msgstr "工作目录路径"
+
+msgid "Service Status"
+msgstr "服务状态"
+
+msgid "Hermes status:"
+msgstr "Hermes 状态信息如下："
+
+msgid "Setup"
+msgstr "安装配置"
+
+msgid "The following parameters will only take effect during installation or upgrade:"
+msgstr "以下参数只在安装或者升级时才会生效："
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Hermes is running"
+msgstr "Hermes 运行中"
+
+msgid "Hermes is not running"
+msgstr "Hermes 未运行"
+
+msgid "Open Hermes"
+msgstr "打开 Hermes"

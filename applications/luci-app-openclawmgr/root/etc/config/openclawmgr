@@ -1,0 +1,4 @@
+config openclawmgr 'main'
+	option enabled '0'
+	option base_dir ''
+	option install_accelerated '1'
