@@ -5,6 +5,7 @@ USE_PROCD=1
 DEVICE_TYPE="202604101148240791"
 
 get_config() {
+	config_section="$1"
 	config_get_bool enabled "$1" enabled 1
 	config_get data_dir "$1" data_dir ""
 	config_get host "$1" host "0.0.0.0"
@@ -53,6 +54,33 @@ storage_root_from_data_dir() {
 	df -P "$path" 2>/dev/null | awk 'NR == 2 { print $6 }'
 }
 
+default_macid() {
+	local netdev mac
+	for netdev in br-lan eth0 lan0; do
+		if [ -r "/sys/class/net/$netdev/address" ]; then
+			mac="$(tr -d ':' <"/sys/class/net/$netdev/address")"
+			if [ -n "$mac" ]; then
+				printf '%s\n' "$mac"
+				return 0
+			fi
+		fi
+	done
+	return 1
+}
+
+ensure_macid() {
+	if [ -n "$macid" ]; then
+		return 0
+	fi
+
+	macid="$(default_macid)"
+	if [ -n "$macid" ] && [ -n "$config_section" ]; then
+		uci set "baidudrive.$config_section.macid=$macid"
+		uci commit baidudrive
+		logger -t baidudrive "generated macid from network interface: $macid"
+	fi
+}
+
 start_service() {
 	config_load baidudrive
 	config_foreach get_config baidudrive
@@ -61,6 +89,7 @@ start_service() {
 	fi
 
 	require_start_value data_dir "$data_dir" || return 1
+	ensure_macid
 	require_start_value macid "$macid" || return 1
 	require_executable /usr/sbin/baidudrive || return 1
 	require_executable "$sdk_dir/baiduNas" || return 1
