@@ -48,9 +48,9 @@ define Build/Compile
 endef
 
 define Package/$(PKG_NAME)/install
-	$(INSTALL_DIR) $(1)/usr/sbin $(1)/usr/libexec/baidudrive $(1)/opt/baidunas-sdk $(1)/etc/init.d $(1)/etc/uci-defaults $(1)/etc/config
+	$(INSTALL_DIR) $(1)/usr/sbin $(1)/usr/libexec/baidudrive $(1)/usr/lib/baidusdk/nas_sdk $(1)/etc/init.d $(1)/etc/uci-defaults $(1)/etc/config
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/baidudrive.$(PKG_ARCH_BAIDUDRIVE) $(1)/usr/sbin/baidudrive
-	$(LN) /usr/sbin/baidudrive $(1)/opt/baidunas-sdk/P2PClient
+	$(LN) /usr/sbin/baidudrive $(1)/usr/lib/baidusdk/nas_sdk/P2PClient
 	$(INSTALL_BIN) ./files/sdk-init.sh $(1)/usr/libexec/baidudrive/sdk-init.sh
 	$(INSTALL_BIN) ./files/baidudrive.init $(1)/etc/init.d/baidudrive
 	$(INSTALL_BIN) ./files/baidudrive.uci-default $(1)/etc/uci-defaults/09-baidudrive

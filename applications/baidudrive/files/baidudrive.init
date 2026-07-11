@@ -10,7 +10,7 @@ get_config() {
 	config_get data_dir "$1" data_dir ""
 	config_get host "$1" host "0.0.0.0"
 	config_get port "$1" port "10780"
-	config_get sdk_dir "$1" sdk_dir "/opt/baidunas-sdk"
+	config_get sdk_dir "$1" sdk_dir "/usr/lib/baidusdk/nas_sdk"
 	config_get sdk_host "$1" sdk_host "127.0.0.1"
 	config_get sdk_port "$1" sdk_port "8001"
 	config_get macid "$1" macid ""
@@ -96,7 +96,7 @@ start_service() {
 	require_executable "$sdk_dir/P2PClient" || return 1
 	require_executable "$sdk_dir/P2PClient.bin" || return 1
 	require_file "$sdk_dir/libkernel.so" || return 1
-	require_file /opt/baidunas-glibc || return 1
+	require_file /usr/lib/baidusdk/glibc || return 1
 
 	mkdir -p "$data_dir" || return 1
 
@@ -115,6 +115,7 @@ start_service() {
 
 	logger -t baidudrive "Starting Baidu NAS SDK"
 	procd_open_instance baiduNas
+	procd_set_param env BAIDU_NAS_GLIBC_DIR="/usr/lib/baidusdk/glibc"
 	procd_set_param command "$sdk_dir/baiduNas" \
 		-ip "$sdk_host" \
 		-port "$sdk_port" \
