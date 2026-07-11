@@ -7,11 +7,8 @@ uci -q batch <<-EOF >/dev/null
 	commit ucitrack
 EOF
 
-old_sdk_dir="$(uci -q get baidudrive.@baidudrive[0].sdk_dir)"
-if [ "$old_sdk_dir" = "/opt/baidunas-sdk" ]; then
-	uci -q set baidudrive.@baidudrive[0].sdk_dir="/usr/lib/baidusdk/nas_sdk"
-	uci -q commit baidudrive
-fi
+uci -q delete baidudrive.@baidudrive[0].sdk_dir
+uci -q commit baidudrive
 
 /etc/init.d/baidudrive enable
 /etc/init.d/baidudrive start
