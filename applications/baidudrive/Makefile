@@ -13,7 +13,7 @@ PKG_NAME:=baidudrive
 PKG_VERSION:=1.0.3
 PKG_RELEASE:=
 PKG_SOURCE:=$(PKG_NAME)-binary-$(PKG_VERSION).tar.gz
-PKG_SOURCE_URL:=https://github.com/linkease/istore-packages/releases/download/prebuilt/
+PKG_SOURCE_URL:=https://github.com/linkease/istore-packages/releases/download/baidudrive/
 PKG_HASH:=a1e5a19204f3f7de71ad546db679a7af84e5b7181e5ff135dd6be2b84bf973f9
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-binary-$(PKG_VERSION)
 
