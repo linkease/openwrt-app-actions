@@ -37,19 +37,6 @@ define Package/$(PKG_NAME)/description
   BaiduDrive provides a Baidu Netdisk Web UI for iStoreOS.
 endef
 
-define Package/baidusdk
-	SECTION:=net
-	CATEGORY:=Network
-	SUBMENU:=Web Servers/Proxies
-	TITLE:=Baidu NAS SDK runtime
-	DEPENDS:=@(x86_64||aarch64)
-	URL:=https://github.com/linkease/istore-packages
-endef
-
-define Package/baidusdk/description
-  Baidu NAS SDK runtime files used by BaiduDrive.
-endef
-
 define Package/$(PKG_NAME)/conffiles
 /etc/config/baidudrive
 endef
@@ -70,13 +57,4 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_CONF) ./files/baidudrive.config $(1)/etc/config/baidudrive
 endef
 
-define Package/baidusdk/install
-	$(INSTALL_DIR) $(1)/opt/baidunas-sdk $(1)/opt/baidunas-glibc
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/nas_sdk/$(PKG_ARCH_BAIDUDRIVE)/baiduNas $(1)/opt/baidunas-sdk/baiduNas
-	$(INSTALL_BIN) $(PKG_BUILD_DIR)/nas_sdk/$(PKG_ARCH_BAIDUDRIVE)/P2PClient.bin $(1)/opt/baidunas-sdk/P2PClient.bin
-	$(INSTALL_DATA) $(PKG_BUILD_DIR)/nas_sdk/$(PKG_ARCH_BAIDUDRIVE)/libkernel.so $(1)/opt/baidunas-sdk/libkernel.so
-	$(CP) $(PKG_BUILD_DIR)/glibc/$(PKG_ARCH_BAIDUDRIVE)/. $(1)/opt/baidunas-glibc/
-endef
-
 $(eval $(call BuildPackage,$(PKG_NAME)))
-$(eval $(call BuildPackage,baidusdk))
