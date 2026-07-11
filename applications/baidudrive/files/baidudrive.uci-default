@@ -7,9 +7,6 @@ uci -q batch <<-EOF >/dev/null
 	commit ucitrack
 EOF
 
-uci -q delete baidudrive.@baidudrive[0].sdk_dir
-uci -q commit baidudrive
-
 /etc/init.d/baidudrive enable
 /etc/init.d/baidudrive start
 
