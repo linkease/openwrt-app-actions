@@ -9,7 +9,7 @@ on:
         required: true
         default: 'all'
       target:
-        description: 'build target ["arm64", "x64", "mipsel", "arm", "all"]'
+        description: 'build target ["arm64", "x64", "mipsel", "arm", "all"]. multiple targets are separated by spaces'
         required: true
         default: 'all'
 
