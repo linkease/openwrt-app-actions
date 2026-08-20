@@ -13,6 +13,9 @@ msgstr "基于Web技术的私有云在线文档管理解决方案。"
 msgid "Config path"
 msgstr "配置文件路径"
 
+msgid "Docker Image"
+msgstr "镜像"
+
 msgid "Port"
 msgstr "端口"
 
