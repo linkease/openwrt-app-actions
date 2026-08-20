@@ -111,9 +111,16 @@ jobs:
 
       - name: Load custom feeds
         run: |
+          FEEDS_CONF="apps/feeds.conf"
+          BRANCH_FEEDS_CONF="apps/feeds/${GITHUB_REF_NAME}.conf"
+          if [ "${GITHUB_REF_NAME}" != "main" ] && [ -f "${BRANCH_FEEDS_CONF}" ]; then
+            FEEDS_CONF="${BRANCH_FEEDS_CONF}"
+          fi
+          echo "FEEDS_CONF=${FEEDS_CONF}" >> "$GITHUB_ENV"
+          echo "======= Using custom feeds: ${FEEDS_CONF}"
           echo "" > common-feeds.conf
           echo "src-link apps `pwd`/apps/applications" >> common-feeds.conf
-          cat apps/feeds.conf >> common-feeds.conf
+          cat "${FEEDS_CONF}" >> common-feeds.conf
           echo "" >> common-feeds.conf
           cat common-feeds.conf >> ${SDK_NAME}/feeds.conf
           cat common-feeds.conf >> ${SDK_NAME_APK}/feeds.conf
@@ -178,7 +185,7 @@ jobs:
             cd $sdk
             if [ "$apps" = "all" ]; then
               ./scripts/feeds install -a -p apps -d y
-              for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ${{ github.workspace }}/apps/feeds.conf`
+              for repo in `sed -e 's/src-[^ ]* \([^ ]*\) .*/\1/g' ${{ github.workspace }}/${FEEDS_CONF}`
               do
                 echo add all in repo $repo
                 ./scripts/feeds install -a -p $repo -d y
@@ -366,4 +373,3 @@ jobs:
             cd staging_dir
             rm -rf packages target-*
           done
-
