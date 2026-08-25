@@ -182,11 +182,12 @@ do_reset_network() {
 				/bin/config_generate
 				/bin/sh -c ". /rom/etc/uci-defaults/zzz-dockerenv"
 				/bin/sh -c '. /rom/etc/uci-defaults/12_network-generate-ula'
+				/bin/sh -c '. /rom/etc/uci-defaults/14_network-generate-duid'
 				/etc/init.d/network restart
 				sleep 2
 			EOF
 		else
-			echo 'rm -f etc/uci-defaults/zzz-dockerenv etc/uci-defaults/12_network-generate-ula'
+			echo 'rm -f etc/uci-defaults/zzz-dockerenv etc/uci-defaults/12_network-generate-ula etc/uci-defaults/14_network-generate-duid'
 		fi
 	} | sh -c "$shell"
 }
