@@ -30,7 +30,7 @@ define Package/$(PKG_NAME)
 	SECTION:=utils
 	CATEGORY:=Utilities
 	TITLE:=mise - polyglot tool version manager
-	DEPENDS:=@(x86_64||aarch64) +ca-bundle +git
+	DEPENDS:=@(x86_64||aarch64)
 	URL:=https://mise.jdx.dev
 endef
 
