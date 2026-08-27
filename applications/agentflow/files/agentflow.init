@@ -19,8 +19,7 @@ start_service() {
 		logger -t agentflow "missing executable: /usr/bin/agentflow"
 		return 1
 	}
-	mkdir -p "$data_dir/data" || return 1
-	chmod 700 "$data_dir/data" || return 1
+	mkdir -p "$data_dir" || return 1
 
 	logger -t agentflow "starting AgentFlow on $host:$port"
 	procd_open_instance
