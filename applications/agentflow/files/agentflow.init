@@ -1,0 +1,78 @@
+#!/bin/sh /etc/rc.common
+
+START=93
+USE_PROCD=1
+
+get_config() {
+	config_get_bool enabled "$1" enabled 0
+	config_get data_dir "$1" data_dir ""
+	config_get host "$1" host "0.0.0.0"
+	config_get port "$1" port "3333"
+}
+
+validate_config() {
+	if [ -z "$data_dir" ]; then
+		logger -t agentflow "data_dir is empty; configure it in /etc/config/agentflow"
+		return 1
+	fi
+
+	case "$host" in
+		''|*[!0-9A-Fa-f:.]*)
+			logger -t agentflow "invalid listen address: $host"
+			return 1
+			;;
+	esac
+
+	case "$port" in
+		''|*[!0-9]*)
+			logger -t agentflow "invalid listen port: $port"
+			return 1
+			;;
+	esac
+	if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
+		logger -t agentflow "listen port is outside the range 1-65535: $port"
+		return 1
+	fi
+}
+
+write_runtime_config() {
+	local env_file="$data_dir/agentflow.env"
+	local env_tmp="$env_file.tmp.$$"
+
+	umask 077
+	{
+		printf 'HOST=%s\n' "$host"
+		printf 'PORT=%s\n' "$port"
+	} >"$env_tmp" || return 1
+	mv -f "$env_tmp" "$env_file"
+}
+
+start_service() {
+	config_load agentflow
+	config_foreach get_config agentflow
+	[ "$enabled" = 1 ] || return 1
+
+	validate_config || return 1
+	[ -x /usr/bin/agentflow ] || {
+		logger -t agentflow "missing executable: /usr/bin/agentflow"
+		return 1
+	}
+	mkdir -p "$data_dir" || return 1
+	chmod 700 "$data_dir" || return 1
+	write_runtime_config || return 1
+
+	logger -t agentflow "starting AgentFlow on $host:$port"
+	procd_open_instance
+	procd_set_param command /usr/bin/agentflow
+	procd_set_param env \
+		AGENT_FLOW_DATA="$data_dir" \
+		PATH="/root/.local/share/mise/shims:/root/.mise/shims:/usr/sbin:/usr/bin:/sbin:/bin"
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_set_param respawn
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger "agentflow"
+}
