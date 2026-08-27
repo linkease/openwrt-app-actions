@@ -10,37 +10,11 @@ get_config() {
 	config_get port "$1" port "9000"
 }
 
-validate_config() {
-	if [ -z "$data_dir" ]; then
-		logger -t agentflow "data_dir is empty; configure it in /etc/config/agentflow"
-		return 1
-	fi
-
-	case "$host" in
-		''|*[!0-9A-Fa-f:.]*)
-			logger -t agentflow "invalid listen address: $host"
-			return 1
-			;;
-	esac
-
-	case "$port" in
-		''|*[!0-9]*)
-			logger -t agentflow "invalid listen port: $port"
-			return 1
-			;;
-	esac
-	if [ "$port" -lt 1 ] || [ "$port" -gt 65535 ]; then
-		logger -t agentflow "listen port is outside the range 1-65535: $port"
-		return 1
-	fi
-}
-
 start_service() {
 	config_load agentflow
 	config_foreach get_config agentflow
 	[ "$enabled" = 1 ] || return 1
 
-	validate_config || return 1
 	[ -x /usr/bin/agentflow ] || {
 		logger -t agentflow "missing executable: /usr/bin/agentflow"
 		return 1
