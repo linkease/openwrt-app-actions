@@ -28,7 +28,14 @@ start_service() {
 		AGENT_FLOW_DATA="$data_dir/data" \
 		AGENT_FLOW_HOST="$host" \
 		AGENT_FLOW_PORT="$port" \
-		PATH="/root/.local/share/mise/shims:/root/.mise/shims:/usr/sbin:/usr/bin:/sbin:/bin"
+		MISE_INSTALLS_DIR="$data_dir/globalmise/mise-installs" \
+		MISE_GLOBAL_CONFIG_FILE="$data_dir/globalmise/mise-config/config.toml" \
+		MISE_DATA_DIR="$data_dir/globalmise/mise-data" \
+		MISE_CACHE_DIR="$data_dir/globalmise/mise-cache" \
+		MISE_STATE_DIR="$data_dir/globalmise/mise-state" \
+		NPM_CONFIG_CACHE="$data_dir/globalmise/npm-cache" \
+		NPM_CONFIG_USERCONFIG="$data_dir/globalmise/.npmrc" \
+		PATH="$data_dir/globalmise/mise-data/shims:$PATH"
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 	procd_set_param respawn
