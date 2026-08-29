@@ -14,7 +14,6 @@ set_mise_env() {
 	procd_set_param env \
 		"$@" \
 		MISE_INSTALLS_DIR="$data_dir/globalmise/mise-installs" \
-		MISE_GLOBAL_CONFIG_FILE="$data_dir/globalmise/mise-config/config.toml" \
 		MISE_DATA_DIR="$data_dir/globalmise/mise-data" \
 		MISE_CACHE_DIR="$data_dir/globalmise/mise-cache" \
 		MISE_STATE_DIR="$data_dir/globalmise/mise-state" \
