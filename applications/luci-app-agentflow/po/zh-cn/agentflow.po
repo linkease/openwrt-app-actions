@@ -32,7 +32,7 @@ msgid "Port for the AgentFlow HTTP server."
 msgstr "AgentFlow HTTP 服务的端口号。"
 
 msgid "Please select a disk as the data directory."
-msgstr "请把选择硬盘作为数据目录"
+msgstr "请选择硬盘作为数据目录"
 
 msgid "Required. AgentFlow stores its configuration, database and workspace data under this directory."
 msgstr "必需。AgentFlow 在此目录中保存配置、数据库和工作区数据。"
