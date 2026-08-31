@@ -29,7 +29,7 @@ RSTRIP:=:
 include $(INCLUDE_DIR)/package.mk
 
 define Download/agentflow
-	URL:=https://fw0.koolcenter.com/binary/geili/agentflow/build/
+	URL:=https://fw.koolcenter.com/binary/geili/agentflow/build/
 	URL_FILE:=$(AGENTFLOW_URL_FILE)
 	FILE:=$(AGENTFLOW_DOWNLOAD)
 	HASH:=$(AGENTFLOW_HASH_$(ARCH))
