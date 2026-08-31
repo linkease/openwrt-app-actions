@@ -17,7 +17,8 @@ PKG_NAME:=agentflow
 PKG_VERSION:=0.3.0
 PKG_RELEASE:=2
 
-AGENTFLOW_DOWNLOAD:=agentflow-linux-$(AGENTFLOW_ARCH)
+AGENTFLOW_URL_FILE:=agentflow-linux-$(AGENTFLOW_ARCH)
+AGENTFLOW_DOWNLOAD:=$(AGENTFLOW_URL_FILE)-$(AGENTFLOW_HASH_$(ARCH))
 PKG_BUILD_DIR:=$(BUILD_DIR)/$(PKG_NAME)-$(PKG_VERSION)
 
 PKG_BUILD_PARALLEL:=1
@@ -29,6 +30,7 @@ include $(INCLUDE_DIR)/package.mk
 
 define Download/agentflow
 	URL:=https://fw0.koolcenter.com/binary/geili/agentflow/build/
+	URL_FILE:=$(AGENTFLOW_URL_FILE)
 	FILE:=$(AGENTFLOW_DOWNLOAD)
 	HASH:=$(AGENTFLOW_HASH_$(ARCH))
 endef
