@@ -19,8 +19,6 @@ set_mise_env() {
 		MISE_DATA_DIR="$data_dir/globalmise/mise-data" \
 		MISE_CACHE_DIR="$data_dir/globalmise/mise-cache" \
 		MISE_STATE_DIR="$data_dir/globalmise/mise-state" \
-		NPM_CONFIG_CACHE="$data_dir/globalmise/npm-cache" \
-		NPM_CONFIG_USERCONFIG="$data_dir/globalmise/.npmrc" \
 		PATH="$data_dir/globalmise/mise-data/shims:$PATH"
 }
 
