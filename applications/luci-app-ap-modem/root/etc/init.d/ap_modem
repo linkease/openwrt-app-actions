@@ -103,6 +103,26 @@ EOF
     echo "$fw_wan_net" | grep -Fwq 'vap_wan' || uci -q batch <<-EOF >/dev/null
         add_list firewall.$wan_zone.network=vap_wan
 EOF
+
+    local snat_enabled
+    local snat_dest_ip
+    local snat_ip
+    config_get_bool snat_enabled "config" snat_enabled 0
+    config_get snat_dest_ip "config" snat_dest_ip
+    config_get snat_ip "config" snat_ip
+    if [[ "$snat_enabled" = "1" && -n "$snat_dest_ip" && -n "$snat_ip" ]]; then
+        uci -q batch <<-EOF >/dev/null
+            set firewall.ap_modem_snat=nat
+            set firewall.ap_modem_snat.name=ap_modem_snat_to_modem
+            set firewall.ap_modem_snat.family=ipv4
+            set firewall.ap_modem_snat.src=lan
+            set firewall.ap_modem_snat.dest_ip=$snat_dest_ip
+            set firewall.ap_modem_snat.target=SNAT
+            set firewall.ap_modem_snat.snat_ip=$snat_ip
+EOF
+    else
+        uci -q delete firewall.ap_modem_snat
+    fi
     uci commit firewall
 
     # ip
@@ -169,8 +189,9 @@ clean_config() {
     [[ -z "$wan_zone" ]] || uci -q batch <<-EOF >/dev/null
         del_list firewall.$wan_zone.network=vap_lan
         del_list firewall.$wan_zone.network=vap_wan
-        commit firewall
 EOF
+    uci -q delete firewall.ap_modem_snat
+    uci -q commit firewall
     local lan_dev=`find_uci_section network device name 'br-lan' | head -1`
     [[ -z "$lan_dev" ]] || {
         uci del_list "network.$lan_dev.ports=vap-lan"
