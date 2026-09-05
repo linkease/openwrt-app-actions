@@ -6,24 +6,39 @@ USE_PROCD=1
 get_config() {
 	config_get_bool enabled "$1" enabled 0
 	config_get data_dir "$1" data_dir ""
+	config_get_bool use_mise_home "$1" use_mise_home 0
 	config_get host "$1" host "0.0.0.0"
 	config_get port "$1" port "9000"
 }
 
-load_runtime_env() {
-	local conf_dir
+set_mise_env() {
+	procd_set_param env \
+		"$@" \
+		HOME="$data_dir/global" \
+		PATH="$data_dir/global/.local/share/mise/shims:$PATH"
+}
 
-	[ -n "$data_dir" ] || return 1
-	conf_dir="$(dirname "$data_dir")"
-	export ISTORE_RUNTIME_CONF_DIR="$conf_dir"
-
-	if [ -r /lib/functions/istore_runtime.sh ]; then
-		. /lib/functions/istore_runtime.sh
-		istore_runtime_export_env
+prepare_agentflow_home() {
+	if [ "$use_mise_home" = 1 ]; then
+		[ -r /lib/functions/mise.sh ] || return 1
+		. /lib/functions/mise.sh
+		istore_runtime_env
 		return $?
 	fi
 
-	return 1
+	mkdir -p "$data_dir/global"
+}
+
+set_agentflow_env() {
+	if [ "$use_mise_home" = 1 ]; then
+		procd_set_param env \
+			"$@" \
+			HOME="$HOME" \
+			PATH="$PATH"
+		return
+	fi
+
+	set_mise_env "$@"
 }
 
 start_service() {
@@ -36,28 +51,18 @@ start_service() {
 		return 1
 	}
 	mkdir -p "$data_dir" "$data_dir/data" || return 1
-	if ! load_runtime_env; then
-		logger -t agentflow "shared runtime home is not configured"
+	if ! prepare_agentflow_home; then
+		logger -t agentflow "failed to prepare HOME environment"
 		return 1
 	fi
 
 	logger -t agentflow "starting AgentFlow on $host:$port"
 	procd_open_instance
 	procd_set_param command /usr/sbin/agentflow
-	procd_set_param env \
+	set_agentflow_env \
 		"AGENT_FLOW_DATA=$data_dir/data" \
 		"AGENT_FLOW_HOST=$host" \
-		"AGENT_FLOW_PORT=$port" \
-		"HOME=$HOME" \
-		"XDG_DATA_HOME=$XDG_DATA_HOME" \
-		"XDG_CACHE_HOME=$XDG_CACHE_HOME" \
-		"XDG_CONFIG_HOME=$XDG_CONFIG_HOME" \
-		"XDG_STATE_HOME=$XDG_STATE_HOME" \
-		"MISE_DATA_DIR=$MISE_DATA_DIR" \
-		"MISE_CACHE_DIR=$MISE_CACHE_DIR" \
-		"MISE_CONFIG_DIR=$MISE_CONFIG_DIR" \
-		"MISE_STATE_DIR=$MISE_STATE_DIR" \
-		"PATH=$PATH"
+		"AGENT_FLOW_PORT=$port"
 	procd_set_param stdout 1
 	procd_set_param stderr 1
 	procd_set_param respawn
