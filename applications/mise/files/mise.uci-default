@@ -3,4 +3,4 @@
 [ -r /lib/functions/mise.sh ] || exit 1
 . /lib/functions/mise.sh
 
-istore_runtime_set_runtime_dir
+istore_runtime_init
