@@ -10,12 +10,8 @@
     "isolation": "shadow-dom"
   },
   "standalone": {
-    "basePath": "/apps/agentflow/",
-    "url": "/apps/agentflow/",
-    "externalOpen": {
-      "enabled": true,
-      "label": "Open AgentFlow"
-    }
+    "entry": "index.html",
+    "basePath": "/apps/agentflow/"
   },
   "backend": {
     "type": "http",

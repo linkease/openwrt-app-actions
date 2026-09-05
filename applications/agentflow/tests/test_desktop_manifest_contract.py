@@ -15,13 +15,10 @@ class DesktopManifestContractTest(unittest.TestCase):
     def test_manifest_uses_agentflow_app_base_proxy(self):
         self.assertEqual(self.manifest["id"], "agentflow")
         self.assertEqual(self.manifest["staticRoot"], "/usr/share/agentflow/www")
+        self.assertEqual(self.manifest["standalone"]["entry"], "index.html")
         self.assertEqual(self.manifest["standalone"]["basePath"], "/apps/agentflow/")
-        self.assertEqual(self.manifest["standalone"]["url"], "/apps/agentflow/")
-
-        external_open = self.manifest["standalone"]["externalOpen"]
-        self.assertTrue(external_open["enabled"])
-        self.assertNotIn("defaultPort", external_open)
-        self.assertNotIn("path", external_open)
+        self.assertNotIn("url", self.manifest["standalone"])
+        self.assertNotIn("externalOpen", self.manifest["standalone"])
 
         backend = self.manifest["backend"]
         self.assertEqual(backend["upstreamBasePath"], "/apps/agentflow/")
