@@ -43,6 +43,7 @@ istore_runtime_env() {
 
 	config_load mise >/dev/null 2>&1 || return 1
 	config_get runtime_dir main runtime_dir ""
+	[ -n "$runtime_dir" ] || runtime_dir="${HOME:-}"
 	[ -n "$runtime_dir" ] || return 1
 	mkdir -p "$runtime_dir" || return 1
 
