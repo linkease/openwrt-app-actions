@@ -34,10 +34,23 @@ for _, val in pairs(paths) do
 end
 data_dir.default = default_path
 
-local use_mise_home = s:option(Flag, "use_mise_home", translate("Use mise HOME"))
-use_mise_home.default = "0"
-use_mise_home.rmempty = false
-use_mise_home.description = translate("Use the shared HOME initialized by mise instead of the AgentFlow data directory.")
+function m.on_after_commit(self)
+	local uci = require "luci.model.uci".cursor()
+	local runtime_dir = uci:get("mise", "main", "runtime_dir")
+	if runtime_dir ~= nil and runtime_dir ~= "" then
+		return
+	end
+
+	local saved_data_dir = uci:get_first("agentflow", "agentflow", "data_dir", "")
+	runtime_dir = agentflow_model.runtime_dir(saved_data_dir)
+	if runtime_dir == nil then
+		return
+	end
+
+	if uci:set("mise", "main", "runtime_dir", runtime_dir) then
+		uci:commit("mise")
+	end
+end
 
 local port = s:option(Value, "port", translate("Listen port"))
 port.default = "9000"

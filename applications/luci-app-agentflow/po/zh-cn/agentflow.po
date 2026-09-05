@@ -37,12 +37,6 @@ msgstr "请选择硬盘作为数据目录"
 msgid "Required. AgentFlow stores its configuration, database and workspace data under this directory."
 msgstr "必需。AgentFlow 在此目录中保存配置、数据库和工作区数据。"
 
-msgid "Use mise HOME"
-msgstr "使用 mise HOME"
-
-msgid "Use the shared HOME initialized by mise instead of the AgentFlow data directory."
-msgstr "使用 mise 初始化的共享 HOME，而不是 AgentFlow 数据目录中的 HOME。"
-
 msgid "Status"
 msgstr "状态"
 
