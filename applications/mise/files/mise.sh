@@ -48,5 +48,5 @@ istore_runtime_env() {
 	mkdir -p "$runtime_dir" || return 1
 
 	export HOME="$runtime_dir"
-	export PATH="$runtime_dir/.local/share/mise/shims${PATH:+:$PATH}"
+	export PATH="$HOME/.local/share/mise/shims${PATH:+:$PATH}"
 }
