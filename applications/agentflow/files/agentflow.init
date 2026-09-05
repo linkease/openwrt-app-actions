@@ -11,22 +11,21 @@ get_config() {
 }
 
 load_runtime_env() {
-	local conf_dir runtime_dir runtime_home
+	local conf_dir runtime_dir
 
 	[ -n "$data_dir" ] || return 1
 	conf_dir="$(dirname "$data_dir")"
 	runtime_dir="$(uci -q get mise.main.runtime_dir 2>/dev/null || true)"
-	[ -n "$runtime_dir" ] || runtime_dir="$conf_dir/Runtime"
-	runtime_home="$runtime_dir/home"
+	[ -n "$runtime_dir" ] || runtime_dir="$conf_dir/Runtime/home"
 
 	mkdir -p \
-		"$runtime_home/.local/share/mise" \
-		"$runtime_home/.cache/mise" \
-		"$runtime_home/.config/mise" \
-		"$runtime_home/.local/state/mise" \
-		"$runtime_home/.local/bin" || return 1
+		"$runtime_dir/.local/share/mise" \
+		"$runtime_dir/.cache/mise" \
+		"$runtime_dir/.config/mise" \
+		"$runtime_dir/.local/state/mise" \
+		"$runtime_dir/.local/bin" || return 1
 
-	export HOME="$runtime_home"
+	export HOME="$runtime_dir"
 	export XDG_DATA_HOME="$HOME/.local/share"
 	export XDG_CACHE_HOME="$HOME/.cache"
 	export XDG_CONFIG_HOME="$HOME/.config"

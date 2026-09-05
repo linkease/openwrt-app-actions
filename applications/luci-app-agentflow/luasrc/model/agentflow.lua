@@ -66,7 +66,7 @@ agentflow.runtime_dir = function(data_dir, home_dirs)
 		return ""
 	end
 
-	return conf_dir .. "/Runtime"
+	return conf_dir .. "/Runtime/home"
 end
 
 agentflow.runtime_home = function(data_dir, home_dirs)
@@ -75,7 +75,7 @@ agentflow.runtime_home = function(data_dir, home_dirs)
 		return ""
 	end
 
-	return runtime_dir .. "/home"
+	return runtime_dir
 end
 
 return agentflow

@@ -22,7 +22,7 @@ set_runtime_dir() {
 	[ -z "$runtime_dir" ] || return 0
 
 	conf_dir="$(istore_runtime_quickstart_conf_dir)" || return 0
-	runtime_dir="$conf_dir/Runtime"
+	runtime_dir="$conf_dir/Runtime/home"
 
 	uci -q set "mise.main.runtime_dir=$runtime_dir" >/dev/null 2>&1 || return 1
 	uci -q commit mise >/dev/null 2>&1
