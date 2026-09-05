@@ -41,7 +41,6 @@ istore_runtime_init() {
 istore_runtime_env() {
 	local runtime_dir shims_dir
 
-	istore_runtime_init || return 1
 	config_load mise >/dev/null 2>&1 || return 1
 	config_get runtime_dir main runtime_dir ""
 	[ -n "$runtime_dir" ] || return 1
