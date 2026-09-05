@@ -15,10 +15,9 @@ class MiseRuntimeContractTest(unittest.TestCase):
         makefile = read("mise/Makefile")
         config = read("mise/files/mise.config")
         defaults = read("mise/files/mise.uci-default")
-        helper = read("mise/files/istore_runtime.sh")
 
         self.assertIn("/etc/config/mise", makefile)
-        self.assertIn("/lib/functions/istore_runtime.sh", makefile)
+        self.assertNotIn("istore_runtime.sh", makefile)
         self.assertIn("$(INSTALL_BIN) ./files/mise.uci-default", makefile)
         self.assertIn("[ -f /etc/uci-defaults/mise ]", makefile)
 
@@ -30,20 +29,9 @@ class MiseRuntimeContractTest(unittest.TestCase):
         ]
         self.assertEqual(options, ["option runtime_dir ''"])
 
-        self.assertIn(". /lib/functions/istore_runtime.sh", defaults)
-        self.assertIn("istore_runtime_init", defaults)
+        self.assertNotIn("istore_runtime", defaults)
         self.assertIn("uci -q delete mise.main.enabled", defaults)
         self.assertIn("uci -q delete mise.main.auto_discover", defaults)
-
-        self.assertIn("config_get conf_dir main conf_dir", helper)
-        self.assertIn('"$conf_dir" "$ISTORE_RUNTIME_DEFAULT_SUBDIR"', helper)
-        self.assertIn("ISTORE_RUNTIME_HOME_SUBDIR=\"home\"", helper)
-        self.assertIn("ISTORE_RUNTIME_CONF_DIR", helper)
-        self.assertNotIn("auto_discover", helper)
-        self.assertIn('export HOME="$runtime_home"', helper)
-        self.assertIn('export XDG_DATA_HOME="$HOME/.local/share"', helper)
-        self.assertIn('export MISE_DATA_DIR="$XDG_DATA_HOME/mise"', helper)
-        self.assertIn('export PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH"', helper)
 
     def test_agentflow_consumes_shared_runtime_home(self):
         init = read("agentflow/files/agentflow.init")
@@ -51,8 +39,9 @@ class MiseRuntimeContractTest(unittest.TestCase):
         model = read("luci-app-agentflow/luasrc/model/agentflow.lua")
         translations = read("luci-app-agentflow/po/zh-cn/agentflow.po")
 
-        self.assertIn(". /lib/functions/istore_runtime.sh", init)
-        self.assertIn("istore_runtime_export_env", init)
+        self.assertNotIn("istore_runtime", init)
+        self.assertIn("uci -q get mise.main.runtime_dir", init)
+        self.assertIn('runtime_dir="$conf_dir/Runtime"', init)
         self.assertIn('AGENT_FLOW_DATA=$data_dir/data', init)
         self.assertIn('HOME=$HOME', init)
         self.assertIn('MISE_DATA_DIR=$MISE_DATA_DIR', init)

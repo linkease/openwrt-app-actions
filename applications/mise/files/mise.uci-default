@@ -6,9 +6,4 @@ if uci -q get mise.main >/dev/null 2>&1; then
 	uci -q commit mise >/dev/null 2>&1 || true
 fi
 
-if [ -r /lib/functions/istore_runtime.sh ]; then
-	. /lib/functions/istore_runtime.sh
-	istore_runtime_init >/dev/null 2>&1 || true
-fi
-
 exit 0

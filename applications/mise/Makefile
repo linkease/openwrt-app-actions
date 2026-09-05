@@ -15,7 +15,7 @@ MISE_HASH_aarch64:=06186cfbfe947049b21d58575fb0ea800cc26ed1375f20f4b678cb3a9d679
 
 PKG_NAME:=mise
 PKG_VERSION:=2026.8.14
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 PKG_SOURCE:=$(PKG_NAME)-v$(PKG_VERSION)-linux-$(MISE_ARCH)-musl.tar.gz
 PKG_SOURCE_URL:=https://github.com/jdx/mise/releases/download/v$(PKG_VERSION)/
 PKG_HASH:=$(MISE_HASH_$(ARCH))
@@ -57,11 +57,10 @@ define Build/Compile
 endef
 
 define Package/$(PKG_NAME)/install
-	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/config $(1)/etc/uci-defaults $(1)/lib/functions
+	$(INSTALL_DIR) $(1)/usr/bin $(1)/etc/config $(1)/etc/uci-defaults
 	$(INSTALL_BIN) $(PKG_BUILD_DIR)/bin/mise $(1)/usr/bin/mise
 	$(INSTALL_CONF) ./files/mise.config $(1)/etc/config/mise
 	$(INSTALL_BIN) ./files/mise.uci-default $(1)/etc/uci-defaults/mise
-	$(INSTALL_BIN) ./files/istore_runtime.sh $(1)/lib/functions/istore_runtime.sh
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))

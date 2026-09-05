@@ -7,30 +7,30 @@ AgentFlow 的应用数据和设备级开发运行时分离：
 - AgentFlow 数据目录：`<quickstart.conf_dir>/AgentFlow`
 - 共享 Runtime HOME：`<quickstart.conf_dir>/Runtime/home`
 
-共享 Runtime HOME 由 `mise` 包提供公共 helper 初始化，AgentFlow 和后续运行时感知应用复用同一套 `HOME`、XDG、`MISE_*` 和 `PATH`。
+`mise` 包通过 `runtime_dir` 提供共享目录配置，AgentFlow 根据该配置初始化 `HOME`、XDG、`MISE_*` 和 `PATH`。
 
-## Milestone 1：公共 Runtime HOME 合约
+## Milestone 1：共享 Runtime 目录配置
 
 目标：
 
 - `mise` 包安装 `/etc/config/mise`。
-- `mise` 包安装 `/lib/functions/istore_runtime.sh`。
-- helper 自动从 `quickstart.main.conf_dir` 推导 `<conf_dir>/Runtime/home`。
-- helper 支持 `ISTORE_RUNTIME_CONF_DIR` 兜底，便于应用从自身 Configs 目录派生 Runtime。
-- helper 统一导出 `HOME`、`XDG_DATA_HOME`、`XDG_CACHE_HOME`、`XDG_CONFIG_HOME`、`XDG_STATE_HOME`、`MISE_DATA_DIR`、`MISE_CACHE_DIR`、`MISE_CONFIG_DIR`、`MISE_STATE_DIR` 和 `PATH`。
+- 配置文件只保留 `runtime_dir`。
+- `runtime_dir` 非空时作为共享 Runtime 根目录。
+- `runtime_dir` 为空时，由使用方从自身 Configs 目录推导 Runtime 根目录。
 
 验收：
 
-- 新安装 `mise` 后，存在 `/etc/config/mise` 和 `/lib/functions/istore_runtime.sh`。
-- 已配置 quickstart 时，初始化路径为 `<quickstart.conf_dir>/Runtime/home`。
-- 未配置 quickstart 但应用提供 `ISTORE_RUNTIME_CONF_DIR` 时，初始化路径为 `$ISTORE_RUNTIME_CONF_DIR/Runtime/home`。
+- 新安装 `mise` 后存在 `/etc/config/mise`，且只包含 `runtime_dir` 选项。
+- 不再安装 `/lib/functions/istore_runtime.sh`。
 
 ## Milestone 2：AgentFlow 接入共享 Runtime HOME
 
 目标：
 
 - AgentFlow 不再使用 `$data_dir/global` 作为 `HOME` 或 mise shim 根。
-- AgentFlow 启动时调用 `istore_runtime_export_env`。
+- AgentFlow 启动时直接读取 `mise.main.runtime_dir`。
+- `runtime_dir` 为空时，从 AgentFlow 数据目录的父目录推导 `Runtime`。
+- AgentFlow 初始化并导出 `HOME`、XDG、`MISE_*` 和 `PATH`。
 - `AGENT_FLOW_DATA` 继续固定在 AgentFlow 数据目录下的 `data` 子目录。
 - AgentFlow 服务进程及其子进程继承共享 Runtime HOME。
 
