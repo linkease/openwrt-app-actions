@@ -1,0 +1,9 @@
+#!/bin/sh
+
+. /lib/functions.sh
+
+. /etc/init.d/mise
+
+istore_runtime_env || exit 1
+
+exec /bin/ash
