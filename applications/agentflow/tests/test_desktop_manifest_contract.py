@@ -1,6 +1,5 @@
 import json
 import pathlib
-import re
 import unittest
 
 
@@ -12,12 +11,17 @@ class DesktopManifestContractTest(unittest.TestCase):
         self.manifest = json.loads(
             (APP_DIR / "files" / "agentflow-plugin.json").read_text()
         )
-        self.entry = (APP_DIR / "files" / "www" / "desktop-entry.js").read_text()
 
     def test_manifest_uses_agentflow_app_base_proxy(self):
         self.assertEqual(self.manifest["id"], "agentflow")
         self.assertEqual(self.manifest["staticRoot"], "/usr/share/agentflow/www")
         self.assertEqual(self.manifest["standalone"]["basePath"], "/apps/agentflow/")
+        self.assertEqual(self.manifest["standalone"]["url"], "/apps/agentflow/")
+
+        external_open = self.manifest["standalone"]["externalOpen"]
+        self.assertTrue(external_open["enabled"])
+        self.assertNotIn("defaultPort", external_open)
+        self.assertNotIn("path", external_open)
 
         backend = self.manifest["backend"]
         self.assertEqual(backend["upstreamBasePath"], "/apps/agentflow/")
@@ -30,13 +34,9 @@ class DesktopManifestContractTest(unittest.TestCase):
         self.assertEqual(desktop["entry"], "desktop-entry.js")
         self.assertEqual(desktop["isolation"], "shadow-dom")
 
-        self.assertRegex(self.entry, r"export\s+async\s+function\s+bootstrap\s*\(")
-        self.assertRegex(self.entry, r"export\s+async\s+function\s+mount\s*\(")
-        self.assertRegex(self.entry, r"export\s+async\s+function\s+unmount\s*\(")
-        self.assertIn("/apps/agentflow/", self.entry)
-        self.assertRegex(
-            self.entry,
-            re.compile(r"props\.context\s*&&\s*props\.context\.basePath"),
+        self.assertFalse(
+            (APP_DIR / "files" / "www" / "desktop-entry.js").exists(),
+            "desktop-entry.js must be served by AgentFlow backend, not the static iframe wrapper",
         )
 
 

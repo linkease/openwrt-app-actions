@@ -80,7 +80,6 @@ define Package/$(PKG_NAME)/install
 	$(INSTALL_BIN) ./files/agentflow.uci-default $(1)/etc/uci-defaults/09-agentflow
 	$(INSTALL_CONF) ./files/agentflow.config $(1)/etc/config/agentflow
 	$(INSTALL_DATA) ./files/agentflow-plugin.json $(1)/usr/share/agentflow/agentflow-plugin.json
-	$(INSTALL_DATA) ./files/www/desktop-entry.js $(1)/usr/share/agentflow/www/desktop-entry.js
 	$(INSTALL_DATA) ./files/www/logo.svg $(1)/usr/share/agentflow/www/logo.svg
 	ln -sf /usr/share/agentflow/agentflow-plugin.json $(1)/usr/share/linkeasefull/desktop-apps.d/30-agentflow.json
 endef

@@ -11,13 +11,10 @@
   },
   "standalone": {
     "basePath": "/apps/agentflow/",
+    "url": "/apps/agentflow/",
     "externalOpen": {
       "enabled": true,
-      "label": "Open AgentFlow",
-      "scheme": "http",
-      "hostMode": "request-host",
-      "defaultPort": 9000,
-      "path": "/apps/agentflow/"
+      "label": "Open AgentFlow"
     }
   },
   "backend": {
