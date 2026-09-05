@@ -19,9 +19,12 @@ istore_runtime_quickstart_conf_dir() {
 	local main_dir conf_dir
 
 	config_load quickstart >/dev/null 2>&1 || return 1
-	config_get main_dir main main_dir ""
-	[ -n "$main_dir" ] || return 1
-	config_get conf_dir main conf_dir "$main_dir/Configs"
+	config_get conf_dir main conf_dir ""
+	if [ -z "$conf_dir" ]; then
+		config_get main_dir main main_dir ""
+		[ -n "$main_dir" ] || return 1
+		conf_dir="$main_dir/Configs"
+	fi
 	[ -n "$conf_dir" ] || return 1
 
 	printf '%s\n' "$conf_dir"
@@ -82,7 +85,7 @@ istore_runtime_home() {
 }
 
 istore_runtime_init() {
-	local runtime_dir runtime_home section
+	local runtime_dir runtime_home
 
 	runtime_dir="$(istore_runtime_dir)" || return 1
 	runtime_home="$runtime_dir/$ISTORE_RUNTIME_HOME_SUBDIR"
@@ -93,12 +96,6 @@ istore_runtime_init() {
 		"$runtime_home/.config/mise" \
 		"$runtime_home/.local/state/mise" \
 		"$runtime_home/.local/bin" || return 1
-
-	section="$(istore_runtime_uci_section 2>/dev/null || true)"
-	if [ -n "$section" ]; then
-		uci -q set "mise.$section.runtime_dir=$runtime_dir" >/dev/null 2>&1 || true
-		uci -q commit mise >/dev/null 2>&1 || true
-	fi
 
 	printf '%s\n' "$runtime_home"
 }

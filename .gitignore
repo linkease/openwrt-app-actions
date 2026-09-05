@@ -3,3 +3,5 @@ forkapp/forkapp
 tools/forkapp
 forkapp/forkapp.exe
 tools/forkapp.exe
+__pycache__/
+*.py[cod]
