@@ -39,7 +39,7 @@ istore_runtime_init() {
 }
 
 istore_runtime_env() {
-	local runtime_dir shims_dir
+	local runtime_dir
 
 	config_load mise >/dev/null 2>&1 || return 1
 	config_get runtime_dir main runtime_dir ""
@@ -48,10 +48,5 @@ istore_runtime_env() {
 	mkdir -p "$runtime_dir" || return 1
 
 	export HOME="$runtime_dir"
-	shims_dir="$runtime_dir/.local/share/mise/shims"
-	case ":${PATH:-}:" in
-		*":$shims_dir:"*) ;;
-		*) PATH="$shims_dir${PATH:+:$PATH}" ;;
-	esac
-	export PATH
+	export PATH="$runtime_dir/.local/share/mise/shims${PATH:+:$PATH}"
 }
