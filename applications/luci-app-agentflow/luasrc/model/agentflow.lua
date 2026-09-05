@@ -52,12 +52,6 @@ local dirname = function(path)
 end
 
 agentflow.runtime_dir = function(data_dir, home_dirs)
-	local uci = require "luci.model.uci".cursor()
-	local configured = uci:get_first("mise", "mise", "runtime_dir", "")
-	if configured ~= nil and configured ~= "" then
-		return configured
-	end
-
 	local conf_dir = dirname(data_dir)
 	if conf_dir == "" then
 		conf_dir = home_dirs["Configs"]

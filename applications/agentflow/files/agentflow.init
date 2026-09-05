@@ -11,30 +11,13 @@ get_config() {
 }
 
 load_runtime_env() {
-	local conf_dir runtime_dir
+	local conf_dir
 
 	[ -n "$data_dir" ] || return 1
 	conf_dir="$(dirname "$data_dir")"
-	runtime_dir="$(uci -q get mise.main.runtime_dir 2>/dev/null || true)"
-	[ -n "$runtime_dir" ] || runtime_dir="$conf_dir/Runtime/home"
-
-	mkdir -p \
-		"$runtime_dir/.local/share/mise" \
-		"$runtime_dir/.cache/mise" \
-		"$runtime_dir/.config/mise" \
-		"$runtime_dir/.local/state/mise" \
-		"$runtime_dir/.local/bin" || return 1
-
-	export HOME="$runtime_dir"
-	export XDG_DATA_HOME="$HOME/.local/share"
-	export XDG_CACHE_HOME="$HOME/.cache"
-	export XDG_CONFIG_HOME="$HOME/.config"
-	export XDG_STATE_HOME="$HOME/.local/state"
-	export MISE_DATA_DIR="$XDG_DATA_HOME/mise"
-	export MISE_CACHE_DIR="$XDG_CACHE_HOME/mise"
-	export MISE_CONFIG_DIR="$XDG_CONFIG_HOME/mise"
-	export MISE_STATE_DIR="$XDG_STATE_HOME/mise"
-	export PATH="$MISE_DATA_DIR/shims:$HOME/.local/bin:$PATH"
+	[ -r /lib/functions/mise.sh ] || return 1
+	. /lib/functions/mise.sh
+	istore_runtime_env "$conf_dir"
 }
 
 start_service() {

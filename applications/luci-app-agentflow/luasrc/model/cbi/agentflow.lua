@@ -35,7 +35,7 @@ end
 data_dir.default = default_path
 
 local runtime_home = s:option(DummyValue, "_runtime_home", translate("Shared runtime home"))
-runtime_home.description = translate("AgentFlow and other runtime-aware applications share this HOME. It is derived from the selected Configs directory unless mise has an explicit runtime directory.")
+runtime_home.description = translate("AgentFlow and other runtime-aware applications share this HOME. It is derived from the selected Configs directory.")
 function runtime_home.cfgvalue(self, section)
 	local selected_data_dir = m.uci:get("agentflow", section, "data_dir") or default_path
 	local path = agentflow_model.runtime_home(selected_data_dir, home)
