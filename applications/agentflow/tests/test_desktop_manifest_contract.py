@@ -17,8 +17,14 @@ class DesktopManifestContractTest(unittest.TestCase):
         self.assertEqual(self.manifest["staticRoot"], "/usr/share/agentflow/www")
         self.assertEqual(self.manifest["standalone"]["entry"], "index.html")
         self.assertEqual(self.manifest["standalone"]["basePath"], "/apps/agentflow/")
-        self.assertNotIn("url", self.manifest["standalone"])
-        self.assertNotIn("externalOpen", self.manifest["standalone"])
+        self.assertEqual(
+            self.manifest["standalone"]["url"],
+            "/cgi-bin/luci/admin/services/agentflow/open",
+        )
+        self.assertEqual(
+            self.manifest["standalone"]["externalOpen"],
+            {"enabled": True, "label": "Open AgentFlow"},
+        )
         self.assertEqual(self.manifest["auth"]["mode"], "passthrough")
 
         backend = self.manifest["backend"]
