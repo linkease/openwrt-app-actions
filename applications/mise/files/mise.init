@@ -1,7 +1,5 @@
 #!/bin/sh /etc/rc.common
 
-START=20
-
 istore_runtime_quickstart_conf_dir() {
 	local main_dir conf_dir
 
@@ -16,7 +14,7 @@ istore_runtime_quickstart_conf_dir() {
 	printf '%s\n' "$conf_dir"
 }
 
-start() {
+set_runtime_dir() {
 	local conf_dir runtime_dir
 
 	config_load mise >/dev/null 2>&1 || return 0
