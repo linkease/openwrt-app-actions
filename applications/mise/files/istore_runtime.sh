@@ -57,18 +57,16 @@ istore_runtime_discover_dir() {
 }
 
 istore_runtime_dir() {
-	local section runtime_dir auto_discover
+	local section runtime_dir
 
 	section="$(istore_runtime_uci_section 2>/dev/null || true)"
 	if [ -n "$section" ]; then
 		config_load mise >/dev/null 2>&1 || true
 		config_get runtime_dir "$section" runtime_dir ""
-		config_get_bool auto_discover "$section" auto_discover 1
 		if [ -n "$runtime_dir" ]; then
 			printf '%s\n' "$runtime_dir"
 			return 0
 		fi
-		[ "$auto_discover" = "1" ] || return 1
 	fi
 
 	istore_runtime_discover_dir

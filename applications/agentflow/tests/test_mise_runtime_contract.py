@@ -23,16 +23,23 @@ class MiseRuntimeContractTest(unittest.TestCase):
         self.assertIn("[ -f /etc/uci-defaults/mise ]", makefile)
 
         self.assertIn("config mise 'main'", config)
-        self.assertIn("option runtime_dir ''", config)
-        self.assertIn("option auto_discover '1'", config)
+        options = [
+            line.strip()
+            for line in config.splitlines()
+            if line.strip().startswith("option ")
+        ]
+        self.assertEqual(options, ["option runtime_dir ''"])
 
         self.assertIn(". /lib/functions/istore_runtime.sh", defaults)
         self.assertIn("istore_runtime_init", defaults)
+        self.assertIn("uci -q delete mise.main.enabled", defaults)
+        self.assertIn("uci -q delete mise.main.auto_discover", defaults)
 
         self.assertIn("config_get conf_dir main conf_dir", helper)
         self.assertIn('"$conf_dir" "$ISTORE_RUNTIME_DEFAULT_SUBDIR"', helper)
         self.assertIn("ISTORE_RUNTIME_HOME_SUBDIR=\"home\"", helper)
         self.assertIn("ISTORE_RUNTIME_CONF_DIR", helper)
+        self.assertNotIn("auto_discover", helper)
         self.assertIn('export HOME="$runtime_home"', helper)
         self.assertIn('export XDG_DATA_HOME="$HOME/.local/share"', helper)
         self.assertIn('export MISE_DATA_DIR="$XDG_DATA_HOME/mise"', helper)
