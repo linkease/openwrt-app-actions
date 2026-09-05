@@ -1,8 +1,6 @@
 #!/bin/sh
 
-. /lib/functions.sh
-
-. /etc/init.d/mise
+. /lib/functions/mise.sh
 
 istore_runtime_env || exit 1
 

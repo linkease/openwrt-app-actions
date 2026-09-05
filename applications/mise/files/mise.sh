@@ -1,11 +1,6 @@
-#!/bin/sh /etc/rc.common
+#!/bin/sh
 
-EXTRA_COMMANDS="set_runtime_dir istore_runtime_init istore_runtime_env"
-EXTRA_HELP="
-	set_runtime_dir       Set runtime_dir from quickstart
-	istore_runtime_init   Initialize runtime_dir when empty
-	istore_runtime_env    Initialize and export the runtime environment
-"
+. /lib/functions.sh
 
 istore_runtime_quickstart_conf_dir() {
 	local main_dir conf_dir
