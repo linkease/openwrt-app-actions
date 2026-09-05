@@ -27,3 +27,11 @@ set_runtime_dir() {
 	uci -q set "mise.main.runtime_dir=$runtime_dir" >/dev/null 2>&1 || return 1
 	uci -q commit mise >/dev/null 2>&1
 }
+
+istore_runtime_init() {
+	local runtime_dir
+
+	config_load mise >/dev/null 2>&1 || return 1
+	config_get runtime_dir main runtime_dir ""
+	[ -n "$runtime_dir" ] || set_runtime_dir
+}
