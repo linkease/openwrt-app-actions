@@ -16,7 +16,7 @@ istore_runtime_quickstart_conf_dir() {
 	printf '%s\n' "$conf_dir"
 }
 
-set_runtime_dir() {
+istore_runtime_set_runtime_dir() {
 	local conf_dir runtime_dir
 
 	config_load mise >/dev/null 2>&1 || return 0
@@ -35,11 +35,11 @@ istore_runtime_init() {
 
 	config_load mise >/dev/null 2>&1 || return 1
 	config_get runtime_dir main runtime_dir ""
-	[ -n "$runtime_dir" ] || set_runtime_dir
+	[ -n "$runtime_dir" ] || istore_runtime_set_runtime_dir
 }
 
 istore_runtime_env() {
-	local runtime_dir
+	local runtime_dir shims_dir
 
 	istore_runtime_init || return 1
 	config_load mise >/dev/null 2>&1 || return 1
@@ -48,5 +48,10 @@ istore_runtime_env() {
 	mkdir -p "$runtime_dir" || return 1
 
 	export HOME="$runtime_dir"
-	export PATH="$runtime_dir/.local/share/mise/shims:$PATH"
+	shims_dir="$runtime_dir/.local/share/mise/shims"
+	case ":${PATH:-}:" in
+		*":$shims_dir:"*) ;;
+		*) PATH="$shims_dir${PATH:+:$PATH}" ;;
+	esac
+	export PATH
 }
