@@ -16,6 +16,7 @@ class AgentFlowLuciOpenContractTest(unittest.TestCase):
 
         self.assertNotIn("+luci-lib-linkeaseauth", makefile)
         self.assertIn('entry({"admin", "services", "agentflow", "open"}', controller)
+        self.assertIn("open.sysauth = false", controller)
         self.assertIn("function agentflow_open()", controller)
         self.assertIn("uhttpd_apps_proxy_available()", controller)
         self.assertIn("linkeasefull_running()", controller)

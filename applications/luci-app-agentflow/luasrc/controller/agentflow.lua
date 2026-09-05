@@ -11,8 +11,7 @@ function index()
 	local open = entry({"admin", "services", "agentflow", "open"}, call("agentflow_open"))
 	open.leaf = true
 	open.dependent = false
-	open.sysauth = "root"
-	open.sysauth_authenticator = "htmlauth"
+	open.sysauth = false
 
 	if not nixio.fs.access("/etc/config/agentflow") then
 		return
