@@ -13,6 +13,9 @@
     "entry": "index.html",
     "basePath": "/apps/agentflow/"
   },
+  "auth": {
+    "mode": "passthrough"
+  },
   "backend": {
     "type": "http",
     "scheme": "http",

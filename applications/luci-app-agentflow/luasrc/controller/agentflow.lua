@@ -59,12 +59,6 @@ local function normalized_base_path(path)
 	return path
 end
 
-local function cookie_encode(value)
-	return tostring(value or ""):gsub("([^A-Za-z0-9._~-])", function(char)
-		return string.format("%%%02X", char:byte())
-	end)
-end
-
 local function authority_host(authority)
 	if not authority or authority == "" then
 		return ""
@@ -92,11 +86,6 @@ local function request_or_lan_host()
 		return host
 	end
 	return uci:get("network", "lan", "ipaddr") or "127.0.0.1"
-end
-
-local function linkease_auth_url(name)
-	local dispatcher = require "luci.dispatcher"
-	return dispatcher.build_url("admin", "services", "linkease_auth", name)
 end
 
 local function agentflow_config()
@@ -137,5 +126,5 @@ end
 
 function agentflow_open()
 	local entry_url = agentflow_entry_url()
-	http.redirect(linkease_auth_url("auth") .. "?return=" .. cookie_encode(entry_url))
+	http.redirect(entry_url)
 end

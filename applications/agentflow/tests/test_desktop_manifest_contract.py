@@ -19,6 +19,7 @@ class DesktopManifestContractTest(unittest.TestCase):
         self.assertEqual(self.manifest["standalone"]["basePath"], "/apps/agentflow/")
         self.assertNotIn("url", self.manifest["standalone"])
         self.assertNotIn("externalOpen", self.manifest["standalone"])
+        self.assertEqual(self.manifest["auth"]["mode"], "passthrough")
 
         backend = self.manifest["backend"]
         self.assertEqual(backend["upstreamBasePath"], "/apps/agentflow/")

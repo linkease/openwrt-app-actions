@@ -14,14 +14,15 @@ class AgentFlowLuciOpenContractTest(unittest.TestCase):
         controller = self.read("luasrc/controller/agentflow.lua")
         status = self.read("luasrc/view/agentflow/status.htm")
 
-        self.assertIn("+luci-lib-linkeaseauth", makefile)
+        self.assertNotIn("+luci-lib-linkeaseauth", makefile)
         self.assertIn('entry({"admin", "services", "agentflow", "open"}', controller)
         self.assertIn("function agentflow_open()", controller)
         self.assertIn("uhttpd_apps_proxy_available()", controller)
         self.assertIn("linkeasefull_running()", controller)
         self.assertIn("return base_path", controller)
         self.assertIn("url_authority(request_or_lan_host(), port)", controller)
-        self.assertIn('linkease_auth_url("auth")', controller)
+        self.assertIn("http.redirect(entry_url)", controller)
+        self.assertNotIn('linkease_auth_url("auth")', controller)
         self.assertIn('url("admin/services/agentflow/open")', status)
         self.assertNotIn('window.location.hostname + ":" + st.port', status)
 
