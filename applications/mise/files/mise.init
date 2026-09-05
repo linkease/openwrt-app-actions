@@ -36,7 +36,7 @@ istore_runtime_init() {
 	[ -n "$runtime_dir" ] || set_runtime_dir
 }
 
-env() {
+istore_runtime_env() {
 	local runtime_dir
 
 	istore_runtime_init || return 1
