@@ -34,11 +34,6 @@ for _, val in pairs(paths) do
 end
 data_dir.default = default_path
 
-local use_mise_home = s:option(Flag, "use_mise_home", translate("Use mise HOME"))
-use_mise_home.default = "0"
-use_mise_home.rmempty = false
-use_mise_home.description = translate("Use the shared HOME initialized by mise instead of the AgentFlow data directory.")
-
 local port = s:option(Value, "port", translate("Listen port"))
 port.default = "9000"
 port.rmempty = false
