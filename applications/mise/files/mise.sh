@@ -19,11 +19,11 @@ istore_runtime_quickstart_conf_dir() {
 istore_runtime_set_runtime_dir() {
 	local conf_dir runtime_dir
 
-	config_load mise >/dev/null 2>&1 || return 0
+	config_load mise >/dev/null 2>&1 || return 1
 	config_get runtime_dir main runtime_dir ""
 	[ -z "$runtime_dir" ] || return 0
 
-	conf_dir="$(istore_runtime_quickstart_conf_dir)" || return 0
+	conf_dir="$(istore_runtime_quickstart_conf_dir)" || return 1
 	runtime_dir="$conf_dir/Runtime/home"
 
 	uci -q set "mise.main.runtime_dir=$runtime_dir" >/dev/null 2>&1 || return 1
