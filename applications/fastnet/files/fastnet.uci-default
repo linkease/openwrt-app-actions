@@ -6,6 +6,14 @@ uci -q batch <<-EOF_UCI >/dev/null
 	set ucitrack.@fastnet[-1].init=fastnet
 	commit ucitrack
 
+	delete firewall.fastnet
+	set firewall.fastnet=rule
+	set firewall.fastnet.name="fastnet"
+	set firewall.fastnet.target="ACCEPT"
+	set firewall.fastnet.src="wan"
+	set firewall.fastnet.proto="tcp"
+	set firewall.fastnet.dest_port="3200"
+	commit firewall
 EOF_UCI
 
 /etc/init.d/fastnet enable
