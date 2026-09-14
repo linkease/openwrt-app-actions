@@ -8,4 +8,4 @@ workspace:
   workdir: ${PROJECT_ROOT}
 run:
   cmds:
-    - python3 tools/sync-agentflow.py
+    - python3 "${TASK_CONFIG_DIR}/sync-agentflow.py"
