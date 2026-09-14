@@ -7,3 +7,6 @@ tools/forkapp.exe
 # Python bytecode caches
 __pycache__/
 *.py[cod]
+
+# Local it-runner project and runtime data
+.it-runner/
