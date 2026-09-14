@@ -1,5 +1,10 @@
 #!/bin/sh
 
+[ -d "/overlay/upper/etc" ] || {
+    echo "Only squashfs rom supported, and /overlay must be mounted." >&2
+    exit 1
+}
+
 APK=false
 PKG_BASE=usr/lib/opkg/info
 PKG_EXT=control
