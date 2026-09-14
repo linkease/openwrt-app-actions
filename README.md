@@ -13,7 +13,3 @@
 1. ./forkapp forkapp -from ../applications/luci-app-plex -to ../applications/luci-app-demo
 2. ./forkapp upload -ip 192.168.100.1 -pwd "password" -from ../applications/luci-app-demo -to /root/
 3. ./forkapp upload -ip 192.168.100.1 -pwd "password" -from ../applications/luci-app-demo -to /root/ -script ../tools/simple-install.sh -install
-
-## 同步 AgentFlow
-
-在 it-runner 中运行 `sync-agentflow`。任务会读取官方发布清单，下载并校验 amd64、arm64 二进制，然后更新 `applications/agentflow/Makefile`。同一版本的新构建会递增 `PKG_RELEASE`，新版本会将其重置为 1。
