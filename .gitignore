@@ -8,6 +8,5 @@ tools/forkapp.exe
 __pycache__/
 *.py[cod]
 
-# it-runner runtime data
-.it-runner/logs/
-.it-runner/states/
+# Local it-runner project and runtime data
+.it-runner/

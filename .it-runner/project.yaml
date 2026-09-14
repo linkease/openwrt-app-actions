@@ -1,4 +1,0 @@
-name: openwrt-app-actions
-tasksDir: .it-runner/tasks
-logsDir: .it-runner/logs
-enabled: true
