@@ -22,7 +22,7 @@ class AgentInstallContractTest(unittest.TestCase):
         self.assertNotIn('type="radio"', status)
         self.assertIn('id="agentflow-open"', status)
         self.assertIn('id="agentflow-agent-open"', status)
-        self.assertLess(status.index('id="agentflow-agent-open"'), status.index('id="agentflow_status"'))
+        self.assertGreater(status.index('id="agentflow-agent-open"'), status.index('id="agentflow_status"'))
         self.assertIn("var selected = document.getElementById('agentflow-agent-select')", status)
         self.assertIn("window.taskd.show_log", status)
         self.assertIn("dispatcher.context.token", status)

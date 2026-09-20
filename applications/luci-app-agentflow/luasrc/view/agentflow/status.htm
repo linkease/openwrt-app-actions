@@ -6,7 +6,7 @@ local token = (dispatcher.context and dispatcher.context.token) or ""
 <%+tasks/embed%>
 
 <style type="text/css">
-.agentflow-actions { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:12px; }
+.agentflow-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
 .agentflow-actions .btn, .agentflow-agent-dialog-actions .btn { min-height:40px; }
 .agentflow-agent-modal { position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; background:rgba(15,23,42,.45); }
 .agentflow-agent-modal.open { display:flex; }
@@ -97,13 +97,13 @@ document.addEventListener('keydown', function(ev) {
 
 <fieldset class="cbi-section">
 	<legend><%:Status%></legend>
+	<p id="agentflow_status">
+		<em><%:Collecting data...%></em>
+	</p>
 	<div class="agentflow-actions">
 		<input id="agentflow-open" class="btn cbi-button cbi-button-apply" type="button" value="<%:Click to open AgentFlow%>" onclick="window.open(agentflowOpenUrl)" style="display:none">
 		<input id="agentflow-agent-open" class="btn cbi-button cbi-button-apply" type="button" value="<%:Install agent%>" onclick="agentflowAgentDialog(true)">
 	</div>
-	<p id="agentflow_status">
-		<em><%:Collecting data...%></em>
-	</p>
 </fieldset>
 
 <div id="agentflow-agent-modal" class="agentflow-agent-modal" role="dialog" aria-modal="true" aria-labelledby="agentflow-agent-title" onclick="if (event.target === this) agentflowAgentDialog(false)">
