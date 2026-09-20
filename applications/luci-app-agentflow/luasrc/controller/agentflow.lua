@@ -156,7 +156,7 @@ function agentflow_agent_install()
 	local sys = require "luci.sys"
 	local util = require "luci.util"
 	local task_id = "agentflow-agent-install"
-	local installer = "/usr/libexec/istorec/agentflow-agent.sh"
+	local installer_url = "https://fw.koolcenter.com/binary/geili/agentflow/releases/installapp/installapp-mise.sh"
 	local agents = {
 		codexcli = true,
 		["claude-code"] = true,
@@ -178,8 +178,8 @@ function agentflow_agent_install()
 		write_json({ ok = false, error = "taskd is not available" })
 		return
 	end
-	if not fs.access(installer) then
-		write_json({ ok = false, error = "agent installer is not available" })
+	if not fs.access("/lib/functions/mise.sh") then
+		write_json({ ok = false, error = "mise environment helper is not available" })
 		return
 	end
 
@@ -191,7 +191,34 @@ function agentflow_agent_install()
 		return
 	end
 
-	local command = util.shellquote(installer) .. " " .. util.shellquote(agent)
+	local install_script = table.concat({
+		"set -e",
+		"agent=" .. util.shellquote(agent),
+		"installer_url=" .. util.shellquote(installer_url),
+		'installer="/tmp/agentflow-installapp-mise.$$"',
+		'cleanup() { rm -f "$installer"; }',
+		"trap cleanup 0 HUP INT TERM",
+		'. /lib/functions/mise.sh',
+		'if ! istore_runtime_env; then echo "[agentflow] Failed to initialize the shared runtime environment" >&2; exit 1; fi',
+		"set -u",
+		"export MISE_YES=1",
+		'echo "[agentflow] Downloading installer: $installer_url"',
+		'if command -v wget >/dev/null 2>&1; then',
+		'\twget -O "$installer" "$installer_url"',
+		'elif command -v curl >/dev/null 2>&1; then',
+		'\tcurl -fL -o "$installer" "$installer_url"',
+		'elif command -v uclient-fetch >/dev/null 2>&1; then',
+		'\tuclient-fetch -O "$installer" "$installer_url"',
+		"else",
+		'\techo "[agentflow] No HTTPS download tool is available" >&2',
+		"\texit 1",
+		"fi",
+		'if [ ! -s "$installer" ]; then echo "[agentflow] Failed to download the agent installer" >&2; exit 1; fi',
+		'chmod 0700 "$installer"',
+		'echo "[agentflow] Running installapp-mise.sh for $agent in $HOME"',
+		'/bin/sh "$installer" "$agent"'
+	}, "\n")
+	local command = "/bin/sh -c " .. util.shellquote(install_script)
 	local rc = sys.call("/etc/init.d/tasks task_add " .. task_id .. " " .. util.shellquote(command) .. " >/dev/null 2>&1")
 	if rc ~= 0 then
 		write_json({ ok = false, error = "failed to start install task", task_id = task_id })

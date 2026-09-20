@@ -40,17 +40,17 @@ class AgentInstallContractTest(unittest.TestCase):
         self.assertIn('/etc/init.d/tasks task_add ', controller)
         self.assertIn('task_id = "agentflow-agent-install"', controller)
 
-    def test_installer_downloads_script_and_passes_whitelisted_agent(self):
-        installer = self.read("root/usr/libexec/istorec/agentflow-agent.sh")
+    def test_controller_runs_remote_installer_inside_taskd(self):
+        controller = self.read("luasrc/controller/agentflow.lua")
 
-        self.assertIn("installapp/installapp-mise.sh", installer)
-        self.assertIn("codexcli|claude-code|opencode|kimi|reasonix", installer)
-        self.assertIn("istore_runtime_env", installer)
-        self.assertIn('download_installer', installer)
-        self.assertIn('/bin/sh "$remote_installer" "$agent"', installer)
-        self.assertIn('Unsupported agent:', installer)
-        self.assertNotIn("set -eu", installer)
-        self.assertLess(installer.index("istore_runtime_env"), installer.index("set -u"))
+        self.assertFalse((APP_DIR / "root/usr/libexec/istorec/agentflow-agent.sh").exists())
+        self.assertNotIn("/usr/libexec/istorec/agentflow-agent.sh", controller)
+        self.assertIn("installapp/installapp-mise.sh", controller)
+        self.assertIn("istore_runtime_env", controller)
+        self.assertIn('wget -O "$installer" "$installer_url"', controller)
+        self.assertIn('/bin/sh "$installer" "$agent"', controller)
+        self.assertIn('local command = "/bin/sh -c "', controller)
+        self.assertLess(controller.index("istore_runtime_env"), controller.index('"set -u"'))
 
 
 if __name__ == "__main__":
