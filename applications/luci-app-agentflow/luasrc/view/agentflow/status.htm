@@ -1,8 +1,3 @@
-<%
-local dispatcher = require "luci.dispatcher"
-local token = (dispatcher.context and dispatcher.context.token) or ""
-%>
-
 <%+tasks/embed%>
 
 <style type="text/css">
@@ -25,7 +20,7 @@ local token = (dispatcher.context and dispatcher.context.token) or ""
 <script type="text/javascript">//<![CDATA[
 var agentflowOpenUrl = '<%=url("admin/services/agentflow/open")%>';
 var agentflowAgentInstallUrl = '<%=url("admin/services/agentflow/agent_install")%>';
-var agentflowCsrfToken = '<%=token%>';
+var agentflowCsrfToken = (window.taskd && window.taskd.csrfToken) || '';
 
 function agentflowAgentDialog(open) {
 	var modal = document.getElementById('agentflow-agent-modal');

@@ -32,6 +32,7 @@ end
 local function require_post_csrf()
 	local dispatcher = require "luci.dispatcher"
 	local context = dispatcher.context or {}
+	local expected = context.authtoken or context.token
 
 	if (http.getenv("REQUEST_METHOD") or "") ~= "POST" then
 		http.status(405, "Method Not Allowed")
@@ -39,7 +40,7 @@ local function require_post_csrf()
 		return false
 	end
 
-	if not context.authsession or not context.token or http.formvalue("token") ~= context.token then
+	if not context.authsession or not expected or http.formvalue("token") ~= expected then
 		http.status(403, "Forbidden")
 		write_json({ ok = false, error = "invalid csrf token" })
 		return false
