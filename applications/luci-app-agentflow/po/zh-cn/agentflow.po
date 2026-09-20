@@ -61,12 +61,6 @@ msgstr "智能体"
 msgid "Select a coding agent to install into the shared AgentFlow runtime."
 msgstr "选择要安装到 AgentFlow 共享运行环境中的编码智能体。"
 
-msgid "OpenAI coding agent CLI"
-msgstr "OpenAI 编码智能体命令行工具"
-
-msgid "Anthropic coding agent CLI"
-msgstr "Anthropic 编码智能体命令行工具"
-
 msgid "Cancel"
 msgstr "取消"
 

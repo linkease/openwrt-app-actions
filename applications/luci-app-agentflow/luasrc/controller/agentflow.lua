@@ -157,8 +157,11 @@ function agentflow_agent_install()
 	local task_id = "agentflow-agent-install"
 	local installer = "/usr/libexec/istorec/agentflow-agent.sh"
 	local agents = {
-		codex = true,
-		["claude-code"] = true
+		codexcli = true,
+		["claude-code"] = true,
+		opencode = true,
+		kimi = true,
+		reasonix = true
 	}
 
 	if not require_post_csrf() then

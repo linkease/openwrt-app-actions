@@ -3,19 +3,11 @@
 set -eu
 
 agent="${1:-}"
-node_version="22"
+installer_url="https://fw.koolcenter.com/binary/geili/agentflow/releases/installapp/installapp-mise.sh"
+remote_installer="/tmp/agentflow-installapp-mise.$$"
 
 case "$agent" in
-	codex)
-		name="Codex"
-		package="@openai/codex@latest"
-		binary="codex"
-		;;
-	claude-code)
-		name="Claude Code"
-		package="@anthropic-ai/claude-code@latest"
-		binary="claude"
-		;;
+	codexcli|claude-code|opencode|kimi|reasonix) ;;
 	*)
 		echo "Unsupported agent: $agent" >&2
 		exit 2
@@ -25,6 +17,25 @@ esac
 log() {
 	printf '%s [agentflow] %s\n' "$(date '+%Y-%m-%d %H:%M:%S')" "$*"
 }
+
+cleanup() {
+	rm -f "$remote_installer"
+}
+
+download_installer() {
+	if command -v wget >/dev/null 2>&1; then
+		wget -O "$remote_installer" "$installer_url"
+	elif command -v curl >/dev/null 2>&1; then
+		curl -fL -o "$remote_installer" "$installer_url"
+	elif command -v uclient-fetch >/dev/null 2>&1; then
+		uclient-fetch -O "$remote_installer" "$installer_url"
+	else
+		log "No HTTPS download tool is available"
+		return 1
+	fi
+}
+
+trap cleanup 0 HUP INT TERM
 
 if [ ! -r /lib/functions/mise.sh ]; then
 	log "Missing mise environment helper"
@@ -36,33 +47,15 @@ if ! istore_runtime_env; then
 	log "Failed to initialize the shared runtime environment"
 	exit 1
 fi
-if [ ! -x /usr/bin/mise ]; then
-	log "Missing mise executable"
-	exit 1
-fi
 
 export MISE_YES=1
 
-log "Installing $name into $HOME"
-log "Preparing Node.js $node_version with mise"
-/usr/bin/mise use --global "node@$node_version"
-
-node_bin="$(/usr/bin/mise which node)"
-npm_bin="${node_bin%/node}/npm"
-if [ ! -x "$npm_bin" ]; then
-	log "npm was not found next to $node_bin"
+log "Downloading installer: $installer_url"
+if ! download_installer || [ ! -s "$remote_installer" ]; then
+	log "Failed to download the agent installer"
 	exit 1
 fi
+chmod 0700 "$remote_installer"
 
-log "Running npm install --global $package"
-"$npm_bin" install --global "$package" --no-audit --no-fund
-/usr/bin/mise reshim
-
-agent_bin="${node_bin%/node}/$binary"
-if [ ! -x "$agent_bin" ]; then
-	log "$name executable was not created: $agent_bin"
-	exit 1
-fi
-
-log "$name installed successfully"
-"$agent_bin" --version
+log "Running installapp-mise.sh for $agent in $HOME"
+/bin/sh "$remote_installer" "$agent"
