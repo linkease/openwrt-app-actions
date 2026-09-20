@@ -55,6 +55,9 @@ msgstr "AgentFlow 服务运行中。"
 msgid "Install agent"
 msgstr "安装智能体"
 
+msgid "Agent"
+msgstr "智能体"
+
 msgid "Select a coding agent to install into the shared AgentFlow runtime."
 msgstr "选择要安装到 AgentFlow 共享运行环境中的编码智能体。"
 
