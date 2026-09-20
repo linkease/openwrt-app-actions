@@ -1,0 +1,11 @@
+# 强制 LF 换行，CRLF 会让 shell 脚本在路由器上起不来
+* text=auto eol=lf
+
+# 二进制文件
+*.ipk binary
+*.png binary
+*.jpg binary
+*.gif binary
+*.woff binary
+*.woff2 binary
+*.ttf binary
