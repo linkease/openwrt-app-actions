@@ -49,7 +49,11 @@ class AgentInstallContractTest(unittest.TestCase):
         self.assertIn("istore_runtime_env", controller)
         self.assertIn('wget -O "$installer" "$installer_url"', controller)
         self.assertIn('/bin/sh "$installer" "$agent"', controller)
-        self.assertIn('local command = "/bin/sh -c "', controller)
+        self.assertIn('task_script = "/tmp/agentflow-agent-install.sh"', controller)
+        self.assertIn("fs.writefile(task_script", controller)
+        self.assertIn('rm -f "$installer" "$0"', controller)
+        self.assertIn('local command = "/bin/sh "', controller)
+        self.assertNotIn('local command = "/bin/sh -c "', controller)
         self.assertLess(controller.index("istore_runtime_env"), controller.index('"set -u"'))
 
 

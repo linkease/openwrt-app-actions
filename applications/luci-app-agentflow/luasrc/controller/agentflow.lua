@@ -156,6 +156,7 @@ function agentflow_agent_install()
 	local sys = require "luci.sys"
 	local util = require "luci.util"
 	local task_id = "agentflow-agent-install"
+	local task_script = "/tmp/agentflow-agent-install.sh"
 	local installer_url = "https://fw.koolcenter.com/binary/geili/agentflow/releases/installapp/installapp-mise.sh"
 	local agents = {
 		codexcli = true,
@@ -196,7 +197,7 @@ function agentflow_agent_install()
 		"agent=" .. util.shellquote(agent),
 		"installer_url=" .. util.shellquote(installer_url),
 		'installer="/tmp/agentflow-installapp-mise.$$"',
-		'cleanup() { rm -f "$installer"; }',
+		'cleanup() { rm -f "$installer" "$0"; }',
 		"trap cleanup 0 HUP INT TERM",
 		'. /lib/functions/mise.sh',
 		'if ! istore_runtime_env; then echo "[agentflow] Failed to initialize the shared runtime environment" >&2; exit 1; fi',
@@ -218,9 +219,20 @@ function agentflow_agent_install()
 		'echo "[agentflow] Running installapp-mise.sh for $agent in $HOME"',
 		'/bin/sh "$installer" "$agent"'
 	}, "\n")
-	local command = "/bin/sh -c " .. util.shellquote(install_script)
+	if not fs.writefile(task_script, install_script .. "\n") then
+		write_json({ ok = false, error = "failed to create install task", task_id = task_id })
+		return
+	end
+	if sys.call("chmod 0600 " .. util.shellquote(task_script)) ~= 0 then
+		fs.unlink(task_script)
+		write_json({ ok = false, error = "failed to secure install task", task_id = task_id })
+		return
+	end
+
+	local command = "/bin/sh " .. util.shellquote(task_script)
 	local rc = sys.call("/etc/init.d/tasks task_add " .. task_id .. " " .. util.shellquote(command) .. " >/dev/null 2>&1")
 	if rc ~= 0 then
+		fs.unlink(task_script)
 		write_json({ ok = false, error = "failed to start install task", task_id = task_id })
 		return
 	end
