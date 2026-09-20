@@ -49,6 +49,8 @@ class AgentInstallContractTest(unittest.TestCase):
         self.assertIn('download_installer', installer)
         self.assertIn('/bin/sh "$remote_installer" "$agent"', installer)
         self.assertIn('Unsupported agent:', installer)
+        self.assertNotIn("set -eu", installer)
+        self.assertLess(installer.index("istore_runtime_env"), installer.index("set -u"))
 
 
 if __name__ == "__main__":

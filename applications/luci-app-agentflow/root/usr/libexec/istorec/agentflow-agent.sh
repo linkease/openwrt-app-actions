@@ -1,6 +1,6 @@
 #!/bin/sh
 
-set -eu
+set -e
 
 agent="${1:-}"
 installer_url="https://fw.koolcenter.com/binary/geili/agentflow/releases/installapp/installapp-mise.sh"
@@ -48,6 +48,7 @@ if ! istore_runtime_env; then
 	exit 1
 fi
 
+set -u
 export MISE_YES=1
 
 log "Downloading installer: $installer_url"
