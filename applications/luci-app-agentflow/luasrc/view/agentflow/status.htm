@@ -5,15 +5,17 @@
 .agentflow-actions .btn, .agentflow-agent-dialog-actions .btn { min-height:40px; }
 .agentflow-agent-modal { position:fixed; inset:0; z-index:10000; display:none; align-items:center; justify-content:center; padding:20px; box-sizing:border-box; background:rgba(15,23,42,.45); }
 .agentflow-agent-modal.open { display:flex; }
-.agentflow-agent-dialog { width:min(520px, 100%); padding:20px; box-sizing:border-box; border:1px solid #d0d7de; border-radius:12px; background:#fff; box-shadow:0 18px 48px rgba(15,23,42,.24); }
+.agentflow-agent-dialog, body[theme="light"] .agentflow-agent-dialog { width:min(520px, 100%); padding:20px; box-sizing:border-box; border:1px solid #d0d7de; border-radius:12px; background:#fff; color:inherit; box-shadow:0 18px 48px rgba(15,23,42,.24); }
 .agentflow-agent-dialog h3 { margin:0 0 8px; text-wrap:balance; }
-.agentflow-agent-dialog > p { margin:0 0 16px; color:#666; text-wrap:pretty; }
+.agentflow-agent-dialog > p, body[theme="light"] .agentflow-agent-dialog > p { margin:0 0 16px; color:#666; text-wrap:pretty; }
 .agentflow-agent-field label { display:block; margin-bottom:6px; font-weight:600; }
 .agentflow-agent-field select { width:100%; min-height:40px; box-sizing:border-box; }
 .agentflow-agent-dialog-actions { display:flex; justify-content:flex-end; gap:10px; margin-top:18px; }
+body[theme="dark"] .agentflow-agent-dialog { border-color:#465166; background:#1f2937; color:#e5e7eb; }
+body[theme="dark"] .agentflow-agent-dialog > p { color:#aeb8c7; }
 @media (prefers-color-scheme: dark) {
-	.agentflow-agent-dialog { border-color:#465166; background:#1f2937; color:#e5e7eb; }
-	.agentflow-agent-dialog > p { color:#aeb8c7; }
+	body:not([theme]) .agentflow-agent-dialog { border-color:#465166; background:#1f2937; color:#e5e7eb; }
+	body:not([theme]) .agentflow-agent-dialog > p { color:#aeb8c7; }
 }
 </style>
 

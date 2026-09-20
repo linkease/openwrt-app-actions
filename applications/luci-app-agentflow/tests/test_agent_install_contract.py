@@ -40,6 +40,14 @@ class AgentInstallContractTest(unittest.TestCase):
         self.assertIn('/etc/init.d/tasks task_add ', controller)
         self.assertIn('task_id = "agentflow-agent-install"', controller)
 
+    def test_modal_theme_prefers_body_attribute_then_system_theme(self):
+        status = self.read("luasrc/view/agentflow/status.htm")
+
+        self.assertIn('body[theme="light"] .agentflow-agent-dialog', status)
+        self.assertIn('body[theme="dark"] .agentflow-agent-dialog', status)
+        self.assertIn('@media (prefers-color-scheme: dark)', status)
+        self.assertIn('body:not([theme]) .agentflow-agent-dialog', status)
+
     def test_controller_runs_remote_installer_inside_taskd(self):
         controller = self.read("luasrc/controller/agentflow.lua")
 
