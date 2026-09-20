@@ -17,8 +17,35 @@ function index()
 		return
 	end
 
+	local install = entry({"admin", "services", "agentflow", "agent_install"}, call("agentflow_agent_install"))
+	install.leaf = true
+
 	local page = entry({"admin", "services", "agentflow"}, cbi("agentflow"), _("AgentFlow"), 100)
 	page.dependent = true
+end
+
+local function write_json(obj)
+	http.prepare_content("application/json")
+	http.write_json(obj)
+end
+
+local function require_post_csrf()
+	local dispatcher = require "luci.dispatcher"
+	local context = dispatcher.context or {}
+
+	if (http.getenv("REQUEST_METHOD") or "") ~= "POST" then
+		http.status(405, "Method Not Allowed")
+		write_json({ ok = false, error = "method not allowed" })
+		return false
+	end
+
+	if not context.authsession or not context.token or http.formvalue("token") ~= context.token then
+		http.status(403, "Forbidden")
+		write_json({ ok = false, error = "invalid csrf token" })
+		return false
+	end
+
+	return true
 end
 
 local function uhttpd_has_apps_proxy_prefix()
@@ -119,8 +146,55 @@ function agentflow_status()
 		proxy_prefix_enabled = uhttpd_apps_proxy_available(),
 		linkeasefull_running = linkeasefull_running()
 	}
-	http.prepare_content("application/json")
-	http.write_json(status)
+	write_json(status)
+end
+
+function agentflow_agent_install()
+	local fs = require "nixio.fs"
+	local jsonc = require "luci.jsonc"
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	local task_id = "agentflow-agent-install"
+	local installer = "/usr/libexec/istorec/agentflow-agent.sh"
+	local agents = {
+		codex = true,
+		["claude-code"] = true
+	}
+
+	if not require_post_csrf() then
+		return
+	end
+
+	local agent = http.formvalue("agent") or ""
+	if not agents[agent] then
+		write_json({ ok = false, error = "unsupported agent" })
+		return
+	end
+	if not fs.access("/etc/init.d/tasks") then
+		write_json({ ok = false, error = "taskd is not available" })
+		return
+	end
+	if not fs.access(installer) then
+		write_json({ ok = false, error = "agent installer is not available" })
+		return
+	end
+
+	local task_status = sys.exec("/etc/init.d/tasks task_status " .. task_id .. " 2>/dev/null")
+	local status = jsonc.parse(task_status) or {}
+	local running = type(status) == "table" and status.running
+	if running == true or running == 1 or running == "1" or running == "true" then
+		write_json({ ok = true, busy = true, task_id = task_id })
+		return
+	end
+
+	local command = util.shellquote(installer) .. " " .. util.shellquote(agent)
+	local rc = sys.call("/etc/init.d/tasks task_add " .. task_id .. " " .. util.shellquote(command) .. " >/dev/null 2>&1")
+	if rc ~= 0 then
+		write_json({ ok = false, error = "failed to start install task", task_id = task_id })
+		return
+	end
+
+	write_json({ ok = true, task_id = task_id })
 end
 
 function agentflow_open()
