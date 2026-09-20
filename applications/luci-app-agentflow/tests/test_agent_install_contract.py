@@ -23,7 +23,7 @@ class AgentInstallContractTest(unittest.TestCase):
         self.assertIn('id="agentflow-open"', status)
         self.assertIn('id="agentflow-agent-open"', status)
         self.assertGreater(status.index('id="agentflow-agent-open"'), status.index('id="agentflow_status"'))
-        self.assertIn('margin:12px 0;', status)
+        self.assertIn('margin:12px;', status)
         self.assertIn("var selected = document.getElementById('agentflow-agent-select')", status)
         self.assertIn("window.taskd.show_log", status)
         self.assertIn("dispatcher.context.token", status)
