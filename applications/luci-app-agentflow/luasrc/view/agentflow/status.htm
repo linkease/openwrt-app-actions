@@ -159,7 +159,7 @@
 	font-weight:800;
 }
 .agentflow-agent-copy { min-width:0; }
-.agentflow-agent-copy h4 { margin:2px 0 4px; color:var(--af-text); font-size:17px; }
+.agentflow-agent-title { margin:2px 0 4px; color:var(--af-text); font-size:17px; font-weight:700; line-height:1.4; }
 .agentflow-agent-copy p { margin:0; color:var(--af-muted); font-size:13px; line-height:1.45; }
 .agentflow-agent-meta {
 	display:flex;
@@ -175,7 +175,11 @@
 .agentflow-agent-card[data-state="installed"] .agentflow-agent-dot { background:var(--af-success); box-shadow:0 0 0 4px var(--af-success-soft); }
 .agentflow-agent-divider { color:#b4bdd0; }
 .agentflow-install-button { width:100%; margin-top:auto; }
-.agentflow-agent-card[data-state="installed"] .agentflow-install-button { display:none; }
+.agentflow-agent-card[data-state="installed"] .agentflow-install-button {
+	border-color:var(--af-success) !important;
+	background:var(--af-success-soft) !important;
+	color:var(--af-success) !important;
+}
 .agentflow-agent-modal {
 	position:fixed;
 	inset:0;
@@ -308,8 +312,8 @@ function agentflowRenderStatus(st) {
 		if (state) state.textContent = installed ? agentflowLabels.installed : (available ? agentflowLabels.notInstalled : agentflowLabels.unknown);
 		if (version) version.textContent = installed && item.version ? item.version : '-';
 		if (installButton) {
-			installButton.disabled = !available;
-			installButton.value = agentflowLabels.install;
+			installButton.disabled = !available || installed;
+			installButton.value = installed ? agentflowLabels.installed : agentflowLabels.install;
 		}
 	}
 }
@@ -421,27 +425,27 @@ document.addEventListener('keydown', function(ev) {
 		</div>
 		<div class="agentflow-agent-grid">
 			<div id="agentflow-agent-codexcli" class="agentflow-agent-card" data-state="unknown" style="--agent-color:#356cf6">
-				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">C</div><div class="agentflow-agent-copy"><h4>Codex</h4><p><%:OpenAI coding agent for software development tasks.%></p></div></div>
+				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">C</div><div class="agentflow-agent-copy"><div class="agentflow-agent-title">Codex</div><p><%:OpenAI coding agent for software development tasks.%></p></div></div>
 				<div class="agentflow-agent-meta"><span class="agentflow-agent-state"><span class="agentflow-agent-dot"></span><span id="agentflow-agent-state-codexcli"><%:Checking...%></span></span><span class="agentflow-agent-divider">|</span><span><%:Version%>: <span id="agentflow-agent-version-codexcli">-</span></span></div>
 				<input id="agentflow-agent-install-codexcli" class="btn cbi-button agentflow-button agentflow-primary agentflow-install-button" type="button" value="<%:Install%>" onclick="agentflowAgentDialog(true, 'codexcli')" disabled>
 			</div>
 			<div id="agentflow-agent-claude-code" class="agentflow-agent-card" data-state="unknown" style="--agent-color:#dc633d">
-				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">C</div><div class="agentflow-agent-copy"><h4>Claude Code</h4><p><%:Anthropic coding agent for code analysis and development.%></p></div></div>
+				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">C</div><div class="agentflow-agent-copy"><div class="agentflow-agent-title">Claude Code</div><p><%:Anthropic coding agent for code analysis and development.%></p></div></div>
 				<div class="agentflow-agent-meta"><span class="agentflow-agent-state"><span class="agentflow-agent-dot"></span><span id="agentflow-agent-state-claude-code"><%:Checking...%></span></span><span class="agentflow-agent-divider">|</span><span><%:Version%>: <span id="agentflow-agent-version-claude-code">-</span></span></div>
 				<input id="agentflow-agent-install-claude-code" class="btn cbi-button agentflow-button agentflow-primary agentflow-install-button" type="button" value="<%:Install%>" onclick="agentflowAgentDialog(true, 'claude-code')" disabled>
 			</div>
 			<div id="agentflow-agent-opencode" class="agentflow-agent-card" data-state="unknown" style="--agent-color:#6a3ee8">
-				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">O</div><div class="agentflow-agent-copy"><h4>OpenCode</h4><p><%:Open source coding agent with a flexible terminal workflow.%></p></div></div>
+				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">O</div><div class="agentflow-agent-copy"><div class="agentflow-agent-title">OpenCode</div><p><%:Open source coding agent with a flexible terminal workflow.%></p></div></div>
 				<div class="agentflow-agent-meta"><span class="agentflow-agent-state"><span class="agentflow-agent-dot"></span><span id="agentflow-agent-state-opencode"><%:Checking...%></span></span><span class="agentflow-agent-divider">|</span><span><%:Version%>: <span id="agentflow-agent-version-opencode">-</span></span></div>
 				<input id="agentflow-agent-install-opencode" class="btn cbi-button agentflow-button agentflow-primary agentflow-install-button" type="button" value="<%:Install%>" onclick="agentflowAgentDialog(true, 'opencode')" disabled>
 			</div>
 			<div id="agentflow-agent-kimi" class="agentflow-agent-card" data-state="unknown" style="--agent-color:#1677d2">
-				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">K</div><div class="agentflow-agent-copy"><h4>Kimi</h4><p><%:Moonshot AI coding agent for terminal-based development.%></p></div></div>
+				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">K</div><div class="agentflow-agent-copy"><div class="agentflow-agent-title">Kimi</div><p><%:Moonshot AI coding agent for terminal-based development.%></p></div></div>
 				<div class="agentflow-agent-meta"><span class="agentflow-agent-state"><span class="agentflow-agent-dot"></span><span id="agentflow-agent-state-kimi"><%:Checking...%></span></span><span class="agentflow-agent-divider">|</span><span><%:Version%>: <span id="agentflow-agent-version-kimi">-</span></span></div>
 				<input id="agentflow-agent-install-kimi" class="btn cbi-button agentflow-button agentflow-primary agentflow-install-button" type="button" value="<%:Install%>" onclick="agentflowAgentDialog(true, 'kimi')" disabled>
 			</div>
 			<div id="agentflow-agent-reasonix" class="agentflow-agent-card" data-state="unknown" style="--agent-color:#3f526f">
-				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">R</div><div class="agentflow-agent-copy"><h4>Reasonix</h4><p><%:AI coding agent for software engineering workflows.%></p></div></div>
+				<div class="agentflow-agent-top"><div class="agentflow-agent-logo" aria-hidden="true">R</div><div class="agentflow-agent-copy"><div class="agentflow-agent-title">Reasonix</div><p><%:AI coding agent for software engineering workflows.%></p></div></div>
 				<div class="agentflow-agent-meta"><span class="agentflow-agent-state"><span class="agentflow-agent-dot"></span><span id="agentflow-agent-state-reasonix"><%:Checking...%></span></span><span class="agentflow-agent-divider">|</span><span><%:Version%>: <span id="agentflow-agent-version-reasonix">-</span></span></div>
 				<input id="agentflow-agent-install-reasonix" class="btn cbi-button agentflow-button agentflow-primary agentflow-install-button" type="button" value="<%:Install%>" onclick="agentflowAgentDialog(true, 'reasonix')" disabled>
 			</div>

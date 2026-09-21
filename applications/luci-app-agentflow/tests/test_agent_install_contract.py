@@ -20,6 +20,8 @@ class AgentInstallContractTest(unittest.TestCase):
             self.assertIn(f'id="agentflow-agent-{agent}"', status)
             self.assertIn(f"agentflowAgentDialog(true, '{agent}')", status)
         self.assertNotIn('<select id="agentflow-agent-select"', status)
+        self.assertNotIn("<h4>", status)
+        self.assertEqual(status.count('class="agentflow-agent-title"'), 5)
         self.assertNotIn("Update", status)
         self.assertNotIn("Uninstall", status)
         self.assertIn('id="agentflow-open"', status)
@@ -56,6 +58,8 @@ class AgentInstallContractTest(unittest.TestCase):
         self.assertIn('agents_available = agents_available', controller)
         self.assertIn('st.agents_available', status)
         self.assertIn('item.installed === true', status)
+        self.assertIn('installButton.disabled = !available || installed', status)
+        self.assertIn('installed ? agentflowLabels.installed : agentflowLabels.install', status)
 
     def test_modal_theme_prefers_body_attribute_then_system_theme(self):
         status = self.read("luasrc/view/agentflow/status.htm")
