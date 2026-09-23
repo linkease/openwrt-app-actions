@@ -2,7 +2,6 @@
 local fs = require "nixio.fs"
 local sys = require "luci.sys"
 local ok, api = pcall(require, "luci.model.cbi.cloudreve.api")
-local ok_model, cloudreve_model = pcall(require, "luci.model.cloudreve")
 
 m = Map("cloudreve", translate('Cloudreve 云盘'),
 	translate('自建网盘 / 文件分享系统。程序本体、配置文件、数据库都存放在您所选磁盘的 Configs/cloudreve/ 目录里，不占用路由器自身闪存。'))
