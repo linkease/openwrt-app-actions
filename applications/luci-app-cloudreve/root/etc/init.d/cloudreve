@@ -30,8 +30,7 @@ log_msg() {
 	echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> $LOG_PATH
 }
 
-# 存储盘：先用 LuCI 里选的；留空则按官方策略自动挑一块外置盘；
-# 都拿不到就返回空串，由调用方拒绝启动
+# 程序和配置存储盘：先用 LuCI 里选的，如果为空由调用方拒绝启动
 resolve_storage() {
 	local root=$(uci_get root_path "")
 	if [ -n "$root" ]; then
