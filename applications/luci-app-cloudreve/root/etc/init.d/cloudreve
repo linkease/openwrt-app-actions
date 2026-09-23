@@ -8,7 +8,7 @@
 #   2) V4 不认 [Database] 段，数据库固定在「程序所在目录/data/cloudreve.db」
 #      所以不写 DBFile，也不设 workingdir，让它自己定位
 #   3) conf.ini 只在缺失/残缺时生成，避免每次启动都换 SessionSecret 导致掉登录
-#   4) 没配存储盘就自动挑一块外置盘，挑不到就拒绝启动并写日志，
+#   4) 没配存储盘就拒绝启动并写日志，
 #      不回落系统闪存（/root、/tmp 都不是合法的数据落点）
 
 USE_PROCD=1
