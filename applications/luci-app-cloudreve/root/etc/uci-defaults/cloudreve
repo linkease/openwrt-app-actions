@@ -16,9 +16,6 @@ uci -q delete cloudreve.@cloudreve[0].listen_address
 uci -q delete cloudreve.@cloudreve[0].database_path
 uci commit cloudreve
 
-# 旧版本可能遗留空的 /etc/cloudreve 目录，清理掉（配置已移回用户数据目录）
-[ -d /etc/cloudreve ] && [ -z "$(ls -A /etc/cloudreve 2>/dev/null)" ] && rmdir /etc/cloudreve 2>/dev/null
-
 rm -f /tmp/luci-indexcache
 rm -f /tmp/luci-modulecache/*
 
