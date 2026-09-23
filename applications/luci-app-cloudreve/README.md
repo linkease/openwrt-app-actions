@@ -162,9 +162,7 @@ python tools/check_bom.py       luasrc   # 中文文件禁 BOM
 - 写进 `/etc/config` 的键、写进脚本的分支，都要能指出「谁读它、什么时候会跑到」；
   查不到调用方的配置项和走不到的分支一律删掉（踩过：`root_path` / `database_path` 无人读、
   `/root/.istore` 兜底被自家校验规则挡死）
-- 路径合法性只认一个来源：`detect_base.sh` 的 `validate_path`。默认值别在多处各写一套，
-  否则会出现「init.d 给 `/root/.istore`、配置文件给 `/tmp`，两个都被自家校验器判非法」的局面
-- 配置与数据一起放在用户目录：`<root>/Configs/cloudreve/cloudreve.ini`，程序、配置、数据库都跟盘走。用户通过 LuCI「程序根目录」选择存储盘，留空则自动挑选。
+- 配置与数据一起放在用户目录：`<root>/Configs/cloudreve/cloudreve.ini`，程序、配置、数据库都跟盘走。用户通过 LuCI「程序根目录」选择存储盘，留空则启动失败。
 
 ---
 
