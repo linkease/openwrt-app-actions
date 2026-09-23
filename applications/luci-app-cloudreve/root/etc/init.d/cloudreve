@@ -20,9 +20,6 @@ LOG_PATH="/var/log/cloudreve.log"
 CONFIGS_DIR="Configs"
 APP_SUBDIR="cloudreve"
 
-LEGACY_CONF_OLD="/etc/cloudreve/cloudreve.ini"
-LEGACY_CONF_DATA=""
-
 uci_get() {
 	local ret=$(uci -q get ${CONF}.@cloudreve[0].${1} 2>/dev/null)
 	echo ${ret:=$2}
@@ -100,12 +97,6 @@ start_service() {
 	mkdir -p "$app_dir" 2>/dev/null
 	mkdir -p "$data_dir" 2>/dev/null
 	chmod 700 "$data_dir" 2>/dev/null
-
-	# 配置文件迁移：旧版本可能放在 /etc/cloudreve/，统一迁移到标准位置
-	if [ ! -f "$conf_file" ] && [ -f "$LEGACY_CONF_OLD" ]; then
-		mv -f "$LEGACY_CONF_OLD" "$conf_file" 2>/dev/null
-		log_msg "配置文件从旧位置迁移：$LEGACY_CONF_OLD -> $conf_file"
-	fi
 
 	if [ ! -f "$bin" ]; then
 		log_msg "启动失败：在 $bin 找不到程序本体，请先在 LuCI 页面点「下载最新二进制」"
