@@ -5,6 +5,13 @@ module("luci.controller.agentflow", package.seeall)
 local APPS_PROXY_PREFIX = "/apps=http://127.0.0.1:19290"
 local DEFAULT_BASE_PATH = "/apps/agentflow/"
 local DEFAULT_PORT = 9000
+local AGENTS = {
+	{ id = "codexcli", package = "@openai/codex" },
+	{ id = "claude-code", package = "@anthropic-ai/claude-code" },
+	{ id = "opencode", package = "opencode-ai" },
+	{ id = "kimi", package = "@moonshot-ai/kimi-code" },
+	{ id = "reasonix", package = "reasonix" }
+}
 
 function index()
 	entry({"admin", "services", "agentflow_status"}, call("agentflow_status"))
@@ -17,8 +24,36 @@ function index()
 		return
 	end
 
+	local install = entry({"admin", "services", "agentflow", "agent_install"}, call("agentflow_agent_install"))
+	install.leaf = true
+
 	local page = entry({"admin", "services", "agentflow"}, cbi("agentflow"), _("AgentFlow"), 100)
 	page.dependent = true
+end
+
+local function write_json(obj)
+	http.prepare_content("application/json")
+	http.write_json(obj)
+end
+
+local function require_post_csrf()
+	local dispatcher = require "luci.dispatcher"
+	local context = dispatcher.context or {}
+	local expected = context.authtoken or context.token
+
+	if (http.getenv("REQUEST_METHOD") or "") ~= "POST" then
+		http.status(405, "Method Not Allowed")
+		write_json({ ok = false, error = "method not allowed" })
+		return false
+	end
+
+	if not context.authsession or not expected or http.formvalue("token") ~= expected then
+		http.status(403, "Forbidden")
+		write_json({ ok = false, error = "invalid csrf token" })
+		return false
+	end
+
+	return true
 end
 
 local function uhttpd_has_apps_proxy_prefix()
@@ -105,10 +140,54 @@ local function agentflow_entry_url()
 	return "http://" .. url_authority(request_or_lan_host(), port) .. base_path
 end
 
+local function node_modules_root()
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	local script = table.concat({
+		'. /lib/functions/mise.sh 2>/dev/null || exit 1',
+		'istore_runtime_env >/dev/null 2>&1 || exit 1',
+		'mise_bin="$(command -v mise-istore || command -v mise)"',
+		'[ -n "$mise_bin" ] || exit 1',
+		'node_dir="$("$mise_bin" where node@lts 2>/dev/null)"',
+		'[ -n "$node_dir" ] || exit 1',
+		'printf "%s/lib/node_modules" "$node_dir"'
+	}, "; ")
+	local root = sys.exec("/bin/sh -c " .. util.shellquote(script)) or ""
+	root = root:match("^%s*(.-)%s*$")
+	if root == "" or root:sub(1, 1) ~= "/" then
+		return nil
+	end
+	return root
+end
+
+local function agent_statuses()
+	local fs = require "nixio.fs"
+	local jsonc = require "luci.jsonc"
+	local root = node_modules_root()
+	local statuses = {}
+
+	for _, agent in ipairs(AGENTS) do
+		local status = { id = agent.id, installed = false }
+		if root then
+			local package_file = root .. "/" .. agent.package .. "/package.json"
+			local package_data = fs.readfile(package_file)
+			local package_json = package_data and jsonc.parse(package_data) or nil
+			if type(package_json) == "table" then
+				status.installed = true
+				status.version = package_json.version
+			end
+		end
+		statuses[#statuses + 1] = status
+	end
+
+	return statuses, root ~= nil
+end
+
 function agentflow_status()
 	local sys = require "luci.sys"
 	local port, base_path = agentflow_config()
 	local entry_url = agentflow_entry_url()
+	local agents, agents_available = agent_statuses()
 
 	local status = {
 		running = (sys.call("pidof agentflow >/dev/null") == 0),
@@ -117,10 +196,98 @@ function agentflow_status()
 		entry_url = entry_url,
 		proxy_prefix_supported = uhttpd_supports_proxy_prefix(),
 		proxy_prefix_enabled = uhttpd_apps_proxy_available(),
-		linkeasefull_running = linkeasefull_running()
+		linkeasefull_running = linkeasefull_running(),
+		agents_available = agents_available,
+		agents = agents
 	}
-	http.prepare_content("application/json")
-	http.write_json(status)
+	write_json(status)
+end
+
+function agentflow_agent_install()
+	local fs = require "nixio.fs"
+	local jsonc = require "luci.jsonc"
+	local sys = require "luci.sys"
+	local util = require "luci.util"
+	local task_id = "agentflow-agent-install"
+	local task_script = "/tmp/agentflow-agent-install.sh"
+	local installer_url = "https://fw.koolcenter.com/binary/geili/agentflow/releases/installapp/installapp-mise.sh"
+	local supported_agents = {}
+	for _, supported_agent in ipairs(AGENTS) do
+		supported_agents[supported_agent.id] = true
+	end
+
+	if not require_post_csrf() then
+		return
+	end
+
+	local agent = http.formvalue("agent") or ""
+	if not supported_agents[agent] then
+		write_json({ ok = false, error = "unsupported agent" })
+		return
+	end
+	if not fs.access("/etc/init.d/tasks") then
+		write_json({ ok = false, error = "taskd is not available" })
+		return
+	end
+	if not fs.access("/lib/functions/mise.sh") then
+		write_json({ ok = false, error = "mise environment helper is not available" })
+		return
+	end
+
+	local task_status = sys.exec("/etc/init.d/tasks task_status " .. task_id .. " 2>/dev/null")
+	local status = jsonc.parse(task_status) or {}
+	local running = type(status) == "table" and status.running
+	if running == true or running == 1 or running == "1" or running == "true" then
+		write_json({ ok = true, busy = true, task_id = task_id })
+		return
+	end
+
+	local install_script = table.concat({
+		"set -e",
+		"agent=" .. util.shellquote(agent),
+		"installer_url=" .. util.shellquote(installer_url),
+		'installer="/tmp/agentflow-installapp-mise.$$"',
+		'cleanup() { rm -f "$installer" "$0"; }',
+		"trap cleanup 0 HUP INT TERM",
+		'. /lib/functions/mise.sh',
+		'if ! istore_runtime_env; then echo "[agentflow] Failed to initialize the shared runtime environment" >&2; exit 1; fi',
+		"set -u",
+		"export MISE_YES=1",
+		'echo "[agentflow] Downloading installer: $installer_url"',
+		'if command -v wget >/dev/null 2>&1; then',
+		'\twget -O "$installer" "$installer_url"',
+		'elif command -v curl >/dev/null 2>&1; then',
+		'\tcurl -fL -o "$installer" "$installer_url"',
+		'elif command -v uclient-fetch >/dev/null 2>&1; then',
+		'\tuclient-fetch -O "$installer" "$installer_url"',
+		"else",
+		'\techo "[agentflow] No HTTPS download tool is available" >&2',
+		"\texit 1",
+		"fi",
+		'if [ ! -s "$installer" ]; then echo "[agentflow] Failed to download the agent installer" >&2; exit 1; fi',
+		'chmod 0700 "$installer"',
+		'echo "[agentflow] Running installapp-mise.sh for $agent in $HOME"',
+		'/bin/sh "$installer" "$agent"'
+	}, "\n")
+	if not fs.writefile(task_script, install_script .. "\n") then
+		write_json({ ok = false, error = "failed to create install task", task_id = task_id })
+		return
+	end
+	if sys.call("chmod 0600 " .. util.shellquote(task_script)) ~= 0 then
+		fs.unlink(task_script)
+		write_json({ ok = false, error = "failed to secure install task", task_id = task_id })
+		return
+	end
+
+	local command = "/bin/sh " .. util.shellquote(task_script)
+	local rc = sys.call("/etc/init.d/tasks task_add " .. task_id .. " " .. util.shellquote(command) .. " >/dev/null 2>&1")
+	if rc ~= 0 then
+		fs.unlink(task_script)
+		write_json({ ok = false, error = "failed to start install task", task_id = task_id })
+		return
+	end
+
+	write_json({ ok = true, task_id = task_id })
 end
 
 function agentflow_open()
