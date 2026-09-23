@@ -1,4 +1,4 @@
 config cloudreve
 	option enabled '0'
 	option listen_port '5212'
-	option root_path ''
+#	option root_path ''
