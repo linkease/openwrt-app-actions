@@ -3,7 +3,7 @@
 # Ported from iStoreOS official skill istoreos-storage-path/scripts/detect.sh
 # Rules:
 #   1. enumerate mounts via df -P -k, keep /mnt|/media|/opt
-#   2. require >= 1GiB free (1048576 KB) AND writable test
+#   2. require >= 10MB free (10240 KB) AND writable test
 #   3. pick the one with LARGEST available space
 #   4. no fallback: nothing qualifies -> exit 1 and let the caller tell the user
 #   5. validate against dangerous paths (/, /root/*, ../, system dirs, /tmp)
@@ -17,7 +17,7 @@ set -eu
 
 say() { echo "$*" >&2; }
 
-MIN_KB=1048576
+MIN_KB=10240
 
 # 路径安全性校验：照抄 luci-app-openclawmgr 的 validate_base_dir
 # 禁止：空、相对路径、/、/root/*、含 ..、系统目录（/bin /sbin /lib /usr /etc /proc /sys /dev /run /tmp /var /overlay /rom）
@@ -58,7 +58,7 @@ ok() {
 	# 先校验路径安全
 	validate_path "$base" || return 1
 	mkdir -p "$base" 2>/dev/null || return 1
-	t="$base/.istore_write_test.$$"
+	t="$base/.cloudreve_write_test.$$"
 	: >"$t" 2>/dev/null || return 1
 	rm -f "$t" 2>/dev/null || true
 	return 0
@@ -96,11 +96,6 @@ case "${1:-}" in
 	[ -n "$target" ] || { say "no path given"; exit 1; }
 	validate_path "$target" || exit 1
 	ok "$target" || { say "not writable: $target"; exit 1; }
-	avail="$(df -P -k "$target" 2>/dev/null | awk 'NR==2{print $4}')"
-	if [ -n "${avail:-}" ] && [ "$avail" -lt "$MIN_KB" ] 2>/dev/null; then
-		say "free space < 1GiB: $target"
-		exit 1
-	fi
 	say "ok: $target"
 	exit 0
 	;;
@@ -125,12 +120,12 @@ $cands
 EOF
 
 	if [ -n "$chosen" ]; then
-		say "picked: base path=$chosen (largest writable mount under /mnt|/media|/opt, >= 1GiB free)"
+		say "picked: base path=$chosen (largest writable mount under /mnt|/media|/opt, >= 10MB free)"
 		echo "$chosen"
 		exit 0
 	fi
 
-	say "failed: no writable external mount found (need a mount under /mnt|/media|/opt with >= 1GiB free); the system disk is not used on purpose."
+	say "failed: no writable external mount found (need a mount under /mnt|/media|/opt with >= 10MB free); the system disk is not used on purpose."
 	exit 1
 	;;
 esac
