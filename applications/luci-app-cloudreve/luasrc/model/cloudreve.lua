@@ -40,6 +40,8 @@ cloudreve.home = function()
 end
 
 -- 拼出候选存储路径（每个挂载点下的 Configs/cloudreve）
+-- 注意：这里只是「提议」。候选必须再经 api.check_path()（内部调 detect_base.sh --check）
+-- 校验可写性、剩余空间和系统目录黑名单之后才能给用户选，不要直接当合法路径使用。
 cloudreve.find_paths = function(blocks, home_dirs, path_name)
 	local appname = "/cloudreve"
 	local default_path = ""

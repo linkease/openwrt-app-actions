@@ -5,8 +5,8 @@
 #   1. enumerate mounts via df -P -k, keep /mnt|/media|/opt
 #   2. require >= 1GiB free (1048576 KB) AND writable test
 #   3. pick the one with LARGEST available space
-#   4. fallback /root/.istore ; then give up
-#   5. validate against dangerous paths (/, /root/*, ../, system dirs)
+#   4. no fallback: nothing qualifies -> exit 1 and let the caller tell the user
+#   5. validate against dangerous paths (/, /root/*, ../, system dirs, /tmp)
 #
 # Usage:
 #   cloudreve-detect-base          -> print chosen base path (stderr: reason)
@@ -124,14 +124,7 @@ EOF
 		exit 0
 	fi
 
-	fallback="/root/.istore"
-	if ok "$fallback"; then
-		say "picked: base path=$fallback (fallback on system disk; may fill overlay)"
-		echo "$fallback"
-		exit 0
-	fi
-
-	say "failed: cannot auto-pick a writable base path; please provide one manually."
+	say "failed: no writable external mount found (need a mount under /mnt|/media|/opt with >= 1GiB free); the system disk is not used on purpose."
 	exit 1
 	;;
 esac

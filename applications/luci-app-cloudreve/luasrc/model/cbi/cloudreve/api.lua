@@ -2,9 +2,19 @@
 local fs = require "nixio.fs"
 local sys = require "luci.sys"
 local util = require "luci.util"
-local i18n = require "luci.i18n"
 
 module("luci.model.cbi.cloudreve.api", package.seeall)
+
+-- 重要：module() 会把本文件的环境换成新表（__index 指向 _G），
+-- LuCI（ucode 运行时）注入的全局 translate 在这里取不到，直接当全局调用会 500。
+-- 真机实测：api.lua:51 attempt to call global 'translate' (a nil value)。
+-- 本项目文案是中文硬编码、没有实际翻译需求，这里给一个本地兜底实现。
+local function translate(s)
+	return s
+end
+
+-- 同理，nixio 不依赖「别的模块已经把它变成全局」，显式 require 更稳
+local ok_nixio, nixio = pcall(require, "nixio")
 
 local appname = "cloudreve"
 local api_url = "https://api.github.com/repos/cloudreve/cloudreve/releases/latest"
@@ -64,22 +74,31 @@ end
 
 function get_storage_root()
     local storage = uci_get("storage_path", nil)
-    if not storage or storage == "" then
-        -- Auto-pick via official strategy; fall back to /root/.istore
-        storage = get_auto_base() or "/root/.istore"
-    end
-    return storage
+    if storage and storage ~= "" then return storage end
+    -- 没配置就按官方策略自动挑盘；挑不到返回空串，由调用方提示用户选盘
+    return get_auto_base() or ""
+end
+
+-- 配置文件目录：放系统盘上，与磁盘上的数据目录分开存放
+function get_conf_dir()
+    return "/etc/cloudreve"
+end
+
+function get_conf_path()
+    return get_conf_dir() .. "/cloudreve.ini"
 end
 
 -- Build the Configs directory path: <root>/Configs/cloudreve
 function get_app_dir()
     local root = get_storage_root()
+    if root == "" then return "" end
     return root .. "/" .. CONFIGS_DIR .. "/" .. APP_SUBDIR
 end
 
 -- Ensure <root>/Configs/cloudreve exists; create if missing
 function ensure_app_dir()
     local root = get_storage_root()
+    if root == "" then return nil end
     local app_dir = get_app_dir()
 
     -- Create root if needed
@@ -112,7 +131,10 @@ end
 
 -- ─── Architecture detection ───
 function auto_get_arch()
-    local arch = nixio.uname().machine or ""
+    local arch = ""
+    if ok_nixio and nixio and nixio.uname then
+        arch = nixio.uname().machine or ""
+    end
     local target = "amd64"
 
     if arch == "x86_64" then
@@ -244,6 +266,10 @@ end
 function download_install(url)
     if not url or url == "" then
         return { code = 1, error = translate('下载链接为空，请先点一次按钮完成检测再下载。') }
+    end
+
+    if get_storage_root() == "" then
+        return { code = 1, error = translate('没有可用的外置存储盘，请先在「存储与磁盘」里选一块外置硬盘。') }
     end
 
     local app_dir = ensure_app_dir()

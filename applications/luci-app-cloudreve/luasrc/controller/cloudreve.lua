@@ -1,5 +1,11 @@
 module("luci.controller.cloudreve", package.seeall)
 
+-- 同 api.lua：module() 换过环境后全局 translate 不保证存在，用本地兜底
+-- （本项目文案是中文硬编码，原样返回即可）
+local function translate(s)
+	return s
+end
+
 -- Defensive load: if the api module is missing we simply do not register
 -- the menu, instead of throwing during dispatcher pagetree build and
 -- taking down the ENTIRE LuCI web UI (seen on a half-installed pkg).

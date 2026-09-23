@@ -10,7 +10,13 @@ uci -q batch <<-EOF >/dev/null
 	commit ucitrack
 EOF
 
-# Create system config dir
+# 清理旧版本遗留的无用配置键：V4 不支持自定义网盘根目录和数据库路径，
+# 这两个键也没有任何代码读取，留着只会在页面上误导用户
+uci -q delete cloudreve.@cloudreve[0].root_path
+uci -q delete cloudreve.@cloudreve[0].database_path
+uci -q commit cloudreve
+
+# 配置文件目录：cloudreve.ini 放这里，与磁盘上的数据目录分开
 mkdir -p /etc/cloudreve >/dev/null 2>&1
 
 rm -f /tmp/luci-indexcache

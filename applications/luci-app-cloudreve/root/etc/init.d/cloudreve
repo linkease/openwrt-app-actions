@@ -1,5 +1,7 @@
 #!/bin/sh /etc/rc.common
-# Cloudreve init script - binary lives on selected disk under Configs/cloudreve/
+# Cloudreve init script
+#   程序与数据放在所选外置盘的 <盘>/Configs/cloudreve/ 下，不占路由器闪存
+#   配置文件单独放 /etc/cloudreve/cloudreve.ini，与数据目录分开存放
 #
 # 实测修正（Cloudreve V4.19.1，aarch64）：
 #   1) 必须用子命令启动：cloudreve server -c <conf>
@@ -7,6 +9,8 @@
 #   2) V4 不认 [Database] 段，数据库固定在「可执行文件所在目录/data/cloudreve.db」
 #      所以不写 DBFile，也不设 workingdir，让它自己定位
 #   3) conf.ini 只在缺失/残缺时生成，避免每次启动都换 SessionSecret 导致掉登录
+#   4) 没配存储盘就自动挑一块外置盘，挑不到就拒绝启动并写日志，
+#      不回落系统闪存（/root、/tmp 都不是合法的数据落点）
 
 USE_PROCD=1
 START=99
@@ -14,6 +18,8 @@ STOP=15
 
 CONF="cloudreve"
 LOG_PATH="/var/log/cloudreve.log"
+CONF_DIR="/etc/cloudreve"
+CONF_FILE="${CONF_DIR}/cloudreve.ini"
 CONFIGS_DIR="Configs"
 APP_SUBDIR="cloudreve"
 
@@ -27,8 +33,26 @@ log_msg() {
 	echo "[$(date '+%Y-%m-%d %H:%M:%S')] $1" >> $LOG_PATH
 }
 
+# 存储盘：先用 LuCI 里选的；留空则按官方策略自动挑一块外置盘；
+# 都拿不到就返回空串，由调用方拒绝启动
+resolve_storage() {
+	local storage=$(uci_get storage_path "")
+	if [ -n "$storage" ]; then
+		echo "$storage"
+		return 0
+	fi
+	local auto=$(sh /usr/libexec/cloudreve/detect_base.sh 2>/dev/null)
+	if [ -n "$auto" ]; then
+		echo "$auto"
+		return 0
+	fi
+	echo ""
+	return 1
+}
+
 resolve_app_dir() {
-	local storage=$(uci_get storage_path "/root/.istore")
+	local storage=$(resolve_storage)
+	[ -n "$storage" ] || return 1
 	echo "${storage}/${CONFIGS_DIR}/${APP_SUBDIR}"
 }
 
@@ -63,13 +87,23 @@ start_service() {
 	fi
 
 	local app_dir=$(resolve_app_dir)
+	if [ -z "$app_dir" ]; then
+		log_msg "启动失败：没有可用的外置存储盘。请在 LuCI 的「存储与磁盘」里选一块外置硬盘（需位于 /mnt 或 /media 下、可写、剩余空间至少 1GiB）"
+		return 1
+	fi
+
 	local bin="${app_dir}/cloudreve"
-	local conf_path="${app_dir}/cloudreve.ini"
 	local data_dir="${app_dir}/data"
 
 	mkdir -p "$app_dir" 2>/dev/null
 	mkdir -p "$data_dir" 2>/dev/null
 	chmod 700 "$data_dir" 2>/dev/null
+	mkdir -p "$CONF_DIR" 2>/dev/null
+
+	# 老版本把 cloudreve.ini 放在数据目录里，迁移到系统配置目录，保住 SessionSecret
+	if [ ! -f "$CONF_FILE" ] && [ -f "${app_dir}/cloudreve.ini" ]; then
+		mv -f "${app_dir}/cloudreve.ini" "$CONF_FILE" 2>/dev/null
+	fi
 
 	if [ ! -f "$bin" ]; then
 		log_msg "启动失败：在 $bin 找不到程序本体，请先在 LuCI 页面点「下载最新二进制」"
@@ -84,19 +118,19 @@ start_service() {
 	local listen="${listen_addr}:${listen_port}"
 
 	# conf.ini 只在不存在、为空、或缺少 HashIDSalt（旧 v3 格式）时重建
-	if [ ! -s "$conf_path" ] || ! grep -q "HashIDSalt" "$conf_path" 2>/dev/null; then
-		write_conf "$conf_path" "$listen"
-		log_msg "已生成配置文件：$conf_path"
+	if [ ! -s "$CONF_FILE" ] || ! grep -q "HashIDSalt" "$CONF_FILE" 2>/dev/null; then
+		write_conf "$CONF_FILE" "$listen"
+		log_msg "已生成配置文件：$CONF_FILE"
 	else
-		sed -i "s|^Listen[ \t]*=.*|Listen = ${listen}|" "$conf_path" 2>/dev/null
+		sed -i "s|^Listen[ \t]*=.*|Listen = ${listen}|" "$CONF_FILE" 2>/dev/null
 	fi
 
-	log_msg "正在启动 Cloudreve：程序=$bin，配置=$conf_path，监听=$listen，数据目录=$data_dir"
+	log_msg "正在启动 Cloudreve：程序=$bin，配置=$CONF_FILE，监听=$listen，数据目录=$data_dir"
 
 	procd_open_instance
 	procd_set_param command "$bin"
 	procd_append_param command server
-	procd_append_param command -c "$conf_path"
+	procd_append_param command -c "$CONF_FILE"
 	procd_set_param limits core="unlimited"
 	procd_set_param limits nofile="1000000 1000000"
 	procd_set_param stdout 1

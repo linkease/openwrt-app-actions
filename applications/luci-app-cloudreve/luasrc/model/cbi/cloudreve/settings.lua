@@ -47,8 +47,8 @@ gs:option(DummyValue, "_guide3", translate('账号提示')).value =
 	translate('首次打开网盘页面时会引导你创建管理员账号；Cloudreve 的运行输出（含初始密码）会写进系统日志，') ..
 	translate('可以在本页最下方的「运行日志」中查看。')
 gs:option(DummyValue, "_guide4", translate('数据存放位置')).value =
-	translate('Cloudreve V4 的数据库固定放在「程序存放目录/data/」下（例如 Configs/cloudreve/data/cloudreve.db），') ..
-	translate('不能自定义，这也是为什么本页没有「数据库路径」这一项。')
+	translate('程序本体和数据库放在所选硬盘的 Configs/cloudreve/ 下（数据库固定为 data/cloudreve.db，不能自定义）；') ..
+	translate('配置文件单独放在 /etc/cloudreve/cloudreve.ini，与数据目录分开，换盘不影响配置。')
 
 -- ────────────── 运行状态 ──────────────
 tpl("status")
@@ -78,12 +78,11 @@ if disks and #disks > 0 then
 	end
 end
 
--- 没有检测到外置硬盘时给出明确指引
+-- 没有检测到外置硬盘时给出明确指引（系统闪存不是合法的数据落点，不给兜底选项）
 if #storage_opts == 0 then
-	storage_opts[#storage_opts + 1] = { "/root/.istore", translate('/root/.istore（系统盘兜底目录）') }
 	s:option(DummyValue, "_nodisk", translate('未检测到外置硬盘')).value =
 		translate('没有找到符合要求的挂载点（需位于 /mnt 或 /media 下、剩余空间 ≥ 1GiB、并且可写）。') ..
-		translate('当前只能使用系统盘兜底目录，建议先把硬盘插好、在「系统 → 挂载点」里挂载成功后再回来操作。')
+		translate('数据不会放到路由器闪存里，请先把硬盘插好、在「系统 → 挂载点」里挂载成功后再回来操作。')
 end
 
 -- 自动推荐磁盘（iStoreOS 官方策略：空间最大且可写的外置挂载点）
@@ -94,7 +93,8 @@ if auto_base then
 end
 
 local storage = s:option(ListValue, "storage_path", translate('存储磁盘'),
-	translate('程序本体与配置都会放在这块盘的 Configs/cloudreve/ 目录里。') ..
+	translate('程序本体与数据都放在这块盘的 Configs/cloudreve/ 目录里（配置文件另放 /etc/cloudreve/）。') ..
+	translate('留空则每次启动自动挑一块可写、剩余空间最大的外置盘。') ..
 	translate('如果之后换了磁盘，需要重新点一次「下载最新二进制」。'))
 -- 用生态标准的 lsblk 探测结果补充候选（去重，不覆盖 detect_base.sh 的结果）
 if ok_model and cloudreve_model then
@@ -106,7 +106,10 @@ if ok_model and cloudreve_model then
 		known[opt[1]] = true
 	end
 	for _, p in ipairs(paths) do
-		if not known[p] then
+		-- 候选必须过一遍官方校验（可写 + 剩余空间 ≥ 1GiB + 非系统目录），
+		-- 否则可能把 /root 下的系统盘路径也当成可选项摆出来
+		local path_ok = api.check_path(p)
+		if path_ok and not known[p] then
 			known[p] = true
 			storage_opts[#storage_opts + 1] = { p, p }
 		end
@@ -117,7 +120,7 @@ for _, opt in ipairs(storage_opts) do
 	storage:value(opt[1], opt[2])
 end
 storage.default = api.get_storage_root()
-storage.rmempty = false
+storage.rmempty = true
 
 local app_dir = api.get_app_dir()
 local dir_state
@@ -152,14 +155,15 @@ o.datatype = "port"
 o.default = "5212"
 o.rmempty = false
 
-o = s2:option(Value, "root_path", translate('网盘根目录'),
-	translate('Cloudreve 对外展示的文件根目录，也就是你上传的文件实际存放的位置。') ..
-	translate('留空则直接使用所选磁盘的根目录。'))
-o.rmempty = true
-
--- V4 不支持自定义数据库路径，改为只读说明，避免用户填错（曾经被填成目录导致异常）
+-- V4 不支持自定义网盘根目录和数据库路径，一律用只读说明，避免用户以为能配
 s2:option(DummyValue, "_dbinfo", translate('数据库位置')).value =
 	translate('固定为「程序存放目录/data/cloudreve.db」，随所选磁盘走，不需要也不能手动指定。')
+
+s2:option(DummyValue, "_fileinfo", translate('上传文件位置')).value =
+	translate('在 Cloudreve 管理面板 → 存储策略里设置，配置文件管不了，所以本页没有这一项。')
+
+s2:option(DummyValue, "_confinfo", translate('配置文件')).value =
+	api.get_conf_path() .. translate('（放在路由器系统盘上，与磁盘里的数据分开）')
 
 -- ────────────── 操作按钮 ──────────────
 o = s2:option(Button, "_svcctl", translate('服务控制'),
