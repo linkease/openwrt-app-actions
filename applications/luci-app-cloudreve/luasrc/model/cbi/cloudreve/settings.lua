@@ -62,7 +62,7 @@ end
 -- 没有检测到外置硬盘时给出明确指引
 if #storage_opts == 0 then
 	s:option(DummyValue, "_nodisk", translate('未检测到外置硬盘')).value =
-		translate('没有找到符合要求的挂载点（需位于 /mnt 或 /media 下、剩余空间 ≥ 1GiB、并且可写）。') ..
+		translate('没有找到符合要求的挂载点（需位于 /mnt 或 /media 下、并且可写）。') ..
 		translate('程序、配置、数据都不会放到路由器闪存里，请先把硬盘插好、在「系统 → 挂载点」里挂载成功后再回来操作。')
 end
 
@@ -75,7 +75,7 @@ end
 
 -- 只显示挂载点，不额外添加 /Configs/cloudreve 子路径（避免重复）
 local storage = s:option(Value, "root_path", translate('程序根目录'),
-	translate('程序、配置和数据库都放在这块盘的 Configs/cloudreve/ 目录里。留空则自动挑一块外置盘。常见路径：/mnt/sda1、/mmcblk0p1 等。'))
+	translate('程序、配置和数据库都放在这块盘的 Configs/cloudreve/ 目录里。常见路径：/mnt/sda1、/mmcblk0p1 等。'))
 
 for _, opt in ipairs(storage_opts) do
 	storage:value(opt[1], opt[2])
