@@ -164,7 +164,7 @@ python tools/check_bom.py       luasrc   # 中文文件禁 BOM
   `/root/.istore` 兜底被自家校验规则挡死）
 - 路径合法性只认一个来源：`detect_base.sh` 的 `validate_path`。默认值别在多处各写一套，
   否则会出现「init.d 给 `/root/.istore`、配置文件给 `/tmp`，两个都被自家校验器判非法」的局面
-- 配置与数据分开：配置放 `/etc/cloudreve/`，数据留数据盘。换盘不掉登录态（SessionSecret 稳定）
+- 配置与数据一起放在用户目录：`<root>/Configs/cloudreve/cloudreve.ini`，程序、配置、数据库都跟盘走。用户通过 LuCI「程序根目录」选择存储盘，留空则自动挑选。
 
 ---
 
