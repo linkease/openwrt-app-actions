@@ -38,11 +38,6 @@ resolve_storage() {
 		echo "$root"
 		return 0
 	fi
-	local auto=$(sh /usr/libexec/cloudreve/detect_base.sh 2>/dev/null)
-	if [ -n "$auto" ]; then
-		echo "$auto"
-		return 0
-	fi
 	echo ""
 	return 1
 }
@@ -86,7 +81,7 @@ start_service() {
 
 	local app_dir=$(resolve_app_dir)
 	if [ -z "$app_dir" ]; then
-		log_msg "启动失败：没有可用的外置存储盘。请在 LuCI 的「程序根目录」里选一块外置硬盘（需位于 /mnt 或 /media 下、可写、剩余空间至少 1GiB）"
+		log_msg "启动失败：没有可用的外置存储盘。请在 LuCI 的「程序根目录」里配置路径"
 		return 1
 	fi
 
