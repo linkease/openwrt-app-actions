@@ -5,8 +5,8 @@
 #   1. enumerate mounts via df -P -k, keep /mnt|/media|/opt
 #   2. require >= 1GiB free (1048576 KB) AND writable test
 #   3. pick the one with LARGEST available space
-#   4. fallback /root/.istore ; then give up
-#   5. validate against dangerous paths (/, /root/*, ../, system dirs)
+#   4. no fallback: nothing qualifies -> exit 1 and let the caller tell the user
+#   5. validate against dangerous paths (/, /root/*, ../, system dirs, /tmp)
 #
 # Usage:
 #   cloudreve-detect-base          -> print chosen base path (stderr: reason)
@@ -65,10 +65,16 @@ ok() {
 }
 
 # list candidates: mountpoint, availKB, fstype
+# 过滤掉 overlay（Docker 容器层）、tmpfs、devtmpfs 等虚拟文件系统
+# 只保留 ext4/xfs/btrfs/trvfat/ntfs 等真实磁盘文件系统
 list_cands() {
 	df -P -kT 2>/dev/null | awk '
 		NR==1 { next }
-		($7 ~ "^/mnt/" || $7 ~ "^/media/" || $7 ~ "^/opt/") { print $7 "	" $5 "	" $2 }
+		($7 ~ "^/mnt/" || $7 ~ "^/media/" || $7 ~ "^/opt/") && \
+		($2 == "ext4" || $2 == "xfs" || $2 == "btrfs" || $2 == "vfat" || $2 == "exfat" || $2 == "ntfs" || $2 == "ext3" || $2 == "ext2" || $2 == "f2fs") && \
+		($7 !~ /overlay/) && \
+		($7 !~ /docker/) \
+		{ print $7 "	" $5 "	" $2 }
 	' | sort -u
 }
 
@@ -124,14 +130,7 @@ EOF
 		exit 0
 	fi
 
-	fallback="/root/.istore"
-	if ok "$fallback"; then
-		say "picked: base path=$fallback (fallback on system disk; may fill overlay)"
-		echo "$fallback"
-		exit 0
-	fi
-
-	say "failed: cannot auto-pick a writable base path; please provide one manually."
+	say "failed: no writable external mount found (need a mount under /mnt|/media|/opt with >= 1GiB free); the system disk is not used on purpose."
 	exit 1
 	;;
 esac
