@@ -1,0 +1,22 @@
+#!/bin/sh
+# Post-install setup for luci-app-cloudreve
+
+chmod +x /etc/init.d/cloudreve >/dev/null 2>&1
+
+uci -q batch <<-EOF >/dev/null
+	delete ucitrack.@cloudreve[-1]
+	add ucitrack cloudreve
+	set ucitrack.@cloudreve[-1].init=cloudreve
+	commit ucitrack
+EOF
+
+# 清理旧版本遗留的配置键（第五轮评审：storage_path → root_path，删 listen_address）
+uci -q delete cloudreve.@cloudreve[0].storage_path
+uci -q delete cloudreve.@cloudreve[0].listen_address
+uci -q delete cloudreve.@cloudreve[0].database_path
+uci commit cloudreve
+
+rm -f /tmp/luci-indexcache
+rm -f /tmp/luci-modulecache/*
+
+exit 0

@@ -1,0 +1,11 @@
+version: "1"
+name: sync-agentflow
+description: "同步最新 AgentFlow Linux 二进制版本和校验值到 OpenWrt 软件包"
+tags: ["agentflow", "sync", "openwrt"]
+watch:
+  stateFile: ${PROJECT_ROOT}/.it-runner/states/sync-agentflow.STATE
+workspace:
+  workdir: ${PROJECT_ROOT}
+run:
+  cmds:
+    - python3 "${TASK_CONFIG_DIR}/sync-agentflow.py"

@@ -15,6 +15,8 @@ mount --make-private /overlay
 mount -t tmpfs -o ro,relatime tmpfs /sys/block
 mount -t tmpfs -o size=1M tmpfs /tmp
 
+[ "on" = "$DIND" ] && mount -o rw,remount /sys/fs/cgroup
+
 # make all private except /mnt
 mkdir -p $PATCHROM
 mount --bind / $PATCHROM
@@ -65,6 +67,9 @@ chroot $PATCHROM /tmp/shadowrt/s1-chroot-patchrom.sh
 umount $PATCHROM/tmp/shadowrt
 umount $PATCHROM/tmp
 rm -rf /tmp/tmp
+
+export -n DIND
+unset DIND
 
 set_default_ip()
 {
@@ -117,6 +122,7 @@ sh -c 'mount --bind /tmp/proconly.txt /proc/$$/mounts && exec mount -o rw,remoun
 rm -f /tmp/proconly.txt
 
 
+# Apk system means that openwrt version is newer than 24.10, there is not such issue on newer openwrt version, so we just check opkg system.
 PROCD_VER=`grep -o '^Version: [0-9]*' /rom/usr/lib/opkg/info/procd.control | cut -d' ' -f2`
 if [ -n "$PROCD_VER" -a "$PROCD_VER" -lt 2024 ]; then
 	# workaround procd < 2024 infite loop on resolving rootfs type, e.g. `ubus call system board`

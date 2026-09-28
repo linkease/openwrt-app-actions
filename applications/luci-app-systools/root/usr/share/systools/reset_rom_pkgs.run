@@ -1,61 +1,114 @@
 #!/bin/sh
 
+[ -d "/overlay/upper/etc" ] || {
+    echo "Only squashfs rom supported, and /overlay must be mounted." >&2
+    exit 1
+}
+
+APK=false
+PKG_BASE=usr/lib/opkg/info
+PKG_EXT=control
+
+[ -s /etc/apk/arch ] && {
+    APK=true
+    PKG_BASE=lib/apk/packages
+    PKG_EXT=list
+}
+
 nonconf_files_of_pkg() {
     local pkgname="$1"
-    if [ -s /rom/usr/lib/opkg/info/${pkgname}.conffiles ]; then
-        grep -hvxFf /rom/usr/lib/opkg/info/${pkgname}.conffiles \
-            /rom/usr/lib/opkg/info/${pkgname}.list
+    if [ -s /rom/$PKG_BASE/${pkgname}.conffiles ]; then
+        grep -hvxFf /rom/$PKG_BASE/${pkgname}.conffiles \
+            /rom/$PKG_BASE/${pkgname}.list
     else
-        cat /rom/usr/lib/opkg/info/${pkgname}.list
+        cat /rom/$PKG_BASE/${pkgname}.list
     fi
 }
 
 reset_pkg() {
     local pkgname="$1"
     local line
-    local dep
-    local deps
     echo "${pkgname}" | grep -q '^kernel$
 ^libc$
 ^libgcc1$
 ^libatomic1$
 ^busybox$' && return
-    if [ -f /rom/usr/lib/opkg/info/${pkgname}.control -a \
-            \( -e /overlay/upper/usr/lib/opkg/info/${pkgname}.control -o \
-             -e /ext_overlay/upper/usr/lib/opkg/info/${pkgname}.control \) ]; then
+    if [ -f /rom/$PKG_BASE/${pkgname}.$PKG_EXT -a \
+            \( -e /overlay/upper/$PKG_BASE/${pkgname}.$PKG_EXT -o \
+             -e /ext_overlay/upper/$PKG_BASE/${pkgname}.$PKG_EXT \) ]; then
         echo "reset ${pkgname}"
-        if [ -f /rom/usr/lib/opkg/info/${pkgname}.list ]; then
+        if [ -f /rom/$PKG_BASE/${pkgname}.list ]; then
             nonconf_files_of_pkg "${pkgname}" | while read; do
-		        line="$REPLY"
-                rm -f "/overlay/upper/${line}" "/ext_overlay/upper/${line}"
+                line="$REPLY"
+                if [ -e "${line}" -o -e "/overlay/upper/${line}" -o -e "/ext_overlay/upper/${line}" ]; then
+                    rm -f "/overlay/upper/${line}" "/ext_overlay/upper/${line}"
+                else
+                    local dir="$(dirname ${line})"
+                    [ -z "$dir" -o "$dir" = "/" -o "$dir" = "." -o "$line" = "$dir" ] || echo "$dir" >> /tmp/.reset_dirs
+                fi
             done
-            rm -f /overlay/upper/usr/lib/opkg/info/${pkgname}.list /ext_overlay/upper/usr/lib/opkg/info/${pkgname}.list
+            if [ -s /rom/$PKG_BASE/${pkgname}.conffiles ]; then
+                # restore config files from rom, if they are not exist in working rootfs
+                while read; do
+                    line="$REPLY"
+                    [ -e "${line}" ] && continue
+                    rm -rf "/overlay/upper/${line}" "/ext_overlay/upper/${line}"
+                done < /rom/$PKG_BASE/${pkgname}.conffiles
+            fi
+            # restore auto start
+            grep '^/etc/init\.d/' /rom/$PKG_BASE/${pkgname}.list | while read; do
+                line="$REPLY"
+                line="$(basename ${line})"
+                rm -f "/overlay/upper/etc/rc.d/"*"${line}" "/ext_overlay/upper/etc/rc.d/"*"${line}"
+            done
+            rm -f /overlay/upper/$PKG_BASE/${pkgname}.list /ext_overlay/upper/$PKG_BASE/${pkgname}.list
         fi
-        deps=`grep '^Depends: ' /rom/usr/lib/opkg/info/${pkgname}.control | sed -e 's/^Depends: //' -e 's/ ([^)]*)//g' -e 's/,/ /g'`
-        # avoid loop deps
-        rm -f /overlay/upper/usr/lib/opkg/info/${pkgname}.control /ext_overlay/upper/usr/lib/opkg/info/${pkgname}.control
-        for dep in $deps ; do
-            reset_pkg "$dep"
-        done
-        rm -f /overlay/upper/usr/lib/opkg/info/${pkgname}.* /ext_overlay/upper/usr/lib/opkg/info/${pkgname}.*
     fi
 }
 
 ls_all_rom_pkgs() {
-	( cd /rom/usr/lib/opkg/info ; find . -maxdepth 1 -name '*.control' | sed -E 's#./(.*).control#\1#g' )
+	( cd /rom/$PKG_BASE ; find . -maxdepth 1 -name "*.$PKG_EXT" | sed -E 's#./(.*).'"$PKG_EXT"'#\1#g' )
 }
 
 reset_all_rom() {
     local line
+    rm -f /tmp/.reset_dirs
     ls_all_rom_pkgs | while read; do
         line="$REPLY"
         reset_pkg "$line"
     done
+    if [ -s /tmp/.reset_dirs ]; then
+        echo "reset overlayfs opaque flags..."
+        sort -u /tmp/.reset_dirs | while read; do
+            local line="$REPLY"
+            echo "reset dir $line and its parents"
+            while :; do
+                dir="$line"
+                line="$(dirname ${dir})"
+                [ -z "$dir" -o "$dir" = "/" -o "$dir" = "." ] && break
+                if [ -e "/overlay/upper/${dir}" -o -e "/ext_overlay/upper/${dir}" ]; then
+                    if [ -d "/overlay/upper/${dir}" -o -d "/ext_overlay/upper/${dir}" ]; then
+                        setfattr -x "trusted.overlay.opaque" -h "/overlay/upper/${dir}" "/ext_overlay/upper/${dir}" 2>/dev/null
+                    else
+                        rm -f "/overlay/upper/${dir}" "/ext_overlay/upper/${dir}"
+                    fi
+                fi
+                [ "$line" = "$dir" ] && break
+            done
+        done
+    fi
+    rm -f /tmp/.reset_dirs
 }
 
 reset_all_rom
 
-touch /overlay/upper/usr/lib/opkg/.upgrading
+if $APK; then
+    rm -f /overlay/upper/etc/uci-defaults/.upgrading /ext_overlay/upper/etc/uci-defaults/.upgrading
+    touch /overlay/upper/etc/uci-defaults/.upgrading 2>/dev/null
+else
+    rm -f /overlay/upper/usr/lib/opkg/.upgrading /ext_overlay/upper/usr/lib/opkg/.upgrading
+    touch /overlay/upper/usr/lib/opkg/.upgrading 2>/dev/null
+fi
 
 echo "done, please reboot, it will reboot in 10s"
 
