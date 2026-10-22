@@ -49,6 +49,7 @@ class ClassicKaiEntryContractTest(unittest.TestCase):
         actions_end = status.index("</div>", classic)
         self.assertLess(kaiplus, classic)
         self.assertLess(classic, actions_end)
+        self.assertIn("margin: 16px 0;", status)
 
 
 if __name__ == "__main__":
