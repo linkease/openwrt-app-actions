@@ -1,0 +1,46 @@
+{
+  "schemaVersion": 1,
+  "id": "kaiplus",
+  "name": "KaiPlus",
+  "icon": "logo.png",
+  "staticRoot": "/usr/share/kaiplus",
+  "desktop": {
+    "mode": "module",
+    "entry": "desktop-entry.js",
+    "isolation": "shadow-dom"
+  },
+  "standalone": {
+    "basePath": "/apps/kaiplus/",
+    "url": "/apps/kaiplus/",
+    "externalOpen": {
+      "enabled": true,
+      "label": "在浏览器中打开酷友社AI"
+    }
+  },
+  "config": {
+    "providerOrder": ["uci"],
+    "providers": {
+      "uci": {
+        "type": "uci"
+      }
+    }
+  },
+  "backend": {
+    "type": "http",
+    "scheme": "http",
+    "host": "127.0.0.1",
+    "portFromUci": "kaiplus.@kaiplus[0].port",
+    "defaultPort": 8189,
+    "upstreamBasePath": "/apps/kaiplus/",
+    "apiPath": "api/",
+    "pathMode": "preserve",
+    "proxyMode": "app-base"
+  },
+  "window": {
+    "width": 1180,
+    "height": 760,
+    "singleton": true
+  },
+  "capabilities": ["assistant", "chat"],
+  "categories": ["other"]
+}
