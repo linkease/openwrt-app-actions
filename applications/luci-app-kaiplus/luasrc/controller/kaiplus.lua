@@ -108,7 +108,7 @@ function install_kai()
 	local install_script = table.concat({
 		'set -e',
 		'echo "[KaiPlus] Installing classic KAI..."',
-		'/bin/is-opkg install app-meta-kai',
+		'/bin/is-opkg install luci-app-kai',
 		'rm -f /tmp/luci-indexcache',
 		'echo "[KaiPlus] Classic KAI installed successfully."'
 	}, "\n")
