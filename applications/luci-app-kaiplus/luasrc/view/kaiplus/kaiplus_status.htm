@@ -1,7 +1,19 @@
 <script type="text/javascript">//<![CDATA[
+var kaiInstalled = false;
+var kaiOpenUrl = '<%=url("admin/services/linkease_apps/open")%>?id=kai';
+
+function openClassicKai() {
+	if (!kaiInstalled) {
+		window.alert('<%:Classic KAI is not installed. Please install KAI first.%>');
+		return;
+	}
+	window.open(kaiOpenUrl, '_blank', 'noopener');
+}
+
 XHR.poll(5, '<%=url("admin/services/kaiplus_status")%>', null, function(x, st) {
 	var el = document.getElementById('kaiplus_status');
 	if (st && el) {
+		kaiInstalled = st.kai_installed === true;
 		var status = st.running
 			? '<br/><em style=\"color:green\"><%:The KaiPlus service is running.%></em>'
 			: '<br/><em style=\"color:red\"><%:The KaiPlus service is not running.%></em>';
@@ -27,5 +39,8 @@ XHR.poll(5, '<%=url("admin/services/kaiplus_status")%>', null, function(x, st) {
 	<legend><%:Status%></legend>
 	<p id="kaiplus_status">
 		<em><%:Collecting data...%></em>
+	</p>
+	<p>
+		<input class="btn cbi-button" type="button" value=" <%:Open classic KAI%> " onclick="openClassicKai()"/>
 	</p>
 </fieldset>

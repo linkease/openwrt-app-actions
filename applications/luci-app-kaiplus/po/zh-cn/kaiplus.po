@@ -43,6 +43,12 @@ msgstr "外部端口访问已禁用。"
 msgid "Click to open KaiPlus"
 msgstr "点击打开酷友社AI"
 
+msgid "Open classic KAI"
+msgstr "打开经典版 KAI"
+
+msgid "Classic KAI is not installed. Please install KAI first."
+msgstr "尚未安装经典版 KAI，请先安装 KAI。"
+
 msgid "Status"
 msgstr "状态"
 
