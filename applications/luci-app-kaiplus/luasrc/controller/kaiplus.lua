@@ -7,6 +7,11 @@ function index()
 	open.dependent = false
 	open.sysauth = "root"
 	open.sysauth_authenticator = "htmlauth"
+	local open_kai = entry({"admin", "services", "kaiplus", "open_kai"}, call("kai_open"))
+	open_kai.leaf = true
+	open_kai.dependent = false
+	open_kai.sysauth = "root"
+	open_kai.sysauth_authenticator = "htmlauth"
 
 	if not nixio.fs.access("/etc/config/kaiplus") then return end
 	entry({"admin", "services", "kaiplus"}, cbi("kaiplus"), _("KaiPlus"), 100).dependent = true
@@ -38,4 +43,8 @@ end
 
 function kaiplus_open()
 	compat():open("kaiplus")
+end
+
+function kai_open()
+	compat():open("kai")
 end

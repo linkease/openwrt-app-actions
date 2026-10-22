@@ -18,10 +18,15 @@ class ClassicKaiEntryContractTest(unittest.TestCase):
         )
 
     def test_entry_opens_installed_kai_and_prompts_when_missing(self):
+        controller = self.read("luasrc/controller/kaiplus.lua")
         status = self.read("luasrc/view/kaiplus/kaiplus_status.htm")
 
-        self.assertIn('url("admin/services/linkease_apps/open")', status)
-        self.assertIn("?id=kai", status)
+        self.assertIn(
+            'entry({"admin", "services", "kaiplus", "open_kai"}',
+            controller,
+        )
+        self.assertIn('compat():open("kai")', controller)
+        self.assertIn('url("admin/services/kaiplus/open_kai")', status)
         self.assertIn("st.kai_installed === true", status)
         self.assertIn("function openClassicKai()", status)
         self.assertIn("Classic KAI is not installed. Please install KAI first.", status)
