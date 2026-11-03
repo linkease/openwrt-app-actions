@@ -28,7 +28,6 @@ define Package/$(PKG_NAME)
 	SUBMENU:=
 	TITLE:=KAI
 	DEPENDS:=+kai_session +kai-agent +luci-lib-linkeaseauth +linkease-app-entry
-	EXTRA_DEPENDS:=kai-agent (>=0.0.28~0), kai_session (>=0.0.28~0)
 	URL:=https://github.com/linkease/istore-ai-helper
 endef
 
