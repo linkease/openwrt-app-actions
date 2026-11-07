@@ -1,11 +1,12 @@
 From 55db7a1f7f650f965e783301387246f9f62fa1ec Mon Sep 17 00:00:00 2001
 From: Liangbin Lian <jjm2473@gmail.com>
 Date: Wed, 11 Dec 2024 11:20:45 +0800
-Subject: [PATCH] luci.mk: postinst compat openwrt 23
+Subject: [PATCH] luci: improve compatibility with newer hosts and OpenWrt 23
 
 ---
- luci.mk | 8 +++++---
- 1 file changed, 5 insertions(+), 3 deletions(-)
+ luci.mk                                      |  8 +++++---
+ modules/luci-base/src/contrib/lemon.c       | 12 ++++++------
+ 2 files changed, 11 insertions(+), 9 deletions(-)
 
 diff --git a/luci.mk b/luci.mk
 index aca52e08cd..b28284c892 100644
@@ -41,6 +42,23 @@ index aca52e08cd..b28284c892 100644
  		exit 0
  	}
    endef
+diff --git a/modules/luci-base/src/contrib/lemon.c b/modules/luci-base/src/contrib/lemon.c
+--- a/modules/luci-base/src/contrib/lemon.c
++++ b/modules/luci-base/src/contrib/lemon.c
+@@ -162,7 +162,7 @@
+ /********** From the file "build.h" ************************************/
+-void FindRulePrecedences();
+-void FindFirstSets();
+-void FindStates();
+-void FindLinks();
+-void FindFollowSets();
+-void FindActions();
++void FindRulePrecedences(struct lemon *);
++void FindFirstSets(struct lemon *);
++void FindStates(struct lemon *);
++void FindLinks(struct lemon *);
++void FindFollowSets(struct lemon *);
++void FindActions(struct lemon *);
 -- 
 2.46.0
 
