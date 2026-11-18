@@ -1,0 +1,4 @@
+# Keep shell scripts and Lua sources LF-only; ipk is binary.
+* text=auto eol=lf
+*.ipk binary
+*.apk binary
