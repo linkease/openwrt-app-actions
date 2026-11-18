@@ -1,0 +1,119 @@
+msgid ""
+msgstr "Content-Type: text/plain; charset=UTF-8"
+
+msgid "KaiPlus"
+msgstr "酷友社AI"
+
+msgid "KaiPlus is an AI workspace and session service."
+msgstr "酷友社AI 是一款 AI 工作区与会话服务。"
+
+msgid "Global settings"
+msgstr "全局设置"
+
+msgid "Enable"
+msgstr "启用"
+
+msgid "Data directory"
+msgstr "数据目录"
+
+msgid "Required. KaiPlus stores workspace, cache, config, and state under this directory."
+msgstr "必填。酷友社AI 会在此目录中保存工作区、缓存、配置和状态数据。"
+
+msgid "Access port"
+msgstr "访问端口"
+
+msgid "KaiPlus is available at http://router-address:port/apps/kaiplus/."
+msgstr "可通过 http://路由器地址:端口/apps/kaiplus/ 访问酷友社AI。"
+
+msgid "The KaiPlus service is running."
+msgstr "酷友社AI 服务正在运行。"
+
+msgid "The KaiPlus service is starting."
+msgstr "酷友社AI 服务正在启动。"
+
+msgid "The KaiPlus service is not running."
+msgstr "酷友社AI 服务未运行。"
+
+msgid "Access mode: LinkEase Desktop proxy."
+msgstr "访问模式：LinkEase Desktop 代理。"
+
+msgid "Access mode: external port."
+msgstr "访问模式：外部端口。"
+
+msgid "External port access is disabled."
+msgstr "外部端口访问已禁用。"
+
+msgid "Click to open KaiPlus"
+msgstr "点击打开酷友社AI"
+
+msgid "Classic KAI"
+msgstr "经典版 KAI"
+
+msgid "Classic KAI is not installed. Install it now?"
+msgstr "尚未安装经典版 KAI，是否现在安装？"
+
+msgid "Task log window is not available."
+msgstr "任务日志窗口不可用。"
+
+msgid "Starting installation..."
+msgstr "正在启动安装……"
+
+msgid "Failed to start KAI installation."
+msgstr "无法启动经典版 KAI 安装任务。"
+
+msgid "Status"
+msgstr "状态"
+
+msgid "Collecting data..."
+msgstr "正在获取数据……"
+
+msgid "CLASSIC KAI"
+msgstr "经典版 KAI"
+
+msgid "CLASSIC KAI can run alongside KaiPlus. Its settings and data are independent."
+msgstr "经典版 KAI 可与酷友社AI 同时运行，配置和数据相互独立。"
+
+msgid "Install CLASSIC KAI"
+msgstr "安装经典版 KAI"
+
+msgid "Open CLASSIC KAI"
+msgstr "打开经典版 KAI"
+
+msgid "CLASSIC KAI is not installed. Install it to configure and start the service."
+msgstr "尚未安装经典版 KAI，安装后可在此配置和启动服务。"
+
+msgid "The CLASSIC KAI service is running."
+msgstr "经典版 KAI 服务正在运行。"
+
+msgid "The CLASSIC KAI service is not running."
+msgstr "经典版 KAI 服务未运行。"
+
+msgid "Save & Apply starts or stops CLASSIC KAI without restarting KaiPlus."
+msgstr "保存并应用后启动或停止经典版 KAI，酷友社AI 的运行不受影响。"
+
+msgid "Required. CLASSIC KAI stores its workspace, cache, config, and state here. Use a different directory from KaiPlus."
+msgstr "必填。经典版 KAI 在此保存工作区、缓存、配置和状态数据，请与酷友社AI 使用不同目录。"
+
+msgid "CLASSIC KAI is available at http://router-address:port/apps/kai/web/. Use a different port from KaiPlus."
+msgstr "可通过 http://路由器地址:端口/apps/kai/web/ 访问经典版 KAI，请与酷友社AI 使用不同端口。"
+
+msgid "CLASSIC KAI could not apply the service settings. Check its configuration and system log."
+msgstr "经典版 KAI 无法应用服务设置，请检查配置和系统日志。"
+
+msgid "Check for CLASSIC KAI updates"
+msgstr "检查经典版 KAI 更新"
+
+msgid "Check for updates"
+msgstr "检查更新"
+
+msgid "Update CLASSIC KAI and its runtime engine from the iStore package feed? A running CLASSIC KAI service will restart."
+msgstr "是否从 iStore 软件源更新经典版 KAI 及运行引擎？正在运行的经典版服务将重启。"
+
+msgid "Starting task..."
+msgstr "正在启动任务……"
+
+msgid "Failed to start the CLASSIC KAI package task."
+msgstr "无法启动经典版 KAI 软件包任务。"
+
+msgid "Updates come from the iStore package feed and include CLASSIC KAI and its runtime engine."
+msgstr "从 iStore 软件源更新经典版 KAI 及运行引擎。"
