@@ -21,8 +21,23 @@ return view.extend({
         s.anonymous = true;
         s.addremove = false;
 
+
         o = s.option(form.Flag, 'enabled', _('Enable'));
         o.rmempty  = false;
+
+        o = s.option(form.Flag, 'snat_enabled', _('Enable SNAT for modem management'));
+        o.rmempty = false;
+        o.default = o.disabled;
+
+        o = s.option(form.Value, 'snat_dest_ip', _('SNAT destination IP'), _('Usually modem management IP, e.g. 192.168.1.1'));
+        o.datatype = 'ip4addr';
+        o.placeholder = '192.168.1.1';
+        o.depends('snat_enabled', '1');
+
+        o = s.option(form.Value, 'snat_ip', _('SNAT source IP'), _('Usually one WAN virtual IP on modem subnet, e.g. 192.168.1.254'));
+        o.datatype = 'ip4addr';
+        o.placeholder = '192.168.1.254';
+        o.depends('snat_enabled', '1');
 
         s = m.section(form.NamedSection, 'config', 'ap_modem', _('Interface Settings'));
         s.anonymous = true;
