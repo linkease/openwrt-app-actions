@@ -1,0 +1,7 @@
+<style>
+.codex-terminal-shell{border:1px solid #dfe5ef;border-radius:10px;padding:14px;background:#fff}.codex-terminal-note{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:12px}.codex-terminal-note p{margin:0;color:#667085}.codex-terminal-frame{width:100%;min-height:680px;border:0;border-radius:8px;background:#0b1220}body[theme="dark"] .codex-terminal-shell{background:#20252b;border-color:#3c4652}@media(max-width:700px){.codex-terminal-note{align-items:flex-start;flex-direction:column}}
+</style>
+<div class="codex-terminal-shell">
+ <div class="codex-terminal-note"><p>终端经 LuCI 登录态和 LinkEase 应用网关打开；后端 ttyd 不监听局域网地址。</p><a class="btn cbi-button cbi-button-apply" target="_blank" rel="noopener" href="<%=url('admin/services/linkease_apps/open')%>?id=codex">在新窗口打开</a></div>
+ <iframe class="codex-terminal-frame" title="Codex terminal" src="<%=url('admin/services/linkease_apps/open')%>?id=codex"></iframe>
+</div>

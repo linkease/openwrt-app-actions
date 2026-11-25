@@ -1,0 +1,38 @@
+<%+tasks/embed%>
+<style>
+.codex-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:14px;margin:14px 0}.codex-card{border:1px solid #dfe5ef;border-radius:10px;padding:18px;background:#fff;box-shadow:0 6px 20px rgba(30,45,80,.06)}.codex-card h3{margin:0 0 9px}.codex-muted{color:#667085;line-height:1.55}.codex-state{font-weight:700}.codex-ok{color:#16833b}.codex-warn{color:#a15c00}.codex-actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}body[theme="dark"] .codex-card{background:#20252b;border-color:#3c4652}.codex-path{word-break:break-all;font-family:monospace}
+</style>
+<script>
+//<![CDATA[
+var codexStatusUrl='<%=url("admin/services/codex/status")%>';
+var codexInstallUrl='<%=url("admin/services/codex/install")%>';
+var codexToken=(window.taskd&&window.taskd.csrfToken)||'';
+function codexText(id,value,klass){var el=document.getElementById(id);if(!el)return;el.textContent=value;if(klass)el.className='codex-state '+klass;}
+function codexRender(s){
+ s=s||{};var runtime=s.runtime||{};
+ codexText('codex-install-state',s.installed?('已安装 '+(s.version||'')):(s.install_running?'正在安装':'尚未安装'),s.installed?'codex-ok':'codex-warn');
+ codexText('codex-runtime-state',runtime.ready?('Node '+runtime.node+' / npm '+runtime.npm+' / '+runtime.abi):(runtime.error||'运行时未准备'),runtime.ready?'codex-ok':'codex-warn');
+ codexText('codex-auth-state',s.authenticated?'已登录':'未登录',s.authenticated?'codex-ok':'codex-warn');
+ codexText('codex-terminal-state',s.service_running?'终端正在运行':'终端未运行',s.service_running?'codex-ok':'codex-warn');
+ codexText('codex-data',s.data_dir||'-');codexText('codex-workspace',s.workspace||'-');
+ var install=document.getElementById('codex-install');install.disabled=!!s.install_running;install.value=s.installed?'重新安装固定版本':(s.install_running?'正在安装…':'安装 Codex');
+ document.getElementById('codex-recover').style.display=s.interrupted?'inline-block':'none';
+}
+function codexOperation(operation){
+ (new XHR()).post(codexInstallUrl,{token:codexToken,operation:operation},function(x,data){
+  data=data||{};if(!data.ok){alert(data.error||'操作失败');return}
+  if(data.task_id&&window.taskd)window.taskd.show_log(data.task_id,false,function(){location.reload()});
+  else location.reload();
+ });
+}
+XHR.poll(5,codexStatusUrl,null,function(x,s){codexRender(s)});
+//]]>
+</script>
+<div class="codex-grid">
+ <section class="codex-card"><h3>Codex CLI</h3><div id="codex-install-state" class="codex-state">检查中…</div><p class="codex-muted">固定安装 <code>@openai/codex@0.172.0</code>，升级需要明确发布新的插件版本。</p><div class="codex-actions"><input id="codex-install" class="btn cbi-button cbi-button-apply" type="button" value="安装 Codex" onclick="codexOperation('install')"><input id="codex-recover" class="btn cbi-button" style="display:none" type="button" value="恢复中断安装" onclick="codexOperation('recover')"></div></section>
+ <section class="codex-card"><h3>共享运行时</h3><div id="codex-runtime-state" class="codex-state">检查中…</div><p class="codex-muted">运行时由 mise-runtime 管理，不修改全局 mise 默认版本。</p><a href="<%=url('admin/services/mise')%>">打开运行时环境</a></section>
+ <section class="codex-card"><h3>认证</h3><div id="codex-auth-state" class="codex-state">检查中…</div><p class="codex-muted">凭据仅保存在专用 Codex HOME。请在终端执行 <code>codex login --device-auth</code>。</p><a href="<%=url('admin/services/codex/terminal')%>">打开终端</a></section>
+ <section class="codex-card"><h3>浏览器终端</h3><div id="codex-terminal-state" class="codex-state">检查中…</div><p class="codex-muted">ttyd 只监听回环地址，外部访问由认证应用网关转发。</p></section>
+ <section class="codex-card"><h3>数据目录</h3><div id="codex-data" class="codex-path">-</div></section>
+ <section class="codex-card"><h3>默认工作区</h3><div id="codex-workspace" class="codex-path">-</div></section>
+</div>

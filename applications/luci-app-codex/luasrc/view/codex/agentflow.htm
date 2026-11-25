@@ -1,0 +1,17 @@
+<style>
+.codex-agentflow{max-width:820px;border:1px solid #dfe5ef;border-radius:10px;padding:24px;background:#fff}.codex-agentflow h3{margin-top:0}.codex-agentflow p{color:#667085;line-height:1.65}.codex-agentflow-actions{display:flex;gap:10px;flex-wrap:wrap}.codex-agentflow code{word-break:break-all}body[theme="dark"] .codex-agentflow{background:#20252b;border-color:#3c4652}
+</style>
+<script>
+//<![CDATA[
+XHR.get('<%=url("admin/services/codex/status")%>',null,function(x,s){
+ s=s||{};var a=s.agentflow||{};document.getElementById('codex-agentflow-installed').style.display=a.installed?'block':'none';document.getElementById('codex-agentflow-missing').style.display=a.installed?'none':'block';
+ document.getElementById('codex-agentflow-state').textContent=a.running?'AgentFlow 正在运行':'AgentFlow 已安装但未运行';
+});
+//]]>
+</script>
+<div class="codex-agentflow">
+ <h3>在 AgentFlow 中使用 Codex</h3>
+ <p>独立 Codex 插件提供系统命令 <code>/usr/bin/codex</code> 和代理清单 <code>/usr/share/coding-agents.d/codex.json</code>。AgentFlow 启动环境可以从系统 PATH 发现该命令，实际执行仍由 Codex 插件降权到专用用户。</p>
+ <div id="codex-agentflow-installed" style="display:none"><p id="codex-agentflow-state">检查中…</p><div class="codex-agentflow-actions"><a class="btn cbi-button cbi-button-apply" href="<%=url('admin/services/agentflow')%>">管理 AgentFlow</a><a class="btn cbi-button" target="_blank" rel="noopener" href="<%=url('admin/services/linkease_apps/open')%>?id=agentflow">打开 AgentFlow 网页</a></div></div>
+ <div id="codex-agentflow-missing" style="display:none"><p>尚未安装 AgentFlow。Codex 终端可独立使用；如需网页工作流编排，请在 iStore 中安装 <code>app-meta-agentflow</code>。</p><a class="btn cbi-button cbi-button-apply" href="/cgi-bin/luci/admin/store">前往 iStore</a></div>
+</div>

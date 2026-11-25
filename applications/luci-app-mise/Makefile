@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_VERSION:=0.1.1
-PKG_RELEASE:=1
+PKG_RELEASE:=2
 LUCI_TITLE:=Persistent runtime environments
 LUCI_PKGARCH:=all
 LUCI_MINIFY_JS:=0
@@ -12,6 +12,8 @@ LUCI_EXTRA_DEPENDS:=mise-runtime (>=0.1.1-$(if $(CONFIG_USE_APK),r)1)
 define Build/Prepare/luci-app-mise
 	$(INSTALL_DIR) $(PKG_BUILD_DIR)/root/usr/share/linkease/apps.d
 	ln -sf /usr/share/mise/mise-plugin.json $(PKG_BUILD_DIR)/root/usr/share/linkease/apps.d/40-mise.json
+	$(INSTALL_DIR) $(PKG_BUILD_DIR)/root/www/luci-static/resources/mise
+	ln -sf /www/luci-static/resources/app-icons/mise.png $(PKG_BUILD_DIR)/root/www/luci-static/resources/mise/logo.png
 	chmod 0755 $(PKG_BUILD_DIR)/root/usr/share/mise/register-desktop.sh
 endef
 

@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "id": "codex",
+  "name": "Codex",
+  "icon": "logo.svg",
+  "staticRoot": "/usr/share/codex/www",
+  "desktop": {
+    "mode": "iframe",
+    "target": {
+      "scheme": "http",
+      "hostMode": "request-host",
+      "port": {
+        "default": 7683,
+        "keys": { "uci": "codex.main.terminal_port" }
+      },
+      "path": "/apps/codex/"
+    },
+    "access": {
+      "scope": "lan",
+      "blockedTitle": "请在局域网内打开 Codex",
+      "blockedMessage": "Codex 终端只通过设备的认证应用网关提供。"
+    }
+  },
+  "standalone": {
+    "basePath": "/apps/codex/",
+    "externalOpen": {
+      "enabled": true,
+      "label": "打开 Codex 终端"
+    }
+  },
+  "auth": { "mode": "passthrough" },
+  "backend": {
+    "type": "http",
+    "scheme": "http",
+    "host": "127.0.0.1",
+    "portFromUci": "codex.main.terminal_port",
+    "defaultPort": 7683,
+    "upstreamBasePath": "/apps/codex/",
+    "pathMode": "preserve",
+    "proxyMode": "app-base"
+  },
+  "window": { "width": 1180, "height": 760, "singleton": true },
+  "capabilities": ["coding-agent", "terminal", "development"],
+  "categories": ["development", "ai"]
+}

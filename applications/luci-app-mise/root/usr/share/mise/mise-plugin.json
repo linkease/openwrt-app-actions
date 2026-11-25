@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "id": "mise",
   "name": "运行时环境",
-  "icon": "logo.svg",
+  "icon": "logo.png",
   "staticRoot": "/www/luci-static/resources/mise",
   "desktop": {
     "mode": "builtin",
