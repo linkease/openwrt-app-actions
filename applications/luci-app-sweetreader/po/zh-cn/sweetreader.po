@@ -1,0 +1,11 @@
+msgid "SweetReader 书库"
+msgstr "SweetReader 书库"
+
+msgid "SweetReader 个人书库"
+msgstr "SweetReader 个人书库"
+
+msgid "在路由器 / NAS 上自建的电子书库，支持 EPUB / PDF / DOC·DOCX / TXT 在线阅读。"
+msgstr "在路由器 / NAS 上自建的电子书库，支持 EPUB / PDF / DOC·DOCX / TXT 在线阅读。"
+
+msgid "打开书库"
+msgstr "打开书库"

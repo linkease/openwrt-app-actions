@@ -1,0 +1,23 @@
+{
+  "name": "sweetreader",
+  "title": "SweetReader 个人书库",
+  "description": "在路由器 / NAS 上自建的个人电子书库，数据完全私有、存于你自己的设备。支持 EPUB / PDF / DOC·DOCX / TXT 在线阅读，带分类管理、全文搜索、阅读进度记忆、双页模式与字号/主题/行距等排版设置，以及 TXT 段落重排与自动目录。",
+  "category": "实用工具",
+  "icon": "icon.png",
+  "screenshot": [
+    "https://raw.githubusercontent.com/514475844/SweetReader/main/docs/screenshots/reader.jpg",
+    "https://raw.githubusercontent.com/514475844/SweetReader/main/docs/screenshots/dark.jpg",
+    "https://raw.githubusercontent.com/514475844/SweetReader/main/docs/screenshots/toc.jpg"
+  ],
+  "arch": ["amd64", "arm64"],
+  "type": "docker",
+  "main": "docker",
+  "port": 5000,
+  "web": "/",
+  "author": "卖红薯",
+  "version": "1.0.0",
+  "docker_compose_file": "docker-compose.yml",
+  "upgrade": "auto",
+  "dependencies": ["docker"],
+  "tips": "首次启动后，初始管理员密码打印在容器日志中（docker logs sweetreader），请登录后尽快修改。书库存放目录可在 docker-compose.yml 中通过 BOOK_DIR 环境变量修改。"
+}

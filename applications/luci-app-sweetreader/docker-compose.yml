@@ -1,0 +1,27 @@
+version: "3"
+
+# iStoreOS 会读取本文件自动部署容器。
+# 书库存放目录可通过环境变量 BOOK_DIR 覆盖（默认 /mnt/sweetreader，建议指向大容量磁盘）。
+# 例如：BOOK_DIR=/mnt/sdb1/Books docker compose up -d
+
+services:
+  sweetreader:
+    image: docker.io/514475844/sweetreader:latest
+    container_name: sweetreader
+    restart: unless-stopped
+    network_mode: bridge
+    ports:
+      - "5000:5000"
+    environment:
+      - TZ=Asia/Shanghai
+      - BOOK_DIR=${BOOK_DIR:-/mnt/sweetreader}
+    volumes:
+      - ${BOOK_DIR:-/mnt/sweetreader}/books:/app/books
+      - ${BOOK_DIR:-/mnt/sweetreader}/instance:/app/instance
+      - ${BOOK_DIR:-/mnt/sweetreader}/covers:/app/static/covers
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5000/health', timeout=5).read()"]
+      interval: 60s
+      timeout: 10s
+      retries: 3
+      start_period: 45s

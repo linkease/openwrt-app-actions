@@ -1,0 +1,8 @@
+<%+header%>
+<h2><%= translate("SweetReader 个人书库") %></h2>
+<p><%= translate("在路由器 / NAS 上自建的电子书库，支持 EPUB / PDF / DOC·DOCX / TXT 在线阅读。") %></p>
+<p><%= translate("容器首次启动后，初始管理员密码会打印在日志中（docker logs sweetreader）。登录后请在「设置」中修改密码。") %></p>
+<p>
+  <a class="btn" href="<%=url('admin/services/sweetreader/open')%>"><%:打开书库%></a>
+</p>
+<%+footer%>
