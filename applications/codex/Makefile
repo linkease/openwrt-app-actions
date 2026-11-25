@@ -55,6 +55,9 @@ rmdir "$${root}/usr/share/linkeasefull/desktop-apps.d" 2>/dev/null || true
 exit 0
 endef
 
+define Build/Compile
+endef
+
 define Package/codex/install
 	$(INSTALL_DIR) $(1)/usr/bin $(1)/usr/libexec $(1)/usr/share/codex/www $(1)/usr/share/coding-agents.d
 	$(INSTALL_DIR) $(1)/usr/share/linkease/apps.d $(1)/etc/init.d $(1)/etc/config $(1)/etc/uci-defaults
