@@ -54,6 +54,9 @@ jobs:
         with:
           path: 'apps'
 
+      - name: Check runtime dependency floors
+        run: python3 apps/tools/check-mise-runtime-dependency-floor.py
+
       - name: Import Env
         env:
           MATRIX_TARGET: ${{ matrix.target }}
