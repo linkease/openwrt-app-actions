@@ -9,7 +9,24 @@ run_checked() {
 }
 migrate_config() {
  [ -f "$config" ] || return 0
- sed -i '/^[[:space:]]*"http":[[:space:]]*{},[[:space:]]*$/d' "$config"
+ local tmp
+ tmp="${config}.migrate.$$"
+ umask 077
+ if ! /usr/bin/ucode -e '
+  import { readfile } from "fs";
+  let value = json(readfile("/dev/stdin"));
+  if (type(value) != "object")
+   exit(1);
+  delete value.http;
+  print(value);
+ ' < "$config" > "$tmp"; then
+  rm -f "$tmp"
+  return 1
+ fi
+ if ! mv -f "$tmp" "$config"; then
+  rm -f "$tmp"
+  return 1
+ fi
 }
 stop_service() {
  if pidof changeguard_bin >/dev/null 2>&1; then
