@@ -1,0 +1,3 @@
+config main
+	option port '5000'
+	option enabled '1'
