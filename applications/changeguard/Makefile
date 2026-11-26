@@ -35,11 +35,13 @@ endef
 define Package/changeguard/postinst
 #!/bin/sh
 IPKG_INSTROOT="$${IPKG_INSTROOT:-}" "$${IPKG_INSTROOT:-}/usr/libexec/changeguard-package" postinst
+exit 0
 endef
 
 define Package/changeguard/prerm
 #!/bin/sh
 IPKG_INSTROOT="$${IPKG_INSTROOT:-}" "$${IPKG_INSTROOT:-}/usr/libexec/changeguard-package" prerm
+exit 0
 endef
 
 define Package/changeguard/install
