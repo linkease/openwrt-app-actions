@@ -5,10 +5,26 @@ local status = util.trim(util.exec("/usr/libexec/istorec/hermes.sh status"))
 local native_status = util.trim(util.exec("/usr/libexec/istorec/hermes.sh status-native"))
 local docker_status = util.trim(util.exec("/usr/libexec/istorec/hermes.sh status-docker"))
 local running = status == "running"
+local backend_labels = {
+    native = translate("Native"),
+    docker = translate("Docker")
+}
+local status_labels = {
+    running = translate("Running"),
+    stopped = translate("Stopped"),
+    degraded = translate("Degraded"),
+    uninstalled = translate("Not installed"),
+    healthy = translate("Healthy"),
+    unhealthy = translate("Unhealthy")
+}
+local backend_label = backend_labels[backend] or backend
+local status_label = status_labels[status] or status
+local native_status_label = status_labels[native_status] or native_status
+local docker_status_label = status_labels[docker_status] or docker_status
 -%>
 <div class="cbi-value">
     <label class="cbi-value-title"><%:Active backend%></label>
-    <div class="cbi-value-field"><strong><%=backend%></strong></div>
+    <div class="cbi-value-field"><strong><%=backend_label%></strong></div>
 </div>
 <div class="cbi-value">
     <label class="cbi-value-title"><%:Backend status%></label>
@@ -16,9 +32,9 @@ local running = status == "running"
         <% if running then %>
         <button class="cbi-button cbi-button-success" disabled="true"><%:Hermes is running%></button>
         <% else %>
-        <button class="cbi-button cbi-button-negative" disabled="true"><%=status%></button>
+        <button class="cbi-button cbi-button-negative" disabled="true"><%=status_label%></button>
         <% end %>
-        <span style="margin-left:1em">Native: <%=native_status%> / Docker: <%=docker_status%></span>
+        <span style="margin-left:1em"><%:Native%>: <%=native_status_label%> / <%:Docker%>: <%=docker_status_label%></span>
     </div>
 </div>
 <% if running then

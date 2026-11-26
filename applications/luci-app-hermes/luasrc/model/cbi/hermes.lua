@@ -29,7 +29,7 @@ s:tab("docker", translate("Docker"), translate("Runs in an isolated container. D
 o = s:taboption("native", DummyValue, "_native_python", translate("Python runtime"))
 o.rawhtml = true
 function o.cfgvalue()
-	return "Python 3.14.9 (mise-runtime, SHA-verified)"
+	return translate("Python 3.14.9 (mise-runtime, SHA-verified)")
 end
 
 o = s:taboption("native", Value, "native_base_dir", translate("Native data and runtime path") .. "<b>*</b>")

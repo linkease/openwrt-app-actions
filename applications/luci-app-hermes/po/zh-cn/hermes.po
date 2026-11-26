@@ -108,3 +108,24 @@ msgstr "活动后端"
 
 msgid "Backend status"
 msgstr "后端状态"
+
+msgid "Python 3.14.9 (mise-runtime, SHA-verified)"
+msgstr "Python 3.14.9（mise-runtime，已验证 SHA）"
+
+msgid "Running"
+msgstr "运行中"
+
+msgid "Stopped"
+msgstr "已停止"
+
+msgid "Degraded"
+msgstr "异常"
+
+msgid "Not installed"
+msgstr "未安装"
+
+msgid "Healthy"
+msgstr "健康"
+
+msgid "Unhealthy"
+msgstr "不健康"
